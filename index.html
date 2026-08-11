@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeamAnalysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <!-- Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Copyright Signature -->
+    <div id="copyright-signature" style="display:none;" data-author="Loris Salerno" data-sigla="taasalo3" data-email="Loris.Salerno@swisscom.com"></div>
+    
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>TeamAnalysis</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" data-section="dashboard" class="active">Dashboard</a></li>
+            <li><a href="#" data-section="database">Database</a></li>
+            <li><a href="#" data-section="statistics">Statistiche</a></li>
+            <li><a href="#" data-section="goals">Obiettivi</a></li>
+            <li><a href="#" data-section="settings">Impostazioni</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="controls">
+                <label class="toggle-switch" title="Modalità Anonima">
+                    <input type="checkbox" id="anon-toggle">
+                    <span class="slider round"></span>
+                    <span class="label">Anonimo</span>
+                </label>
+                <button id="theme-toggle" class="icon-btn" title="Cambia Tema">
+                    <!-- SVG Sun/Moon handled in JS/CSS -->
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="theme-icon"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20V4Z"/></svg>
+                </button>
+            </div>
+            <div class="year-selector">
+                <select id="active-year">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="page-section active">
+            <div class="section-header">
+                <h1>Dashboard</h1>
+                <button id="add-widget-btn" class="btn primary">Aggiungi Widget</button>
+            </div>
+            <div class="dashboard-grid" id="dashboard-grid">
+                <!-- Widgets go here -->
+            </div>
+        </section>
+
+        <!-- Database Section -->
+        <section id="database" class="page-section">
+            <div class="section-header">
+                <h1>Database</h1>
+            </div>
+            <div class="db-cards">
+                <div class="card">
+                    <h2>Performance</h2>
+                    <p>Importa i dati delle performance dei team.</p>
+                    <div class="import-controls">
+                        <label>Data inizio dati:</label>
+                        <input type="date" id="perf-date">
+                        <input type="file" id="perf-file" accept=".csv" style="display:none">
+                        <button class="btn secondary" onclick="document.getElementById('perf-file').click()">Scegli CSV</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Sales</h2>
+                    <p>Importa i dati di vendita (AOIT, Nuovi abo, RET).</p>
+                    <div class="import-controls">
+                        <label>Data inizio dati:</label>
+                        <input type="date" id="sales-date">
+                        <input type="file" id="sales-file" accept=".csv" style="display:none">
+                        <button class="btn secondary" onclick="document.getElementById('sales-file').click()">Scegli CSV</button>
+                    </div>
+                </div>
+            </div>
+            <div id="import-log" class="log-area"></div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section id="statistics" class="page-section">
+            <div class="section-header">
+                <h1>Statistiche</h1>
+                <div class="tabs">
+                    <button class="tab-btn active" data-target="stat-team">Team</button>
+                    <button class="tab-btn" data-target="stat-individual">Individuale</button>
+                </div>
+            </div>
+            <div id="stat-team" class="tab-content active">
+                <button class="btn primary" id="create-stat-btn">Nuova Statistica</button>
+                <div id="team-stats-container" class="stats-grid"></div>
+            </div>
+            <div id="stat-individual" class="tab-content">
+                <div class="filter-bar">
+                    <select id="individual-select">
+                        <option value="">Seleziona Collaboratore...</option>
+                    </select>
+                </div>
+                <div id="individual-stats-container" class="stats-grid"></div>
+            </div>
+        </section>
+
+        <!-- Goals Section -->
+        <section id="goals" class="page-section">
+            <div class="section-header">
+                <h1>Obiettivi</h1>
+                <button class="btn primary" id="add-goal-btn">Nuovo Obiettivo</button>
+            </div>
+            <div id="goals-list" class="goals-grid"></div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings" class="page-section">
+            <div class="section-header">
+                <h1>Impostazioni & Backup</h1>
+            </div>
+            <div class="settings-cards">
+                <div class="card">
+                    <h2>Mappatura Nomi Anonimi</h2>
+                    <p>Assegna ID numerici ai collaboratori per l'anno in corso.</p>
+                    <button class="btn secondary" id="manage-mapping-btn">Gestisci Mappatura</button>
+                </div>
+                <div class="card">
+                    <h2>Backup Dati</h2>
+                    <p>Salva tutti i dati in locale o ripristina un salvataggio.</p>
+                    <button class="btn primary" id="export-backup-btn">Esporta JSON</button>
+                    <input type="file" id="import-backup-file" accept=".json" style="display:none">
+                    <button class="btn secondary" onclick="document.getElementById('import-backup-file').click()">Importa JSON</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+    <div id="mapping-modal" class="modal">
+        <div class="modal-header">
+            <h2>Mappatura ID</h2>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <table class="data-table" id="mapping-table">
+                <thead>
+                    <tr>
+                        <th>Nome Reale</th>
+                        <th>ID Assegnato</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button class="btn primary" id="save-mapping-btn">Salva</button>
+        </div>
+    </div>
+
+    <!-- Script files -->
+    <script src="js/db.js"></script>
+    <script src="js/csv-parser.js"></script>
+    <script src="js/statistics.js"></script>
+    <script src="js/goals.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
