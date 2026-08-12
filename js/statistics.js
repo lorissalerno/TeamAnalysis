@@ -35,6 +35,7 @@ const fullWidthGoalPlugin = {
 };
 
 // Helper for templates
+// Helper for templates
 async function getTemplates() {
     let tpls = await appDb.getSetting('stat_templates', null);
     if (!tpls || !Array.isArray(tpls) || tpls.length === 0) {
@@ -54,10 +55,258 @@ async function getActiveTemplateId() {
     return activeId;
 }
 
+async function duplicateTemplate(templateId) {
+    const tpls = await getTemplates();
+    const source = tpls.find(t => t.id === templateId);
+    if (!source) return;
+
+    const newId = 'tpl_' + Date.now();
+    const newName = source.name + ' (Copia)';
+    tpls.push({ id: newId, name: newName });
+    await appDb.setSetting('stat_templates', tpls);
+
+    // Copy all custom_stats of source template
+    const allStats = await appDb.getAll('custom_stats');
+    const sourceStats = allStats.filter(s => s.templateId === templateId || (!s.templateId && templateId === 'default'));
+    const newStats = sourceStats.map((s, index) => {
+        const cloned = { ...s };
+        cloned.id = 'stat_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substring(2, 6);
+        cloned.templateId = newId;
+        return cloned;
+    });
+
+    if (newStats.length > 0) {
+        await appDb.addMultiple('custom_stats', newStats);
+    }
+
+    await appDb.setSetting('active_stat_template', newId);
+    await initTemplateControls();
+    await renderStatistics();
+    const modal = document.getElementById('templates-modal');
+    if (modal && modal.classList.contains('open')) {
+        await renderTemplatesModalList();
+    }
+}
+
+async function renameTemplate(templateId, newName) {
+    if (!newName || !newName.trim()) return;
+    const cleanName = newName.trim();
+    const tpls = await getTemplates();
+    const target = tpls.find(t => t.id === templateId);
+    if (!target) return;
+    target.name = cleanName;
+    await appDb.setSetting('stat_templates', tpls);
+    await initTemplateControls();
+    const modal = document.getElementById('templates-modal');
+    if (modal && modal.classList.contains('open')) {
+        await renderTemplatesModalList();
+    }
+}
+
+async function deleteTemplate(templateId) {
+    const tpls = await getTemplates();
+    if (tpls.length <= 1) {
+        alert("Impossibile eliminare l'unico template rimasto.");
+        return;
+    }
+    const target = tpls.find(t => t.id === templateId);
+    if (!target) return;
+
+    if (!confirm(`Eliminare il template "${target.name}" e tutte le sue statistiche?`)) return;
+
+    const allStats = await appDb.getAll('custom_stats');
+    for (const s of allStats) {
+        if (s.templateId === templateId || (!s.templateId && templateId === 'default')) {
+            await appDb.deleteRecord('custom_stats', s.id);
+        }
+    }
+
+    const remaining = tpls.filter(t => t.id !== templateId);
+    await appDb.setSetting('stat_templates', remaining);
+
+    const activeId = await getActiveTemplateId();
+    if (activeId === templateId) {
+        await appDb.setSetting('active_stat_template', remaining[0].id);
+    }
+
+    await initTemplateControls();
+    await renderStatistics();
+    const modal = document.getElementById('templates-modal');
+    if (modal && modal.classList.contains('open')) {
+        await renderTemplatesModalList();
+    }
+}
+
+async function createNewTemplate(name) {
+    let cleanName = name ? name.trim() : '';
+    if (!cleanName) {
+        const inputName = prompt('Nome del nuovo template:');
+        if (!inputName || !inputName.trim()) return;
+        cleanName = inputName.trim();
+    }
+    const currentTpls = await getTemplates();
+    const newId = 'tpl_' + Date.now();
+    currentTpls.push({ id: newId, name: cleanName });
+    await appDb.setSetting('stat_templates', currentTpls);
+    await appDb.setSetting('active_stat_template', newId);
+    await initTemplateControls();
+    await renderStatistics();
+    const modal = document.getElementById('templates-modal');
+    if (modal && modal.classList.contains('open')) {
+        await renderTemplatesModalList();
+    }
+}
+
+async function renderTemplatesModalList() {
+    const container = document.getElementById('templates-list-container');
+    if (!container) return;
+
+    const tpls = await getTemplates();
+    const activeId = await getActiveTemplateId();
+
+    container.innerHTML = '';
+    tpls.forEach(t => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; background:var(--bg-base); border:1px solid var(--border); border-radius:var(--radius);';
+
+        const isCurrentActive = (t.id === activeId);
+
+        const leftDiv = document.createElement('div');
+        leftDiv.style.cssText = 'display:flex; align-items:center; gap:8px; flex:1;';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = t.name;
+        input.className = 'template-name-input';
+        input.dataset.id = t.id;
+        input.style.cssText = 'padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.9rem; flex:1;';
+        leftDiv.appendChild(input);
+
+        if (isCurrentActive) {
+            const badge = document.createElement('span');
+            badge.style.cssText = 'font-size:0.75rem; background:var(--primary); color:#fff; padding:3px 8px; border-radius:12px; font-weight:600; white-space:nowrap;';
+            badge.textContent = 'Attivo';
+            leftDiv.appendChild(badge);
+        } else {
+            const actBtn = document.createElement('button');
+            actBtn.className = 'btn secondary activate-tpl-btn';
+            actBtn.dataset.id = t.id;
+            actBtn.style.cssText = 'padding:4px 8px; font-size:0.8rem; white-space:nowrap;';
+            actBtn.textContent = 'Attiva';
+            leftDiv.appendChild(actBtn);
+        }
+
+        const rightDiv = document.createElement('div');
+        rightDiv.style.cssText = 'display:flex; align-items:center; gap:6px;';
+
+        const dupBtn = document.createElement('button');
+        dupBtn.className = 'btn secondary duplicate-tpl-btn';
+        dupBtn.dataset.id = t.id;
+        dupBtn.title = 'Duplica Template';
+        dupBtn.style.cssText = 'padding:6px 8px; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem;';
+        dupBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Duplica`;
+        rightDiv.appendChild(dupBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn danger delete-tpl-btn';
+        delBtn.dataset.id = t.id;
+        delBtn.title = 'Elimina Template';
+        if (tpls.length <= 1) {
+            delBtn.disabled = true;
+            delBtn.style.cssText = 'opacity:0.5; cursor:not-allowed; padding:6px 8px; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;';
+        } else {
+            delBtn.style.cssText = 'padding:6px 8px; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;';
+        }
+        delBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Elimina`;
+        rightDiv.appendChild(delBtn);
+
+        item.appendChild(leftDiv);
+        item.appendChild(rightDiv);
+        container.appendChild(item);
+    });
+
+    container.querySelectorAll('.template-name-input').forEach(input => {
+        const id = input.dataset.id;
+        const saveName = async () => {
+            const val = input.value.trim();
+            if (val) {
+                await renameTemplate(id, val);
+            }
+        };
+        input.addEventListener('blur', saveName);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                input.blur();
+            }
+        });
+    });
+
+    container.querySelectorAll('.activate-tpl-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            await appDb.setSetting('active_stat_template', id);
+            await initTemplateControls();
+            await renderStatistics();
+            await renderTemplatesModalList();
+        });
+    });
+
+    container.querySelectorAll('.duplicate-tpl-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            await duplicateTemplate(id);
+        });
+    });
+
+    container.querySelectorAll('.delete-tpl-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            await deleteTemplate(id);
+        });
+    });
+}
+
+function setupTemplatesModal() {
+    const manageBtn = document.getElementById('manage-templates-btn');
+    const modal = document.getElementById('templates-modal');
+    const closeBtn = document.getElementById('close-templates-modal');
+    const saveBtn = document.getElementById('save-templates-modal-btn');
+    const addBtn = document.getElementById('modal-add-template-btn');
+    const overlay = document.getElementById('modal-overlay');
+
+    const openModal = async () => {
+        if (!modal) return;
+        await renderTemplatesModalList();
+        modal.classList.add('open');
+        if (overlay) overlay.classList.add('open');
+    };
+
+    const closeModal = () => {
+        if (!modal) return;
+        modal.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    };
+
+    if (manageBtn) {
+        manageBtn.onclick = openModal;
+    }
+    if (closeBtn) {
+        closeBtn.onclick = closeModal;
+    }
+    if (saveBtn) {
+        saveBtn.onclick = closeModal;
+    }
+    if (addBtn) {
+        addBtn.onclick = async () => {
+            await createNewTemplate();
+        };
+    }
+}
+
 async function initTemplateControls() {
     const select = document.getElementById('stat-template-select');
     const newBtn = document.getElementById('new-template-btn');
-    const renameBtn = document.getElementById('rename-template-btn');
+    const duplicateBtn = document.getElementById('duplicate-template-btn');
     const deleteBtn = document.getElementById('delete-template-btn');
     if (!select) return;
 
@@ -78,56 +327,27 @@ async function initTemplateControls() {
         await renderStatistics();
     };
 
-    newBtn.onclick = async () => {
-        const name = prompt('Nome del nuovo template:');
-        if (!name || !name.trim()) return;
-        const cleanName = name.trim();
-        const currentTpls = await getTemplates();
-        const newId = 'tpl_' + Date.now();
-        currentTpls.push({ id: newId, name: cleanName });
-        await appDb.setSetting('stat_templates', currentTpls);
-        await appDb.setSetting('active_stat_template', newId);
-        await initTemplateControls();
-        await renderStatistics();
-    };
+    if (newBtn) {
+        newBtn.onclick = async () => {
+            await createNewTemplate();
+        };
+    }
 
-    renameBtn.onclick = async () => {
-        const currentTpls = await getTemplates();
-        const currentId = await getActiveTemplateId();
-        const target = currentTpls.find(t => t.id === currentId);
-        if (!target) return;
-        const newName = prompt('Nuovo nome per il template:', target.name);
-        if (!newName || !newName.trim()) return;
-        target.name = newName.trim();
-        await appDb.setSetting('stat_templates', currentTpls);
-        await initTemplateControls();
-    };
+    if (duplicateBtn) {
+        duplicateBtn.onclick = async () => {
+            const currentId = await getActiveTemplateId();
+            await duplicateTemplate(currentId);
+        };
+    }
 
-    deleteBtn.onclick = async () => {
-        const currentTpls = await getTemplates();
-        if (currentTpls.length <= 1) {
-            alert('Impossibile eliminare l\'unico template rimasto.');
-            return;
-        }
-        const currentId = await getActiveTemplateId();
-        const target = currentTpls.find(t => t.id === currentId);
-        if (!target) return;
+    if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+            const currentId = await getActiveTemplateId();
+            await deleteTemplate(currentId);
+        };
+    }
 
-        if (!confirm(`Eliminare il template "${target.name}" e tutte le sue statistiche?`)) return;
-
-        const allStats = await appDb.getAll('custom_stats');
-        for (const s of allStats) {
-            if (s.templateId === currentId || (!s.templateId && currentId === 'default')) {
-                await appDb.deleteRecord('custom_stats', s.id);
-            }
-        }
-
-        const remaining = currentTpls.filter(t => t.id !== currentId);
-        await appDb.setSetting('stat_templates', remaining);
-        await appDb.setSetting('active_stat_template', remaining[0].id);
-        await initTemplateControls();
-        await renderStatistics();
-    };
+    setupTemplatesModal();
 }
 
 // Team view mode: 'all' = tutti i collaboratori, 'avg' = solo media team

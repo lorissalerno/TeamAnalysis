@@ -123,6 +123,10 @@ input:checked + .slider:before {
     z-index: 100;
 }
 
+.modal-overlay.open {
+    display: block;
+}
+
 .modal {
     display: none;
     position: fixed;
