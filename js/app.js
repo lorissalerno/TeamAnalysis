@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await appDb.setSetting('last_active_section', sectionId);
 
         // Trigger specific section render if needed
-        if (sectionId === 'statistics') renderStatistics();
-        if (sectionId === 'dashboard') renderDashboard();
+        if (sectionId === 'statistics' && window.renderStatistics) renderStatistics();
+        if (sectionId === 'dashboard' && window.renderDashboard) window.renderDashboard();
         if (sectionId === 'database') renderImportedData();
         if (sectionId === 'goals' && window.renderGoals) renderGoals();
     }
@@ -134,8 +134,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.appState.isAnonymous = e.target.checked;
         await appDb.setSetting('isAnonymous', e.target.checked);
         // Refresh views
-        renderDashboard();
-        renderStatistics();
+        if (window.renderDashboard) window.renderDashboard();
+        if (window.renderStatistics) renderStatistics();
         renderImportedData();
     });
 
@@ -144,8 +144,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.appState.activeYear = e.target.value;
         await appDb.setSetting('activeYear', e.target.value);
         await loadAnonymousMap();
-        renderDashboard();
-        renderStatistics();
+        if (window.renderDashboard) window.renderDashboard();
+        if (window.renderStatistics) renderStatistics();
         renderImportedData();
     });
 
@@ -777,8 +777,8 @@ function setupSettings() {
         
         transaction.oncomplete = () => {
             modal.classList.remove('open');
-            renderDashboard();
-            renderStatistics();
+            if (window.renderDashboard) window.renderDashboard();
+            if (window.renderStatistics) renderStatistics();
         };
     });
     
@@ -812,10 +812,6 @@ function setupSettings() {
 }
 
 // --- RENDERING (Placeholders) ---
-function renderDashboard() {
-    const grid = document.getElementById('dashboard-grid');
-    grid.innerHTML = '<p style="color:var(--text-muted)">Nessun widget configurato. Aggiungi un widget.</p>';
-}
 
 function renderStatistics() {
     // Populate individual select
