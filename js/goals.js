@@ -86,16 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <!-- Destra: Riquadro Target/Range + Pulsanti -->
                 <div style="display:flex; align-items:center; gap:16px; flex-shrink:0; flex-wrap:wrap;">
                     <!-- Riquadro Target & Range -->
-                    <div style="background:var(--bg-alt, rgba(255,255,255,0.03)); border:1px solid var(--border, rgba(255,255,255,0.08)); border-radius:8px; padding:8px 16px; display:flex; align-items:center; gap:20px;">
-                        <div>
-                            <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:2px;">Target</div>
-                            <div style="font-size:1.25rem; font-weight:800; color:var(--primary, #6366f1); font-family:monospace; line-height:1;">${g.target}</div>
+                    <div style="background:var(--bg-alt, rgba(255,255,255,0.03)); border:1px solid var(--border, rgba(255,255,255,0.08)); border-radius:8px; padding:8px 14px; display:flex; align-items:center; gap:14px; white-space:nowrap;">
+                        <div style="display:flex; align-items:baseline; gap:6px;">
+                            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Target:</span>
+                            <span style="font-size:1.15rem; font-weight:800; color:var(--primary, #6366f1); font-family:monospace;">${g.target}</span>
                         </div>
 
                         ${minVal !== null ? `
-                        <div style="border-left:1px solid var(--border, rgba(255,255,255,0.1)); padding-left:16px; text-align:right;">
-                            <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:2px;">Range (${tolLabel})</div>
-                            <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); font-family:monospace; line-height:1;">${minVal} – ${maxVal}</div>
+                        <div style="border-left:1px solid var(--border, rgba(255,255,255,0.1)); padding-left:14px; display:flex; align-items:baseline; gap:6px;">
+                            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Range <span style="font-size:0.7rem; font-weight:500; text-transform:none;">(${tolLabel})</span>:</span>
+                            <span style="font-size:1rem; font-weight:700; color:var(--text-main); font-family:monospace;">${minVal} – ${maxVal}</span>
                         </div>
                         ` : ''}
                     </div>
