@@ -65,42 +65,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            card.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 20px; flex-wrap:wrap;';
+            card.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 20px; flex-wrap:wrap;';
 
             card.innerHTML = `
-                <!-- Sinistra: Titolo + Badge -->
-                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:280px; flex-wrap:wrap;">
-                    <h3 style="font-size:0.95rem; font-weight:700; color:var(--text-main); margin:0; line-height:1.3;">
+                <!-- Sinistra: Titolo e sotto i Badge -->
+                <div style="flex:1; min-width:240px;">
+                    <h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0 0 6px 0; line-height:1.35; word-break:break-word;">
                         ${g.metric}
                     </h3>
-                    <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary, #6366f1); border:1px solid rgba(99,102,241,0.25); white-space:nowrap;">
-                        Skill: ${skillText}
-                    </span>
-                    <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:var(--bg-alt, rgba(255,255,255,0.05)); color:var(--text-muted); border:1px solid var(--border, rgba(255,255,255,0.1)); white-space:nowrap;">
-                        ${empText}
-                    </span>
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary, #6366f1); border:1px solid rgba(99,102,241,0.25); white-space:nowrap;">
+                            Skill: ${skillText}
+                        </span>
+                        <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:var(--bg-alt, rgba(255,255,255,0.05)); color:var(--text-muted); border:1px solid var(--border, rgba(255,255,255,0.1)); white-space:nowrap;">
+                            ${empText}
+                        </span>
+                    </div>
                 </div>
 
-                <!-- Centro: Target & Range -->
-                <div style="display:flex; align-items:center; gap:16px; flex-shrink:0;">
-                    <div style="display:flex; align-items:baseline; gap:6px;">
-                        <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Target</span>
-                        <span style="font-size:1.15rem; font-weight:800; color:var(--primary, #6366f1); font-family:monospace;">${g.target}</span>
+                <!-- Destra: Riquadro Target/Range + Pulsanti -->
+                <div style="display:flex; align-items:center; gap:16px; flex-shrink:0; flex-wrap:wrap;">
+                    <!-- Riquadro Target & Range -->
+                    <div style="background:var(--bg-alt, rgba(255,255,255,0.03)); border:1px solid var(--border, rgba(255,255,255,0.08)); border-radius:8px; padding:8px 16px; display:flex; align-items:center; gap:20px;">
+                        <div>
+                            <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:2px;">Target</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:var(--primary, #6366f1); font-family:monospace; line-height:1;">${g.target}</div>
+                        </div>
+
+                        ${minVal !== null ? `
+                        <div style="border-left:1px solid var(--border, rgba(255,255,255,0.1)); padding-left:16px; text-align:right;">
+                            <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:2px;">Range (${tolLabel})</div>
+                            <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); font-family:monospace; line-height:1;">${minVal} – ${maxVal}</div>
+                        </div>
+                        ` : ''}
                     </div>
 
-                    ${minVal !== null ? `
-                    <div style="display:flex; align-items:baseline; gap:6px; background:var(--bg-alt, rgba(255,255,255,0.03)); border:1px solid var(--border, rgba(255,255,255,0.08)); border-radius:6px; padding:4px 10px;">
-                        <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Range</span>
-                        <span style="font-size:0.9rem; font-weight:700; color:var(--text-main); font-family:monospace;">${minVal} – ${maxVal}</span>
-                        <span style="font-size:0.75rem; color:var(--text-muted);">(${tolLabel})</span>
+                    <!-- Pulsanti Azioni -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button class="btn secondary" style="padding:6px 14px; font-size:0.8rem;" onclick="openGoalModal('${g.id}')">Modifica</button>
+                        <button class="btn secondary" style="padding:6px 14px; font-size:0.8rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="deleteGoal('${g.id}')">Elimina</button>
                     </div>
-                    ` : ''}
-                </div>
-
-                <!-- Destra: Pulsanti -->
-                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                    <button class="btn secondary" style="padding:4px 12px; font-size:0.8rem;" onclick="openGoalModal('${g.id}')">Modifica</button>
-                    <button class="btn secondary" style="padding:4px 12px; font-size:0.8rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="deleteGoal('${g.id}')">Elimina</button>
                 </div>
             `;
             list.appendChild(card);
