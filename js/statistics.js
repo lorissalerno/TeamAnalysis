@@ -144,6 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
         createBtn.addEventListener('click', openStatModal);
     }
     
+    const reorderBtn = document.getElementById('reorder-stats-btn');
+    if(reorderBtn) {
+        reorderBtn.addEventListener('click', openReorderModal);
+    }
+    
     // Setup Individual Select change listener
     const indSelect = document.getElementById('individual-select');
     if(indSelect) {
@@ -403,11 +408,16 @@ async function saveNewStat() {
     
     const activeTemplateId = await getActiveTemplateId();
 
+    const allStats = await appDb.getAll('custom_stats');
+    const templateStats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
+    const maxOrder = templateStats.reduce((max, s) => Math.max(max, s.order !== undefined && s.order !== null ? s.order : -1), -1);
+
     const newStat = {
         id: 'stat_' + Date.now(),
         title, metric, skill, type, product,
         templateId: activeTemplateId,
-        year: window.appState.activeYear
+        year: window.appState.activeYear,
+        order: maxOrder + 1
     };
     
     await appDb.addMultiple('custom_stats', [newStat]);
@@ -424,7 +434,9 @@ async function renderTeamStats() {
     const activeTemplateId = await getActiveTemplateId();
 
     const allStats = await appDb.getAll('custom_stats');
-    const stats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
+    const stats = allStats
+        .filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     
     if (stats.length === 0) {
         container.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica presente in questo template. Usa il pulsante "Nuova Statistica".</p>';
@@ -458,7 +470,9 @@ async function renderIndividualStats() {
     const activeTemplateId = await getActiveTemplateId();
 
     const allStats = await appDb.getAll('custom_stats');
-    const stats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
+    const stats = allStats
+        .filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
@@ -963,3 +977,165 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     return card;
 }
+
+function getTypeLabel(type) {
+    if (type === 'bar') return '(barra)';
+    if (type === 'line') return '(linee)';
+    if (type === 'table') return '(dati)';
+    return `(${type})`;
+}
+
+async function openReorderModal() {
+    let modal = document.getElementById('reorder-stat-modal');
+    if (!modal) {
+        modal = createReorderModalHTML();
+    }
+    await renderReorderList();
+    modal.classList.add('open');
+}
+
+function createReorderModalHTML() {
+    const html = `
+    <div id="reorder-stat-modal" class="modal">
+        <div class="modal-header">
+            <h2>Riordina Grafici</h2>
+            <button class="close-modal" onclick="document.getElementById('reorder-stat-modal').classList.remove('open')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">
+                Trascina i titoli su e giù o usa le frecce per riordinare la disposizione dei grafici.
+            </p>
+            <div id="reorder-stat-list" class="reorder-list"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn primary" onclick="document.getElementById('reorder-stat-modal').classList.remove('open')">Chiudi</button>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+    return document.getElementById('reorder-stat-modal');
+}
+
+async function renderReorderList() {
+    const container = document.getElementById('reorder-stat-list');
+    if (!container) return;
+
+    const activeTemplateId = await getActiveTemplateId();
+    const allStats = await appDb.getAll('custom_stats');
+    let stats = allStats
+        .filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    if (stats.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Nessuna statistica presente in questo template.</p>';
+        return;
+    }
+
+    let draggedIdx = null;
+
+    function buildListUI() {
+        container.innerHTML = '';
+        stats.forEach((stat, idx) => {
+            const item = document.createElement('div');
+            item.className = 'reorder-item';
+            item.setAttribute('draggable', 'true');
+            item.setAttribute('data-idx', idx);
+
+            const typeLabel = getTypeLabel(stat.type);
+
+            item.innerHTML = `
+                <div class="reorder-item-handle" title="Trascina per riordinare">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                        <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                    </svg>
+                </div>
+                <div class="reorder-item-title">
+                    <span>${stat.title || stat.metric}</span>
+                    <span class="reorder-item-type">${typeLabel}</span>
+                </div>
+                <div class="reorder-item-actions">
+                    <button class="btn secondary move-up-btn" style="padding:4px 6px; font-size:0.75rem;" title="Sposta Su" ${idx === 0 ? 'disabled' : ''}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                    </button>
+                    <button class="btn secondary move-down-btn" style="padding:4px 6px; font-size:0.75rem;" title="Sposta Giù" ${idx === stats.length - 1 ? 'disabled' : ''}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                </div>
+            `;
+
+            // Drag events
+            item.addEventListener('dragstart', (e) => {
+                draggedIdx = idx;
+                item.classList.add('dragging');
+                if (e.dataTransfer) {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(idx));
+                }
+            });
+
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (e.dataTransfer) {
+                    e.dataTransfer.dropEffect = 'move';
+                }
+            });
+
+            item.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                if (draggedIdx !== null && draggedIdx !== idx) {
+                    const movedItem = stats.splice(draggedIdx, 1)[0];
+                    stats.splice(idx, 0, movedItem);
+                    await saveStatsOrder(stats);
+                    buildListUI();
+                }
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                draggedIdx = null;
+            });
+
+            // Button actions
+            const upBtn = item.querySelector('.move-up-btn');
+            if (upBtn) {
+                upBtn.addEventListener('click', async () => {
+                    if (idx > 0) {
+                        const temp = stats[idx];
+                        stats[idx] = stats[idx - 1];
+                        stats[idx - 1] = temp;
+                        await saveStatsOrder(stats);
+                        buildListUI();
+                    }
+                });
+            }
+
+            const downBtn = item.querySelector('.move-down-btn');
+            if (downBtn) {
+                downBtn.addEventListener('click', async () => {
+                    if (idx < stats.length - 1) {
+                        const temp = stats[idx];
+                        stats[idx] = stats[idx + 1];
+                        stats[idx + 1] = temp;
+                        await saveStatsOrder(stats);
+                        buildListUI();
+                    }
+                });
+            }
+
+            container.appendChild(item);
+        });
+    }
+
+    buildListUI();
+}
+
+async function saveStatsOrder(orderedStats) {
+    orderedStats.forEach((stat, index) => {
+        stat.order = index;
+    });
+    await appDb.addMultiple('custom_stats', orderedStats);
+    await renderTeamStats();
+    await renderIndividualStats();
+}
+
