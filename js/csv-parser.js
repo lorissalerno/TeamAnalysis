@@ -239,7 +239,7 @@ class CSVParser {
                         "Nb Events": 1,
                         "AOIT gew": Math.round(unitGew * 100) / 100
                     };
-                    results.push({ year: year.toString(), date, employee, data: dataObj, category: 'sales' });
+                    results.push({ year: year.toString(), date, employee, skill: 'AOIT', data: dataObj, category: 'sales' });
                 }
             }
         }
@@ -279,11 +279,9 @@ class CSVParser {
                 }
             }
             
-            // Since this is a different structure from AOIT but still 'sales', 
-            // we give it "Product: Nuovi Abo" so it can be distinguished, or just group them.
             dataObj["Product"] = "Nuovi Abo";
             
-            results.push({ year: year.toString(), date, employee, data: dataObj, category: 'sales' });
+            results.push({ year: year.toString(), date, employee, skill: 'Nuovi Abo', data: dataObj, category: 'sales' });
         }
         return results;
     }

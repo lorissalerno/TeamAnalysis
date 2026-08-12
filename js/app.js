@@ -606,23 +606,41 @@ async function renderImportedData() {
     });
 
     salesRecords.forEach(r => {
-        const productName = r.data.Product || 'Generale';
-        const skillName = `Sales (${productName})`;
+        const skillName = r.skill || (r.data && r.data.Product === 'Nuovi Abo' ? 'Nuovi Abo' : 'AOIT');
+        const productName = (r.data && r.data.Product) ? r.data.Product : 'AOIT gew';
+        
+        let value = 0;
+        let metricKeyForRecord = 'AOIT gew';
         if (r.data && typeof r.data === 'object') {
-            Object.entries(r.data).forEach(([metricName, val]) => {
-                if (metricName === 'Product') return;
-                singleRows.push({
-                    recordId: r.id,
-                    store: 'sales',
-                    date: r.date,
-                    employee: r.employee,
-                    type: 'Sales',
-                    skill: skillName,
-                    metric: metricName,
-                    value: val
-                });
-            });
+            if (r.data['AOIT gew'] !== undefined) {
+                value = r.data['AOIT gew'];
+                metricKeyForRecord = 'AOIT gew';
+            } else if (r.data['Value'] !== undefined) {
+                value = r.data['Value'];
+                metricKeyForRecord = 'Value';
+            } else if (r.data['W- Value ACQ'] !== undefined) {
+                value = r.data['W- Value ACQ'];
+                metricKeyForRecord = 'W- Value ACQ';
+            } else {
+                const keys = Object.keys(r.data).filter(k => k !== 'Product');
+                if (keys.length > 0) {
+                    metricKeyForRecord = keys[0];
+                    value = r.data[keys[0]];
+                }
+            }
         }
+
+        singleRows.push({
+            recordId: r.id,
+            store: 'sales',
+            date: r.date,
+            employee: r.employee,
+            type: 'Sales',
+            skill: skillName,
+            metric: productName,
+            metricKey: metricKeyForRecord,
+            value: value
+        });
     });
 
     // Apply Filter by Skill / Sales
@@ -671,7 +689,7 @@ async function renderImportedData() {
             <td style="font-weight:500;">${r.metric}</td>
             <td style="font-weight:600;">${r.value}</td>
             <td style="text-align:center;">
-                <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px;">
+                <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px;">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
                 <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px;">
@@ -700,20 +718,24 @@ async function renderImportedData() {
             const store = e.currentTarget.getAttribute('data-store');
             const metricKey = e.currentTarget.getAttribute('data-metric');
 
-            if (confirm(`Eliminare la riga metrica "${metricKey}"?`)) {
-                const records = await appDb.getAll(store);
-                const targetRecord = records.find(x => x.id === id);
-                if (targetRecord && targetRecord.data) {
-                    delete targetRecord.data[metricKey];
-                    const remainingKeys = Object.keys(targetRecord.data);
-                    if (remainingKeys.length === 0 || (store === 'sales' && remainingKeys.length === 1 && remainingKeys[0] === 'Product')) {
-                        await appDb.deleteRecord(store, id);
-                    } else {
-                        const transaction = appDb._db.transaction([store], 'readwrite');
-                        transaction.objectStore(store).put(targetRecord);
+            if (confirm(`Eliminare questa riga ("${metricKey}")?`)) {
+                if (store === 'sales') {
+                    await appDb.deleteRecord('sales', id);
+                } else {
+                    const records = await appDb.getAll(store);
+                    const targetRecord = records.find(x => x.id === id);
+                    if (targetRecord && targetRecord.data) {
+                        delete targetRecord.data[metricKey];
+                        const remainingKeys = Object.keys(targetRecord.data);
+                        if (remainingKeys.length === 0) {
+                            await appDb.deleteRecord(store, id);
+                        } else {
+                            const transaction = appDb._db.transaction([store], 'readwrite');
+                            transaction.objectStore(store).put(targetRecord);
+                        }
                     }
                 }
-                logImport(`Eliminata riga metrica "${metricKey}".`);
+                logImport(`Eliminata riga "${metricKey}".`);
                 await refreshYearsList();
                 await renderImportedData();
                 if (window.renderStatistics) renderStatistics();
