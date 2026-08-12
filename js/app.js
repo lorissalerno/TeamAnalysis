@@ -694,7 +694,6 @@ async function renderImportedData() {
             <td><strong>${dispEmployee}</strong></td>
             <td>${skillBadge}</td>
             <td style="font-weight:500;">${r.metric}</td>
-            <td style="font-weight:500;">${r.qty}</td>
             <td style="font-weight:600;">${r.value}</td>
             <td style="text-align:center;">
                 <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px;">
