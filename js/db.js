@@ -199,6 +199,16 @@ const db = {
                 store.put(s);
             });
         }
+        const goals = await this.getAll('goals');
+        const goalsToUpdate = goals.filter(g => g.skill === oldName);
+        if (goalsToUpdate.length > 0) {
+            const transaction = this._db.transaction(['goals'], 'readwrite');
+            const store = transaction.objectStore('goals');
+            goalsToUpdate.forEach(g => {
+                g.skill = newName;
+                store.put(g);
+            });
+        }
     },
     
     // Backup entire DB to JSON

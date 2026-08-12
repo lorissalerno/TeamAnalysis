@@ -454,6 +454,8 @@ function setupSkillsModal() {
             await saveSkills(newSkillsList);
             await renderImportedData();
             if (window.renderStatistics) renderStatistics();
+            if (window.renderGoals) renderGoals();
+            if (window.renderDashboard) renderDashboard();
             skillsModal.classList.remove('open');
         });
     }
