@@ -198,6 +198,29 @@ function formatDateLabel(dateStr) {
     return dateStr;
 }
 
+function parseMetricValue(val) {
+    if (val === undefined || val === null || val === '') return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    let str = String(val).trim().replace('%', '');
+    if (str.includes('.') && str.includes(',')) {
+        str = str.replace(/\./g, '').replace(',', '.');
+    } else if (str.includes(',')) {
+        str = str.replace(',', '.');
+    }
+    const n = parseFloat(str);
+    return isNaN(n) ? 0 : n;
+}
+
+function hexToRgba(hex, opacity) {
+    if (!hex || typeof hex !== 'string') return `rgba(59, 130, 246, ${opacity})`;
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '') {
     const card = document.createElement('div');
     card.className = 'card stat-card';
@@ -249,8 +272,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     const canvasContainer = document.createElement('div');
     canvasContainer.style.width = '100%';
-    canvasContainer.style.height = '250px';
     canvasContainer.style.marginTop = '12px';
+    if (statConfig.type === 'table') {
+        canvasContainer.style.height = 'auto';
+        canvasContainer.style.overflowX = 'auto';
+    } else {
+        canvasContainer.style.height = '360px';
+    }
     card.appendChild(canvasContainer);
     
     // Process Data
@@ -271,7 +299,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
 
         const date = row.date;
         const emp = row.employee;
-        const val = parseFloat(row.data[rawKey]) || 0;
+        const val = parseMetricValue(row.data[rawKey]);
 
         datesSet.add(date);
         if (emp) empSet.add(emp);
@@ -341,7 +369,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             });
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
-            canvasContainer.style.overflowY = 'auto';
         } else {
             let html = '<table class="data-table"><thead><tr><th>Collaboratore</th>';
             displayLabels.forEach(l => {
@@ -367,8 +394,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             html += '</tr>';
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
-            canvasContainer.style.overflowX = 'auto';
-            canvasContainer.style.overflowY = 'auto';
         }
     } else {
         const canvas = document.createElement('canvas');
@@ -381,13 +406,16 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             '#e11d48', '#a855f7'
         ];
 
+        const isBar = statConfig.type === 'bar';
+
         if (isIndividual) {
             datasets.push({
                 label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
                 data: dataPts,
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 2,
+                backgroundColor: isBar ? hexToRgba('#3b82f6', 0.75) : 'rgba(59, 130, 246, 0.2)',
+                borderColor: '#3b82f6',
+                borderWidth: isBar ? 1 : 2,
+                borderRadius: isBar ? 4 : 0,
                 tension: 0.3
             });
         } else {
@@ -397,9 +425,10 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 datasets.push({
                     label: window.getDisplayName(emp),
                     data: empPts,
-                    backgroundColor: color + '80',
+                    backgroundColor: isBar ? hexToRgba(color, 0.75) : hexToRgba(color, 0.2),
                     borderColor: color,
-                    borderWidth: 2,
+                    borderWidth: isBar ? 1 : 2,
+                    borderRadius: isBar ? 4 : 0,
                     tension: 0.3
                 });
             });
@@ -449,7 +478,26 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            padding: 8,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
             }
         });
     }
