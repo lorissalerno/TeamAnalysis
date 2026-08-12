@@ -244,6 +244,9 @@
                 <div class="card">
                     <h2>Collaboratori</h2>
                     <p>Gestisci i collaboratori del team, i loro ID numerici e le skill assegnate.</p>
+                    <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+                        Totale: <strong id="collab-count-badge" style="color:var(--primary);">—</strong> collaboratori
+                    </p>
                     <button class="btn secondary" id="manage-mapping-btn">Gestisci Collaboratori</button>
                 </div>
                 <div class="card">
@@ -482,18 +485,18 @@
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <label style="font-weight: 500;">Sovrascrivi dal mese di:</label>
                     <div id="wizard-month-select" class="month-buttons-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-                        <button type="button" class="btn btn-secondary month-btn" data-value="01">Gennaio</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="02">Febbraio</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="03">Marzo</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="04">Aprile</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="05">Maggio</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="06">Giugno</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="07">Luglio</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="08">Agosto</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="09">Settembre</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="10">Ottobre</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="11">Novembre</button>
-                        <button type="button" class="btn btn-secondary month-btn" data-value="12">Dicembre</button>
+                        <div class="wizard-month-card" data-value="01">Gennaio</div>
+                        <div class="wizard-month-card" data-value="02">Febbraio</div>
+                        <div class="wizard-month-card" data-value="03">Marzo</div>
+                        <div class="wizard-month-card" data-value="04">Aprile</div>
+                        <div class="wizard-month-card" data-value="05">Maggio</div>
+                        <div class="wizard-month-card" data-value="06">Giugno</div>
+                        <div class="wizard-month-card" data-value="07">Luglio</div>
+                        <div class="wizard-month-card" data-value="08">Agosto</div>
+                        <div class="wizard-month-card" data-value="09">Settembre</div>
+                        <div class="wizard-month-card" data-value="10">Ottobre</div>
+                        <div class="wizard-month-card" data-value="11">Novembre</div>
+                        <div class="wizard-month-card" data-value="12">Dicembre</div>
                         <input type="hidden" id="wizard-month-date" value="">
                     </div>
                 </div>

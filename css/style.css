@@ -135,10 +135,32 @@ a:hover {
     font-weight: 600;
 }
 
-/* Custom Month Select Dropdown */
 .custom-month-select {
     position: relative;
     flex: 1;
+}
+.wizard-month-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--bg-base);
+    color: var(--text-main);
+    font-weight: 500;
+    font-size: 0.9rem;
+    user-select: none;
+    transition: all var(--transition);
+}
+.wizard-month-card:hover {
+    border-color: var(--primary);
+    background: var(--bg-surface-hover);
+}
+.wizard-month-card.active {
+    border: 2px solid var(--primary);
+    background: var(--accent-muted);
+    color: var(--primary);
+    font-weight: 600;
 }
 .custom-month-trigger {
     width: 100%;
