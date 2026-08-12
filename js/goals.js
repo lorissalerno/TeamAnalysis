@@ -233,11 +233,24 @@ async function openGoalModal(goalId = null) {
         }
     }
 
-    targetInput.oninput = syncToleranceFromPct;
-    minusPctInput.oninput = syncToleranceFromPct;
-    plusPctInput.oninput = syncToleranceFromPct;
-    minusNumInput.oninput = syncToleranceMinusFromNum;
-    plusNumInput.oninput = syncTolerancePlusFromNum;
+    targetInput.oninput = () => { syncToleranceFromPct(); setSuffixes(); };
+    minusPctInput.oninput = () => { syncToleranceFromPct(); };
+    plusPctInput.oninput = () => { syncToleranceFromPct(); };
+    minusNumInput.oninput = () => { syncToleranceMinusFromNum(); setSuffixes(); };
+    plusNumInput.oninput = () => { syncTolerancePlusFromNum(); setSuffixes(); };
+
+    // Suffix % visibility management
+    const minusPctSuffix = document.getElementById('tol-minus-pct-suffix');
+    const plusPctSuffix = document.getElementById('tol-plus-pct-suffix');
+
+    function updateSuffix(input, suffix) {
+        suffix.style.display = input.value !== '' ? 'block' : 'none';
+    }
+
+    function setSuffixes() {
+        updateSuffix(minusPctInput, minusPctSuffix);
+        updateSuffix(plusPctInput, plusPctSuffix);
+    }
 
     // Load existing goal values if editing
     if (editingGoalId) {
@@ -253,29 +266,31 @@ async function openGoalModal(goalId = null) {
             empSelect.value = existing.employee || '';
             
             if (existing.toleranceType === 'percentage') {
-                minusPctInput.value = existing.toleranceMinus ?? 0;
-                plusPctInput.value = existing.tolerancePlus ?? 0;
+                minusPctInput.value = existing.toleranceMinus ?? '';
+                plusPctInput.value = existing.tolerancePlus ?? '';
                 syncToleranceFromPct();
             } else if (existing.toleranceType === 'numeric') {
-                minusNumInput.value = existing.toleranceMinus ?? 0;
-                plusNumInput.value = existing.tolerancePlus ?? 0;
+                minusNumInput.value = existing.toleranceMinus ?? '';
+                plusNumInput.value = existing.tolerancePlus ?? '';
                 syncToleranceMinusFromNum();
                 syncTolerancePlusFromNum();
             } else {
-                minusPctInput.value = 0;
-                plusPctInput.value = 0;
-                minusNumInput.value = 0;
-                plusNumInput.value = 0;
+                minusPctInput.value = '';
+                plusPctInput.value = '';
+                minusNumInput.value = '';
+                plusNumInput.value = '';
             }
+            setSuffixes();
         }
     } else {
         targetInput.value = '';
         skillSelect.value = 'ALL';
         empSelect.value = '';
-        minusPctInput.value = 0;
-        plusPctInput.value = 0;
-        minusNumInput.value = 0;
-        plusNumInput.value = 0;
+        minusPctInput.value = '';
+        plusPctInput.value = '';
+        minusNumInput.value = '';
+        plusNumInput.value = '';
+        setSuffixes();
     }
 
     modal.classList.add('open');
