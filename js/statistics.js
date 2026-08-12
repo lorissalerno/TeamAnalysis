@@ -637,12 +637,11 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     } else {
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
-        let datasets = [];
-        // Palette sgargiante ad alto contrasto e ottima leggibilità sia in dark che light mode
-        const PALETTE = [
-            '#FF2600', '#00A8FF', '#9B51E0', '#00E676', '#FF007F', 
-            '#FF9100', '#00B8D9', '#7C4DFF', '#F50057', '#00C851', 
-            '#FFAB00', '#2979FF'
+        // Palette sfumature di Blu per collaboratori
+        const BLUE_PALETTE = [
+            '#2563EB', '#38BDF8', '#1D4ED8', '#0284C7', 
+            '#6366F1', '#0EA5E9', '#1E40AF', '#60A5FA', 
+            '#4F46E5', '#0369A1', '#93C5FD', '#1E3A8A'
         ];
 
         const isBar = statConfig.type === 'bar';
@@ -652,9 +651,9 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
                 data: dataPts,
                 type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#2979FF', 0.8) : 'rgba(41, 121, 255, 0.15)',
-                borderColor: '#2979FF',
-                borderWidth: isBar ? 1 : 1.5,
+                backgroundColor: isBar ? hexToRgba('#2563EB', 0.8) : 'rgba(37, 99, 235, 0.15)',
+                borderColor: '#2563EB',
+                borderWidth: isBar ? 1 : 1.8,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
                 pointRadius: 0,
@@ -668,13 +667,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#00A3FF',
-                    backgroundColor: '#00A3FF',
+                    borderColor: '#F59E0B',
+                    backgroundColor: '#F59E0B',
                     borderWidth: 3.5,
                     borderDash: [6, 4],
                     pointRadius: 7,
                     pointHoverRadius: 10,
-                    pointBackgroundColor: '#00A3FF',
+                    pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     fill: false,
@@ -688,14 +687,14 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 label: 'Media Team',
                 data: teamAvgPts,
                 type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#00A3FF', 0.85) : 'rgba(0, 163, 255, 0.15)',
-                borderColor: '#00A3FF',
+                backgroundColor: isBar ? hexToRgba('#F59E0B', 0.85) : 'rgba(245, 158, 11, 0.15)',
+                borderColor: '#F59E0B',
                 borderWidth: isBar ? 1 : 3.5,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
                 pointRadius: isBar ? 0 : 7,
                 pointHoverRadius: isBar ? 0 : 10,
-                pointBackgroundColor: '#00A3FF',
+                pointBackgroundColor: '#F59E0B',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
                 borderDash: isBar ? [] : [6, 4],
@@ -704,7 +703,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             });
         } else {
             employees.forEach((emp, idx) => {
-                const color = PALETTE[idx % PALETTE.length];
+                const color = BLUE_PALETTE[idx % BLUE_PALETTE.length];
                 const empPts = labels.map(date => {
                     if (!datesWithData.has(date)) return null;
                     return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
@@ -715,7 +714,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     type: isBar ? 'bar' : 'line',
                     backgroundColor: isBar ? hexToRgba(color, 0.8) : hexToRgba(color, 0.12),
                     borderColor: color,
-                    borderWidth: isBar ? 1 : 1.5,
+                    borderWidth: isBar ? 1 : 1.8,
                     borderRadius: isBar ? 4 : 0,
                     minBarLength: isBar ? 4 : 0,
                     pointRadius: 0,
@@ -730,13 +729,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#00A3FF',
-                    backgroundColor: '#00A3FF',
+                    borderColor: '#F59E0B',
+                    backgroundColor: '#F59E0B',
                     borderWidth: 3.5,
                     borderDash: [6, 4],
                     pointRadius: 7,
                     pointHoverRadius: 10,
-                    pointBackgroundColor: '#00A3FF',
+                    pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     fill: false,
@@ -767,25 +766,17 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             relevantGoal = candidateGoals.find(g => g.employee === employeeName && (!g.skill || g.skill === 'ALL')) ||
                            candidateGoals.find(g => !g.employee && (!g.skill || g.skill === 'ALL'));
         }
-        
+
+        let maxTarget = undefined;
+        let minTarget = undefined;
+
         if (relevantGoal) {
-            datasets.push({
-                label: 'Obiettivo',
-                data: labels.map(() => relevantGoal.target),
-                type: 'line',
-                borderColor: 'rgba(239, 68, 68, 1)',
-                borderWidth: 2,
-                borderDash: [5, 5],
-                fill: false,
-                pointRadius: 0,
-                order: 0
-            });
+            maxTarget = relevantGoal.target;
+            minTarget = relevantGoal.target;
 
             if (relevantGoal.toleranceType && relevantGoal.toleranceType !== 'none') {
                 const plus = parseFloat(relevantGoal.tolerancePlus) || 0;
                 const minus = parseFloat(relevantGoal.toleranceMinus) || 0;
-                let maxTarget = relevantGoal.target;
-                let minTarget = relevantGoal.target;
 
                 if (relevantGoal.toleranceType === 'numeric') {
                     maxTarget = relevantGoal.target + plus;
@@ -793,34 +784,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 } else if (relevantGoal.toleranceType === 'percentage') {
                     maxTarget = relevantGoal.target * (1 + plus / 100);
                     minTarget = relevantGoal.target * (1 - minus / 100);
-                }
-
-                if (plus > 0) {
-                    datasets.push({
-                        label: 'Tolleranza Max',
-                        data: labels.map(() => maxTarget),
-                        type: 'line',
-                        borderColor: 'rgba(239, 68, 68, 0.4)',
-                        borderWidth: 1,
-                        borderDash: [3, 3],
-                        fill: false,
-                        pointRadius: 0,
-                        order: 0
-                    });
-                }
-                if (minus > 0) {
-                    datasets.push({
-                        label: 'Tolleranza Min',
-                        data: labels.map(() => minTarget),
-                        type: 'line',
-                        borderColor: 'rgba(239, 68, 68, 0.4)',
-                        borderWidth: 1,
-                        borderDash: [3, 3],
-                        fill: plus > 0 ? '-1' : false,
-                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                        pointRadius: 0,
-                        order: 0
-                    });
                 }
             }
         }
@@ -836,6 +799,11 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 });
             }
         });
+        if (relevantGoal) {
+            allVals.push(relevantGoal.target);
+            if (maxTarget !== undefined) allVals.push(maxTarget);
+            if (minTarget !== undefined) allVals.push(minTarget);
+        }
 
         // Round up/down to a "nice" number respecting magnitude
         function niceRoundUp(val) {
@@ -874,28 +842,85 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             yScalesConfig = { beginAtZero: true };
         }
 
+        // Plugin per estendere la linea dell'obiettivo viola da estremo a estremo (sinistra a destra)
+        const fullWidthGoalPlugin = {
+            id: 'fullWidthGoalPlugin',
+            beforeDraw(chart) {
+                const goalConfig = chart.options.plugins.fullWidthGoal;
+                if (!goalConfig || goalConfig.target === undefined || goalConfig.target === null) return;
+                const { ctx, chartArea, scales: { y } } = chart;
+                if (!chartArea || !y) return;
+
+                const left = chartArea.left;
+                const right = chartArea.right;
+
+                ctx.save();
+
+                // Tolleranza (area riempita viola trasparente)
+                if (goalConfig.minTarget !== undefined && goalConfig.maxTarget !== undefined && (goalConfig.maxTarget > goalConfig.minTarget)) {
+                    const yMin = y.getPixelForValue(goalConfig.minTarget);
+                    const yMax = y.getPixelForValue(goalConfig.maxTarget);
+                    ctx.fillStyle = 'rgba(147, 51, 234, 0.12)';
+                    ctx.fillRect(left, Math.min(yMin, yMax), right - left, Math.abs(yMin - yMax));
+                }
+
+                // Linea Tolleranza Max
+                if (goalConfig.maxTarget !== undefined && goalConfig.maxTarget > goalConfig.target) {
+                    const yMax = y.getPixelForValue(goalConfig.maxTarget);
+                    ctx.beginPath();
+                    ctx.setLineDash([3, 3]);
+                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(left, yMax);
+                    ctx.lineTo(right, yMax);
+                    ctx.stroke();
+                }
+
+                // Linea Tolleranza Min
+                if (goalConfig.minTarget !== undefined && goalConfig.minTarget < goalConfig.target) {
+                    const yMin = y.getPixelForValue(goalConfig.minTarget);
+                    ctx.beginPath();
+                    ctx.setLineDash([3, 3]);
+                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(left, yMin);
+                    ctx.lineTo(right, yMin);
+                    ctx.stroke();
+                }
+
+                // Linea Obiettivo Viola
+                const yTarget = y.getPixelForValue(goalConfig.target);
+                ctx.beginPath();
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = '#9333EA';
+                ctx.lineWidth = 2;
+                ctx.moveTo(left, yTarget);
+                ctx.lineTo(right, yTarget);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        };
+
         new Chart(canvas, {
             type: isBar ? 'bar' : 'line',
             data: {
                 labels: displayLabels,
                 datasets: datasets
             },
+            plugins: [fullWidthGoalPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 10,
-                            boxHeight: 10,
-                            padding: 8,
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
+                        display: false
+                    },
+                    fullWidthGoal: relevantGoal ? {
+                        target: relevantGoal.target,
+                        maxTarget: maxTarget,
+                        minTarget: minTarget
+                    } : null
                 },
                 scales: {
                     x: {
