@@ -479,27 +479,21 @@
                     Seleziona da quale mese sovrascrivere i dati esistenti. I dati dal mese selezionato in poi verranno aggiornati.
                 </p>
 
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <label style="font-weight: 500; white-space: nowrap;">Sovrascrivi dal mese di:</label>
-                    <div class="custom-month-select" id="wizard-month-select" style="flex:1;">
-                        <button type="button" class="custom-month-trigger">
-                            <span class="selected-text">Mese corrente</span>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; flex-shrink: 0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                        <div class="custom-month-dropdown searchable-dropdown">
-                            <div class="searchable-dropdown-item" data-value="01">Gennaio</div>
-                            <div class="searchable-dropdown-item" data-value="02">Febbraio</div>
-                            <div class="searchable-dropdown-item" data-value="03">Marzo</div>
-                            <div class="searchable-dropdown-item" data-value="04">Aprile</div>
-                            <div class="searchable-dropdown-item" data-value="05">Maggio</div>
-                            <div class="searchable-dropdown-item" data-value="06">Giugno</div>
-                            <div class="searchable-dropdown-item" data-value="07">Luglio</div>
-                            <div class="searchable-dropdown-item" data-value="08">Agosto</div>
-                            <div class="searchable-dropdown-item" data-value="09">Settembre</div>
-                            <div class="searchable-dropdown-item" data-value="10">Ottobre</div>
-                            <div class="searchable-dropdown-item" data-value="11">Novembre</div>
-                            <div class="searchable-dropdown-item" data-value="12">Dicembre</div>
-                        </div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <label style="font-weight: 500;">Sovrascrivi dal mese di:</label>
+                    <div id="wizard-month-select" class="month-buttons-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                        <button type="button" class="btn btn-secondary month-btn" data-value="01">Gennaio</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="02">Febbraio</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="03">Marzo</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="04">Aprile</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="05">Maggio</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="06">Giugno</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="07">Luglio</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="08">Agosto</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="09">Settembre</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="10">Ottobre</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="11">Novembre</button>
+                        <button type="button" class="btn btn-secondary month-btn" data-value="12">Dicembre</button>
                         <input type="hidden" id="wizard-month-date" value="">
                     </div>
                 </div>

@@ -1400,20 +1400,23 @@ function resetWizardMonthSelect() {
     if (!monthContainer) return;
 
     const currentMonthVal = String(new Date().getMonth() + 1).padStart(2, '0');
-    const selectedText = monthContainer.querySelector('.selected-text');
     const hiddenInput = monthContainer.querySelector('#wizard-month-date');
-    const items = monthContainer.querySelectorAll('.searchable-dropdown-item');
+    const buttons = monthContainer.querySelectorAll('.month-btn');
 
     if (!hiddenInput) return;
 
-    let defaultItem = Array.from(items).find(i => i.getAttribute('data-value') === currentMonthVal);
-    if (!defaultItem && items.length > 0) defaultItem = items[0];
+    let defaultBtn = Array.from(buttons).find(b => b.getAttribute('data-value') === currentMonthVal);
+    if (!defaultBtn && buttons.length > 0) defaultBtn = buttons[0];
 
-    if (defaultItem) {
-        items.forEach(i => i.classList.remove('selected'));
-        defaultItem.classList.add('selected');
-        hiddenInput.value = defaultItem.getAttribute('data-value');
-        if (selectedText) selectedText.textContent = defaultItem.textContent;
+    buttons.forEach(b => {
+        b.classList.remove('btn-primary', 'active');
+        b.classList.add('btn-secondary');
+    });
+
+    if (defaultBtn) {
+        defaultBtn.classList.remove('btn-secondary');
+        defaultBtn.classList.add('btn-primary', 'active');
+        hiddenInput.value = defaultBtn.getAttribute('data-value');
         wizardState.month = hiddenInput.value;
     }
 }
@@ -1543,10 +1546,23 @@ function setupImportWizard() {
         });
     }
 
-    const wizardMonthInput = document.getElementById('wizard-month-date');
-    if (wizardMonthInput) {
-        wizardMonthInput.addEventListener('change', (e) => {
-            wizardState.month = e.target.value;
+    const wizardMonthContainer = document.getElementById('wizard-month-select');
+    if (wizardMonthContainer) {
+        wizardMonthContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.month-btn');
+            if (!btn) return;
+            const buttons = wizardMonthContainer.querySelectorAll('.month-btn');
+            buttons.forEach(b => {
+                b.classList.remove('btn-primary', 'active');
+                b.classList.add('btn-secondary');
+            });
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-primary', 'active');
+
+            const val = btn.getAttribute('data-value');
+            const hiddenInput = document.getElementById('wizard-month-date');
+            if (hiddenInput) hiddenInput.value = val;
+            wizardState.month = val;
         });
     }
 
