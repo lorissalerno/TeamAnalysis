@@ -279,7 +279,9 @@ function setupImports() {
     perfInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const startDate = document.getElementById('perf-date').value;
+        let startDate = document.getElementById('perf-date').value;
+        if (startDate && startDate.length === 7) startDate += '-01';
+        
         const selectedSkill = document.getElementById('perf-skill-select').value;
         
         if (!selectedSkill) {
@@ -319,7 +321,8 @@ function setupImports() {
     salesInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const startDate = document.getElementById('sales-date').value;
+        let startDate = document.getElementById('sales-date').value;
+        if (startDate && startDate.length === 7) startDate += '-01';
         
         try {
             logImport(`Lettura ${file.name}...`);
