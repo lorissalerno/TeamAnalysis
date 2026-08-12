@@ -303,13 +303,12 @@ function createGoalModalHTML() {
                 <div style="flex:1;">
                     <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Tolleranza -</label>
                     <div style="display:flex; gap:4px;">
-                        <div style="flex:1;">
-                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">%</span>
-                            <input type="number" step="any" id="goal-tolerance-minus-pct" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        <div style="flex:1; position:relative;">
+                            <input type="number" step="any" id="goal-tolerance-minus-pct" placeholder="%" style="width:100%; padding:6px 24px 6px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
+                            <span id="tol-minus-pct-suffix" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); pointer-events:none; display:none;">%</span>
                         </div>
-                        <div style="flex:1;">
-                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">Valore</span>
-                            <input type="number" step="any" id="goal-tolerance-minus-num" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        <div style="flex:1; position:relative;">
+                            <input type="number" step="any" id="goal-tolerance-minus-num" placeholder="Valore" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
                         </div>
                     </div>
                 </div>
@@ -324,13 +323,12 @@ function createGoalModalHTML() {
                 <div style="flex:1;">
                     <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Tolleranza +</label>
                     <div style="display:flex; gap:4px;">
-                        <div style="flex:1;">
-                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">%</span>
-                            <input type="number" step="any" id="goal-tolerance-plus-pct" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        <div style="flex:1; position:relative;">
+                            <input type="number" step="any" id="goal-tolerance-plus-pct" placeholder="%" style="width:100%; padding:6px 24px 6px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
+                            <span id="tol-plus-pct-suffix" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); pointer-events:none; display:none;">%</span>
                         </div>
-                        <div style="flex:1;">
-                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">Valore</span>
-                            <input type="number" step="any" id="goal-tolerance-plus-num" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        <div style="flex:1; position:relative;">
+                            <input type="number" step="any" id="goal-tolerance-plus-num" placeholder="Valore" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
                         </div>
                     </div>
                 </div>
