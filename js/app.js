@@ -83,11 +83,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Sub-navigation tabs (Statistics)
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.target.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            e.target.parentElement.parentElement.parentElement.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const tabBtn = e.target.closest('.tab-btn');
+            if (!tabBtn) return;
+            const targetId = tabBtn.getAttribute('data-target');
+            if (!targetId) return;
+
+            const parentContainer = tabBtn.parentElement;
+            if (parentContainer) parentContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             
-            e.target.classList.add('active');
-            document.getElementById(e.target.getAttribute('data-target')).classList.add('active');
+            const targetEl = document.getElementById(targetId);
+            if (targetEl && targetEl.parentElement) {
+                targetEl.parentElement.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                targetEl.classList.add('active');
+            }
+            tabBtn.classList.add('active');
         });
     });
 

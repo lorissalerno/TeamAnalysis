@@ -709,6 +709,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     } else {
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
+        let datasets = [];
         // Palette sfumature di Blu per collaboratori
         const BLUE_PALETTE = [
             '#2563EB', '#38BDF8', '#1D4ED8', '#0284C7', 
