@@ -256,8 +256,11 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     // Process Data
     const sourceData = isPerf ? perfData : salesData;
     
-    // Aggregate by date (month/week)
-    const aggregated = {};
+    const datesSet = new Set();
+    const empSet = new Set();
+    const empDateMap = {};
+    const aggregatedByDate = {};
+
     sourceData.forEach(row => {
         if (isPerf && statConfig.skill && statConfig.skill !== 'ALL') {
             if (row.skill !== statConfig.skill) return;
@@ -265,20 +268,64 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         if (!isPerf && statConfig.product) {
             if (row.data['Product'] !== statConfig.product) return;
         }
-        
+
         const date = row.date;
-        const val = row.data[rawKey] || 0;
-        if (!aggregated[date]) aggregated[date] = 0;
-        aggregated[date] += val;
+        const emp = row.employee;
+        const val = parseFloat(row.data[rawKey]) || 0;
+
+        datesSet.add(date);
+        if (emp) empSet.add(emp);
+
+        if (emp) {
+            if (!empDateMap[emp]) empDateMap[emp] = {};
+            if (!empDateMap[emp][date]) empDateMap[emp][date] = 0;
+            empDateMap[emp][date] += val;
+        }
+
+        if (!aggregatedByDate[date]) aggregatedByDate[date] = 0;
+        aggregatedByDate[date] += val;
+    });
+
+    const labels = Array.from(datesSet).sort();
+    const displayLabels = labels.map(formatDateLabel);
+    const employees = Array.from(empSet).sort();
+
+    const dataPts = labels.map(l => {
+        if (isIndividual && employeeName) {
+            return (empDateMap[employeeName] && empDateMap[employeeName][l] !== undefined) ? empDateMap[employeeName][l] : 0;
+        }
+        return aggregatedByDate[l] || 0;
+    });
+
+    // Compute team average for each date
+    const teamAvgPts = labels.map(date => {
+        let sum = 0;
+        let count = 0;
+        employees.forEach(emp => {
+            if (empDateMap[emp] && empDateMap[emp][date] !== undefined) {
+                sum += empDateMap[emp][date];
+                count++;
+            }
+        });
+        return count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
     });
     
-    const labels = Object.keys(aggregated).sort();
-    const dataPts = labels.map(l => aggregated[l]);
-    const displayLabels = labels.map(formatDateLabel);
-    
     exportBtn.onclick = () => {
-        let csv = 'Data,' + statConfig.title + '\n';
-        labels.forEach((l, idx) => csv += `${l},${dataPts[idx]}\n`);
+        let csv = '';
+        if (isIndividual) {
+            csv = 'Mese,Valore\n';
+            displayLabels.forEach((l, idx) => {
+                csv += `"${l}",${dataPts[idx]}\n`;
+            });
+        } else {
+            csv = 'Collaboratore,' + displayLabels.map(l => `"${l}"`).join(',') + '\n';
+            employees.forEach(emp => {
+                const dispName = window.getDisplayName(emp);
+                const rowVals = labels.map(date => (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0);
+                csv += `"${dispName}",${rowVals.join(',')}\n`;
+            });
+            csv += `"Media Team",${teamAvgPts.join(',')}\n`;
+        }
         const blob = new Blob([csv], { type: 'text/csv' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -287,24 +334,90 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     };
     
     if (statConfig.type === 'table') {
-        let html = '<table class="data-table"><thead><tr><th>Mese</th><th>Valore</th></tr></thead><tbody>';
-        displayLabels.forEach((l, idx) => {
-            html += `<tr><td>${l}</td><td>${dataPts[idx]}</td></tr>`;
-        });
-        html += '</tbody></table>';
-        canvasContainer.innerHTML = html;
-        canvasContainer.style.overflowY = 'auto';
+        if (isIndividual) {
+            let html = '<table class="data-table"><thead><tr><th>Mese</th><th>Valore</th></tr></thead><tbody>';
+            displayLabels.forEach((l, idx) => {
+                html += `<tr><td>${l}</td><td>${dataPts[idx]}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            canvasContainer.innerHTML = html;
+            canvasContainer.style.overflowY = 'auto';
+        } else {
+            let html = '<table class="data-table"><thead><tr><th>Collaboratore</th>';
+            displayLabels.forEach(l => {
+                html += `<th style="text-align:center;">${l}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            employees.forEach(emp => {
+                const dispName = window.getDisplayName(emp);
+                html += `<tr><td style="font-weight:600;">${dispName}</td>`;
+                labels.forEach(date => {
+                    const val = (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
+                    html += `<td style="text-align:center;">${val}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
+            html += `<td>Media Team</td>`;
+            labels.forEach((date, idx) => {
+                html += `<td style="text-align:center; color: var(--primary);">${teamAvgPts[idx]}</td>`;
+            });
+            html += '</tr>';
+            html += '</tbody></table>';
+            canvasContainer.innerHTML = html;
+            canvasContainer.style.overflowX = 'auto';
+            canvasContainer.style.overflowY = 'auto';
+        }
     } else {
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
-        let datasets = [{
-            label: statConfig.title,
-            data: dataPts,
-            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            borderColor: 'rgba(59, 130, 246, 1)',
-            borderWidth: 2,
-            tension: 0.3
-        }];
+        let datasets = [];
+
+        const PALETTE = [
+            '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', 
+            '#06b6d4', '#f97316', '#84cc16', '#6366f1', '#14b8a6', 
+            '#e11d48', '#a855f7'
+        ];
+
+        if (isIndividual) {
+            datasets.push({
+                label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
+                data: dataPts,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 2,
+                tension: 0.3
+            });
+        } else {
+            employees.forEach((emp, idx) => {
+                const color = PALETTE[idx % PALETTE.length];
+                const empPts = labels.map(date => (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0);
+                datasets.push({
+                    label: window.getDisplayName(emp),
+                    data: empPts,
+                    backgroundColor: color + '80',
+                    borderColor: color,
+                    borderWidth: 2,
+                    tension: 0.3
+                });
+            });
+
+            datasets.push({
+                label: 'Media Team',
+                data: teamAvgPts,
+                type: 'line',
+                borderColor: '#00f2fe',
+                backgroundColor: '#00f2fe',
+                borderWidth: 3,
+                borderDash: [6, 4],
+                pointRadius: 4,
+                pointBackgroundColor: '#00f2fe',
+                fill: false,
+                order: -1
+            });
+        }
         
         // Check for goals
         let relevantGoal = null;
@@ -318,11 +431,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             datasets.push({
                 label: 'Obiettivo',
                 data: labels.map(() => relevantGoal.target),
+                type: 'line',
                 borderColor: 'rgba(239, 68, 68, 1)',
                 borderWidth: 2,
                 borderDash: [5, 5],
                 fill: false,
-                pointRadius: 0
+                pointRadius: 0,
+                order: -2
             });
         }
         
