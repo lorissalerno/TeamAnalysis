@@ -502,6 +502,47 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             });
         }
         
+        // Calculate adaptive min and max for Y scale
+        let allVals = [];
+        datasets.forEach(ds => {
+            if (ds.data && Array.isArray(ds.data)) {
+                ds.data.forEach(v => {
+                    if (v !== null && v !== undefined && !isNaN(v)) {
+                        allVals.push(v);
+                    }
+                });
+            }
+        });
+
+        let yScalesConfig = {};
+        if (allVals.length > 0) {
+            const minVal = Math.min(...allVals);
+            const maxVal = Math.max(...allVals);
+            
+            if (minVal === 0 && maxVal === 0) {
+                yScalesConfig = { min: 0, max: 1 };
+            } else {
+                const delta = maxVal - minVal;
+                if (delta === 0) {
+                    const margin = Math.abs(maxVal) * 0.1 || 1;
+                    yScalesConfig = {
+                        min: Math.max(0, Math.floor(minVal - margin)),
+                        max: Math.ceil(maxVal + margin)
+                    };
+                } else {
+                    const margin = delta * 0.1;
+                    const calculatedMin = (minVal <= delta * 0.5 && minVal >= 0) ? 0 : Math.max(0, Math.floor(minVal - margin));
+                    const calculatedMax = Math.ceil(maxVal + margin);
+                    yScalesConfig = {
+                        min: calculatedMin,
+                        max: calculatedMax
+                    };
+                }
+            }
+        } else {
+            yScalesConfig = { beginAtZero: true };
+        }
+
         new Chart(canvas, {
             type: isBar ? 'bar' : 'line',
             data: {
@@ -532,7 +573,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                         }
                     },
                     y: {
-                        beginAtZero: true,
+                        ...yScalesConfig,
                         grid: {
                             color: 'rgba(255, 255, 255, 0.08)'
                         }
