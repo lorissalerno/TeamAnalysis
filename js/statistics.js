@@ -1,4 +1,76 @@
-// js/statistics.js
+// Plugin globale per estendere la linea dell'obiettivo viola da estremo a estremo (sinistra a destra)
+const fullWidthGoalPlugin = {
+    id: 'fullWidthGoalPlugin',
+    beforeDatasetsDraw(chart) {
+        try {
+            const goalConfig = chart.options && chart.options.plugins && chart.options.plugins.fullWidthGoal;
+            if (!goalConfig || goalConfig.target === undefined || goalConfig.target === null) return;
+            const ctx = chart.ctx;
+            const chartArea = chart.chartArea;
+            const y = chart.scales ? chart.scales.y : null;
+            if (!ctx || !chartArea || !y) return;
+
+            const left = chartArea.left;
+            const right = chartArea.right;
+
+            ctx.save();
+
+            // Tolleranza (area riempita viola trasparente)
+            if (goalConfig.minTarget !== undefined && goalConfig.maxTarget !== undefined && (goalConfig.maxTarget > goalConfig.minTarget)) {
+                const yMin = y.getPixelForValue(goalConfig.minTarget);
+                const yMax = y.getPixelForValue(goalConfig.maxTarget);
+                if (!isNaN(yMin) && !isNaN(yMax)) {
+                    ctx.fillStyle = 'rgba(147, 51, 234, 0.12)';
+                    ctx.fillRect(left, Math.min(yMin, yMax), right - left, Math.abs(yMin - yMax));
+                }
+            }
+
+            // Linea Tolleranza Max
+            if (goalConfig.maxTarget !== undefined && goalConfig.maxTarget > goalConfig.target) {
+                const yMax = y.getPixelForValue(goalConfig.maxTarget);
+                if (!isNaN(yMax)) {
+                    ctx.beginPath();
+                    ctx.setLineDash([3, 3]);
+                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(left, yMax);
+                    ctx.lineTo(right, yMax);
+                    ctx.stroke();
+                }
+            }
+
+            // Linea Tolleranza Min
+            if (goalConfig.minTarget !== undefined && goalConfig.minTarget < goalConfig.target) {
+                const yMin = y.getPixelForValue(goalConfig.minTarget);
+                if (!isNaN(yMin)) {
+                    ctx.beginPath();
+                    ctx.setLineDash([3, 3]);
+                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(left, yMin);
+                    ctx.lineTo(right, yMin);
+                    ctx.stroke();
+                }
+            }
+
+            // Linea Obiettivo Viola
+            const yTarget = y.getPixelForValue(goalConfig.target);
+            if (!isNaN(yTarget)) {
+                ctx.beginPath();
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = '#9333EA';
+                ctx.lineWidth = 2;
+                ctx.moveTo(left, yTarget);
+                ctx.lineTo(right, yTarget);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        } catch (e) {
+            console.error('Goal plugin error:', e);
+        }
+    }
+};
 
 // Helper for templates
 async function getTemplates() {
@@ -841,66 +913,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         } else {
             yScalesConfig = { beginAtZero: true };
         }
-
-        // Plugin per estendere la linea dell'obiettivo viola da estremo a estremo (sinistra a destra)
-        const fullWidthGoalPlugin = {
-            id: 'fullWidthGoalPlugin',
-            beforeDraw(chart) {
-                const goalConfig = chart.options.plugins.fullWidthGoal;
-                if (!goalConfig || goalConfig.target === undefined || goalConfig.target === null) return;
-                const { ctx, chartArea, scales: { y } } = chart;
-                if (!chartArea || !y) return;
-
-                const left = chartArea.left;
-                const right = chartArea.right;
-
-                ctx.save();
-
-                // Tolleranza (area riempita viola trasparente)
-                if (goalConfig.minTarget !== undefined && goalConfig.maxTarget !== undefined && (goalConfig.maxTarget > goalConfig.minTarget)) {
-                    const yMin = y.getPixelForValue(goalConfig.minTarget);
-                    const yMax = y.getPixelForValue(goalConfig.maxTarget);
-                    ctx.fillStyle = 'rgba(147, 51, 234, 0.12)';
-                    ctx.fillRect(left, Math.min(yMin, yMax), right - left, Math.abs(yMin - yMax));
-                }
-
-                // Linea Tolleranza Max
-                if (goalConfig.maxTarget !== undefined && goalConfig.maxTarget > goalConfig.target) {
-                    const yMax = y.getPixelForValue(goalConfig.maxTarget);
-                    ctx.beginPath();
-                    ctx.setLineDash([3, 3]);
-                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
-                    ctx.lineWidth = 1;
-                    ctx.moveTo(left, yMax);
-                    ctx.lineTo(right, yMax);
-                    ctx.stroke();
-                }
-
-                // Linea Tolleranza Min
-                if (goalConfig.minTarget !== undefined && goalConfig.minTarget < goalConfig.target) {
-                    const yMin = y.getPixelForValue(goalConfig.minTarget);
-                    ctx.beginPath();
-                    ctx.setLineDash([3, 3]);
-                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
-                    ctx.lineWidth = 1;
-                    ctx.moveTo(left, yMin);
-                    ctx.lineTo(right, yMin);
-                    ctx.stroke();
-                }
-
-                // Linea Obiettivo Viola
-                const yTarget = y.getPixelForValue(goalConfig.target);
-                ctx.beginPath();
-                ctx.setLineDash([6, 4]);
-                ctx.strokeStyle = '#9333EA';
-                ctx.lineWidth = 2;
-                ctx.moveTo(left, yTarget);
-                ctx.lineTo(right, yTarget);
-                ctx.stroke();
-
-                ctx.restore();
-            }
-        };
 
         new Chart(canvas, {
             type: isBar ? 'bar' : 'line',
