@@ -175,12 +175,13 @@ a:hover {
 }
 .wizard-step-item.active {
     opacity: 1;
-    color: var(--primary);
+    color: #10b981;
     font-weight: 600;
 }
 .wizard-step-item.completed {
-    opacity: 0.85;
-    color: var(--text-main);
+    opacity: 0.9;
+    color: #10b981;
+    font-weight: 500;
 }
 .wizard-step-item .step-num {
     width: 24px;
@@ -192,15 +193,17 @@ a:hover {
     align-items: center;
     justify-content: center;
     font-size: 0.8rem;
+    transition: all var(--transition);
 }
 .wizard-step-item.active .step-num {
-    background: var(--primary);
+    background: #10b981;
     color: #fff;
-    border-color: var(--primary);
+    border-color: #10b981;
 }
 .wizard-step-item.completed .step-num {
-    background: var(--secondary);
-    color: var(--text-main);
+    background: #10b981;
+    color: #fff;
+    border-color: #10b981;
 }
 .wizard-option-card {
     transition: all var(--transition);

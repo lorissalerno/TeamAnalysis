@@ -1220,6 +1220,14 @@ function updateWizardStepUI(step) {
     document.querySelectorAll('.wizard-step-item').forEach(item => {
         const itemStep = parseInt(item.getAttribute('data-step'));
         item.classList.remove('active', 'completed');
+        
+        if (itemStep === 2 && wizardState.type === 'sales') {
+            item.style.display = 'none';
+            return;
+        } else if (itemStep === 2) {
+            item.style.display = 'flex';
+        }
+
         if (itemStep === step) {
             item.classList.add('active');
         } else if (itemStep < step) {
@@ -1232,24 +1240,8 @@ function updateWizardStepUI(step) {
         if (contentEl) contentEl.style.display = i === step ? 'block' : 'none';
     }
 
-    if (step === 2) {
-        const titleEl = document.getElementById('wizard-step-2-title');
-        const descEl = document.getElementById('wizard-step-2-desc');
-        const perfSection = document.getElementById('wizard-perf-skill-section');
-        const salesSection = document.getElementById('wizard-sales-info-section');
-
-        if (wizardState.type === 'performance') {
-            if (titleEl) titleEl.textContent = 'Passaggio 2: Seleziona lo Skill Performance';
-            if (descEl) descEl.textContent = 'Scegli a quale Skill associare i dati delle performance da importare.';
-            if (perfSection) perfSection.style.display = 'block';
-            if (salesSection) salesSection.style.display = 'none';
-            populateSkillsUI();
-        } else {
-            if (titleEl) titleEl.textContent = 'Passaggio 2: Conferma Importazione Sales';
-            if (descEl) descEl.textContent = 'I dati di vendita verranno organizzati automaticamente per prodotto.';
-            if (perfSection) perfSection.style.display = 'none';
-            if (salesSection) salesSection.style.display = 'block';
-        }
+    if (step === 2 && wizardState.type === 'performance') {
+        populateSkillsUI();
     }
 
     const prevBtn = document.getElementById('wizard-prev-btn');
@@ -1343,7 +1335,9 @@ function setupImportWizard() {
 
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
-            if (wizardState.currentStep > 1) {
+            if (wizardState.currentStep === 3 && wizardState.type === 'sales') {
+                updateWizardStepUI(1);
+            } else if (wizardState.currentStep > 1) {
                 updateWizardStepUI(wizardState.currentStep - 1);
             }
         });
@@ -1351,16 +1345,18 @@ function setupImportWizard() {
 
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
-            if (wizardState.currentStep === 2 && wizardState.type === 'performance') {
+            if (wizardState.currentStep === 1 && wizardState.type === 'sales') {
+                updateWizardStepUI(3);
+            } else if (wizardState.currentStep === 2 && wizardState.type === 'performance') {
                 const skillSelect = document.getElementById('wizard-perf-skill-select');
                 if (skillSelect && skillSelect.value) {
                     wizardState.skill = skillSelect.value;
+                    updateWizardStepUI(3);
                 } else {
                     alert("Seleziona uno skill prima di proseguire.");
                     return;
                 }
-            }
-            if (wizardState.currentStep < 4) {
+            } else if (wizardState.currentStep < 4) {
                 updateWizardStepUI(wizardState.currentStep + 1);
             }
         });
