@@ -191,6 +191,8 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
 async function renderToleranceViolations(goals, perfData, salesData, activeEmployees) {
     const container = document.getElementById('dashboard-tolerance-container');
     const skillSelect = document.getElementById('dash-tolerance-filter-skill');
+    const searchInput = document.getElementById('dash-tolerance-search');
+    const dropdownEl = document.getElementById('dash-tolerance-dropdown');
     if (!container) return;
 
     // Populate skill select dropdown if empty or needed
@@ -203,8 +205,61 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         skillSelect.innerHTML = optHtml;
     }
 
+    // Populate and attach searchable metrics dropdown
+    const metricsSet = new Set();
+    goals.forEach(g => { if (g.metric) metricsSet.add(g.metric); });
+    perfData.forEach(d => {
+        if (d.data) Object.keys(d.data).forEach(k => metricsSet.add(`Performance: ${k}`));
+    });
+    salesData.forEach(d => {
+        if (d.data) Object.keys(d.data).forEach(k => { if (k !== 'Product') metricsSet.add(`Sales: ${k}`); });
+    });
+    const allMetrics = Array.from(metricsSet).sort();
+
+    function renderMetricDropdown(filterText = '') {
+        if (!dropdownEl) return;
+        dropdownEl.innerHTML = '';
+        const query = filterText.toLowerCase().trim();
+        const filteredMetrics = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
+        
+        if (filteredMetrics.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
+            empty.textContent = 'Nessuna statistica trovata';
+            dropdownEl.appendChild(empty);
+            return;
+        }
+
+        filteredMetrics.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'searchable-dropdown-item' + (searchInput && searchInput.value === m ? ' selected' : '');
+            item.textContent = m;
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                if (searchInput) searchInput.value = m;
+                if (dropdownEl) dropdownEl.classList.remove('open');
+                if (window.renderDashboard) window.renderDashboard();
+            });
+            dropdownEl.appendChild(item);
+        });
+    }
+
+    if (searchInput && !searchInput.dataset.initialized) {
+        searchInput.dataset.initialized = 'true';
+        searchInput.addEventListener('focus', () => {
+            renderMetricDropdown(searchInput.value);
+            if (dropdownEl) dropdownEl.classList.add('open');
+        });
+        searchInput.addEventListener('input', (e) => {
+            renderMetricDropdown(e.target.value);
+            if (dropdownEl) dropdownEl.classList.add('open');
+        });
+        searchInput.addEventListener('blur', () => {
+            if (dropdownEl) dropdownEl.classList.remove('open');
+        });
+    }
+
     const selectedSkill = skillSelect ? skillSelect.value : 'ALL';
-    const searchInput = document.getElementById('dash-tolerance-search');
     const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
     const violations = [];
@@ -268,16 +323,16 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         filtered = filtered.filter(v => v.goalSkill === selectedSkill || v.goalSkill === 'ALL');
     }
 
-    // Filter by search query (collaborator name)
+    // Filter by search query (metric / statistic name)
     if (searchQuery) {
-        filtered = filtered.filter(v => v.displayName.toLowerCase().includes(searchQuery) || v.employee.toLowerCase().includes(searchQuery));
+        filtered = filtered.filter(v => v.goalMetric.toLowerCase().includes(searchQuery));
     }
 
     // Sort by Severity Ratio descending (most critical first)
     filtered.sort((a, b) => b.severityRatio - a.severityRatio);
 
     if (filtered.length === 0) {
-        container.innerHTML = `<p style="color:var(--text-muted); padding:12px 0;">${violations.length === 0 ? 'Nessun collaboratore sfora le tolleranze stabilite.' : 'Nessuno sforamento trovato per i filtri selezionati.'}</p>`;
+        container.innerHTML = `<p style="color:var(--text-muted); padding:12px 0;">${violations.length === 0 ? 'Nessun collaboratore sfora le tolleranze stabilite.' : 'Nessuno sforamento trovato per la statistica selezionata.'}</p>`;
         return;
     }
 
