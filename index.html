@@ -191,9 +191,21 @@
             <div id="stat-team" class="tab-content active">
                 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                     <button class="btn primary" id="create-stat-btn">Nuova Statistica</button>
-                    <div class="tabs" style="margin-left:auto;">
-                        <button class="tab-btn active" id="team-view-all-btn">Tutti</button>
-                        <button class="tab-btn" id="team-view-avg-btn">Solo Media</button>
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="show-team-avg-team-toggle">
+                            <span class="slider"></span>
+                            <span class="label">Mostra Media Team</span>
+                        </label>
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="show-team-goal-team-toggle">
+                            <span class="slider"></span>
+                            <span class="label">Mostra Obiettivo Team</span>
+                        </label>
+                        <div class="tabs">
+                            <button class="tab-btn active" id="team-view-all-btn">Tutti</button>
+                            <button class="tab-btn" id="team-view-avg-btn">Solo Media</button>
+                        </div>
                     </div>
                 </div>
                 <input type="text" id="stat-search-input" placeholder="Cerca statistica..." style="width:100%; padding:8px 12px; margin-top:10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
@@ -204,11 +216,18 @@
                     <select id="individual-select">
                         <option value="">Seleziona Collaboratore...</option>
                     </select>
-                    <label class="toggle-switch" style="margin-left:auto; display:flex; align-items:center; cursor:pointer;">
-                        <input type="checkbox" id="show-team-avg-individual-toggle">
-                        <span class="slider"></span>
-                        <span class="label">Mostra Media Team</span>
-                    </label>
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="show-team-avg-individual-toggle">
+                            <span class="slider"></span>
+                            <span class="label">Mostra Media Team</span>
+                        </label>
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="show-team-goal-individual-toggle">
+                            <span class="slider"></span>
+                            <span class="label">Mostra Obiettivo Team</span>
+                        </label>
+                    </div>
                 </div>
                 <div id="individual-stats-container" class="stats-grid"></div>
             </div>

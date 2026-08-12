@@ -98,7 +98,10 @@ async function initTemplateControls() {
 
 // Team view mode: 'all' = tutti i collaboratori, 'avg' = solo media team
 let teamViewMode = 'all';
+let showTeamAvgInTeam = false;
+let showTeamGoalInTeam = false;
 let showIndividualTeamAvg = false;
+let showIndividualTeamGoal = false;
 
 // Initialize statistics module
 document.addEventListener('DOMContentLoaded', () => {
@@ -118,6 +121,30 @@ document.addEventListener('DOMContentLoaded', () => {
         indAvgToggle.addEventListener('change', (e) => {
             showIndividualTeamAvg = e.target.checked;
             renderIndividualStats();
+        });
+    }
+
+    const indGoalToggle = document.getElementById('show-team-goal-individual-toggle');
+    if (indGoalToggle) {
+        indGoalToggle.addEventListener('change', (e) => {
+            showIndividualTeamGoal = e.target.checked;
+            renderIndividualStats();
+        });
+    }
+
+    const teamAvgToggle = document.getElementById('show-team-avg-team-toggle');
+    if (teamAvgToggle) {
+        teamAvgToggle.addEventListener('change', (e) => {
+            showTeamAvgInTeam = e.target.checked;
+            renderTeamStats();
+        });
+    }
+
+    const teamGoalToggle = document.getElementById('show-team-goal-team-toggle');
+    if (teamGoalToggle) {
+        teamGoalToggle.addEventListener('change', (e) => {
+            showTeamGoalInTeam = e.target.checked;
+            renderTeamStats();
         });
     }
 
@@ -300,7 +327,7 @@ async function renderTeamStats() {
     const teamAvgOnly = (teamViewMode === 'avg');
     
     stats.forEach(stat => {
-        const card = buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly);
+        const card = buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly, showTeamAvgInTeam, showTeamGoalInTeam);
         container.appendChild(card);
     });
 }
@@ -333,7 +360,7 @@ async function renderIndividualStats() {
     }
     
     stats.forEach(stat => {
-        const card = buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg);
+        const card = buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
         container.appendChild(card);
     });
 }
@@ -371,7 +398,7 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvgInIndividual = false) {
+function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
     card.style.position = 'relative';
@@ -553,7 +580,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             });
             html += '</tr>';
 
-            if (showTeamAvgInIndividual) {
+            if (showTeamAvg) {
                 html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
                 html += `<td>Media Team</td>`;
                 labels.forEach((date, idx) => {
@@ -601,13 +628,15 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 html += '</tr>';
             });
 
-            html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
-            html += `<td>Media Team</td>`;
-            labels.forEach((date, idx) => {
-                const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
-                html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
-            });
-            html += '</tr>';
+            if (showTeamAvg) {
+                html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
+                html += `<td>Media Team</td>`;
+                labels.forEach((date, idx) => {
+                    const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
+                    html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
+                });
+                html += '</tr>';
+            }
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         }
@@ -638,7 +667,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 order: 2
             });
 
-            if (showTeamAvgInIndividual) {
+            if (showTeamAvg) {
                 datasets.push({
                     label: 'Media Team',
                     data: teamAvgPts,
@@ -690,19 +719,21 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 });
             });
 
-            datasets.push({
-                label: 'Media Team',
-                data: teamAvgPts,
-                type: 'line',
-                borderColor: '#2563eb',
-                backgroundColor: '#2563eb',
-                borderWidth: 3,
-                borderDash: [6, 4],
-                pointRadius: 4,
-                pointBackgroundColor: '#2563eb',
-                fill: false,
-                order: 1
-            });
+            if (showTeamAvg) {
+                datasets.push({
+                    label: 'Media Team',
+                    data: teamAvgPts,
+                    type: 'line',
+                    borderColor: '#2563eb',
+                    backgroundColor: '#2563eb',
+                    borderWidth: 3,
+                    borderDash: [6, 4],
+                    pointRadius: 4,
+                    pointBackgroundColor: '#2563eb',
+                    fill: false,
+                    order: 1
+                });
+            }
         }
         
         // Check for goals
@@ -710,17 +741,21 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const candidateGoals = goals.filter(g => {
             if (g.metric !== statConfig.metric) return false;
             if (isIndividual) {
-                return g.employee === employeeName || !g.employee;
+                if (g.employee === employeeName) return true;
+                if (!g.employee && showTeamGoal) return true;
+                return false;
             } else {
-                return !g.employee;
+                return !g.employee && showTeamGoal;
             }
         });
 
         if (statConfig.skill && statConfig.skill !== 'ALL') {
-            relevantGoal = candidateGoals.find(g => g.skill === statConfig.skill);
+            relevantGoal = candidateGoals.find(g => g.employee === employeeName && g.skill === statConfig.skill) ||
+                           candidateGoals.find(g => !g.employee && g.skill === statConfig.skill);
         }
         if (!relevantGoal) {
-            relevantGoal = candidateGoals.find(g => !g.skill || g.skill === 'ALL');
+            relevantGoal = candidateGoals.find(g => g.employee === employeeName && (!g.skill || g.skill === 'ALL')) ||
+                           candidateGoals.find(g => !g.employee && (!g.skill || g.skill === 'ALL'));
         }
         
         if (relevantGoal) {
