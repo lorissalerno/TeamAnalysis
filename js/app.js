@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadAnonymousMap();
     await populateSkillsUI();
     setupCustomMonthSelects();
+    setupManualDataModalListeners();
 
     // 3. Navigation
     async function navigateToSection(sectionId) {
@@ -656,6 +657,9 @@ async function renderImportedData() {
             <td style="font-weight:500;">${r.metric}</td>
             <td style="font-weight:600;">${r.value}</td>
             <td style="text-align:center;">
+                <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
                 <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px;">
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
                 </button>
@@ -664,6 +668,16 @@ async function renderImportedData() {
         fragment.appendChild(tr);
     });
     tbody.appendChild(fragment);
+
+    // Attach row edit handlers
+    tbody.querySelectorAll('.edit-metric-row-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const id = parseInt(e.currentTarget.getAttribute('data-id'));
+            const store = e.currentTarget.getAttribute('data-store');
+            const metricKey = e.currentTarget.getAttribute('data-metric');
+            await openManualDataModal('edit', { id, store, metricKey });
+        });
+    });
 
     // Attach row delete handlers
     tbody.querySelectorAll('.delete-metric-row-btn').forEach(btn => {
@@ -874,4 +888,244 @@ function setupCustomMonthSelects() {
         }
     });
 }
+
+// --- MANUAL DATA MODAL MANAGEMENT ---
+async function populateManualDataDatalists(storeType) {
+    const skillDatalist = document.getElementById('manual-skill-list');
+    const employeeDatalist = document.getElementById('manual-employee-list');
+    const metricDatalist = document.getElementById('manual-metric-list');
+
+    if (!skillDatalist || !employeeDatalist || !metricDatalist) return;
+
+    skillDatalist.innerHTML = '';
+    employeeDatalist.innerHTML = '';
+    metricDatalist.innerHTML = '';
+
+    const activeYear = window.appState.activeYear;
+    const perfRecords = await appDb.getAll('performance', 'year', activeYear);
+    const salesRecords = await appDb.getAll('sales', 'year', activeYear);
+
+    // Skills / Products
+    const skillsSet = new Set();
+    if (storeType === 'performance') {
+        const customSkills = await appDb.getSetting('custom_skills', ['Voice Inbound']);
+        customSkills.forEach(s => skillsSet.add(s));
+        perfRecords.forEach(r => { if (r.skill) skillsSet.add(r.skill); });
+    } else {
+        salesRecords.forEach(r => { if (r.data && r.data.Product) skillsSet.add(r.data.Product); });
+    }
+    skillsSet.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        skillDatalist.appendChild(opt);
+    });
+
+    // Employees
+    const employeeSet = new Set();
+    Object.keys(window.appState.anonymousMap || {}).forEach(e => employeeSet.add(e));
+    perfRecords.forEach(r => { if (r.employee) employeeSet.add(r.employee); });
+    salesRecords.forEach(r => { if (r.employee) employeeSet.add(r.employee); });
+
+    Array.from(employeeSet).sort().forEach(emp => {
+        const opt = document.createElement('option');
+        opt.value = emp;
+        employeeDatalist.appendChild(opt);
+    });
+
+    // Metrics
+    const metricSet = new Set();
+    if (storeType === 'performance') {
+        perfRecords.forEach(r => {
+            if (r.data) Object.keys(r.data).forEach(k => metricSet.add(k));
+        });
+    } else {
+        salesRecords.forEach(r => {
+            if (r.data) Object.keys(r.data).forEach(k => { if (k !== 'Product') metricSet.add(k); });
+        });
+    }
+    Array.from(metricSet).sort().forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        metricDatalist.appendChild(opt);
+    });
+}
+
+async function openManualDataModal(mode = 'add', editTarget = null) {
+    const modal = document.getElementById('manual-data-modal');
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('manual-data-modal-title');
+    
+    const modeInput = document.getElementById('manual-edit-mode');
+    const recordIdInput = document.getElementById('manual-record-id');
+    const oldStoreInput = document.getElementById('manual-old-store');
+    const oldMetricInput = document.getElementById('manual-old-metric');
+
+    const storeSelect = document.getElementById('manual-store-type');
+    const skillInput = document.getElementById('manual-skill-input');
+    const employeeInput = document.getElementById('manual-employee-input');
+    const dateInput = document.getElementById('manual-date-input');
+    const metricInput = document.getElementById('manual-metric-input');
+    const valueInput = document.getElementById('manual-value-input');
+
+    if (!modal || !overlay) return;
+
+    modeInput.value = mode;
+
+    if (mode === 'edit' && editTarget) {
+        titleEl.textContent = 'Modifica Dato Manuale';
+        const { id, store, metricKey } = editTarget;
+        recordIdInput.value = id;
+        oldStoreInput.value = store;
+        oldMetricInput.value = metricKey;
+
+        const records = await appDb.getAll(store);
+        const record = records.find(r => r.id === id);
+
+        if (record && record.data) {
+            storeSelect.value = store;
+            skillInput.value = store === 'performance' ? (record.skill || '') : (record.data.Product || '');
+            employeeInput.value = record.employee || '';
+            dateInput.value = record.date || `${window.appState.activeYear}-01-01`;
+            metricInput.value = metricKey;
+            valueInput.value = record.data[metricKey] !== undefined ? record.data[metricKey] : '';
+        }
+    } else {
+        titleEl.textContent = 'Aggiungi Dato Manuale';
+        recordIdInput.value = '';
+        oldStoreInput.value = '';
+        oldMetricInput.value = '';
+
+        storeSelect.value = 'performance';
+        skillInput.value = '';
+        employeeInput.value = '';
+        dateInput.value = `${window.appState.activeYear}-01-01`;
+        metricInput.value = '';
+        valueInput.value = '';
+    }
+
+    await populateManualDataDatalists(storeSelect.value);
+
+    modal.classList.add('open');
+    overlay.classList.add('open');
+}
+
+function closeManualDataModal() {
+    const modal = document.getElementById('manual-data-modal');
+    const overlay = document.getElementById('modal-overlay');
+    if (modal) modal.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+}
+
+async function saveManualData() {
+    const mode = document.getElementById('manual-edit-mode').value;
+    const recordId = parseInt(document.getElementById('manual-record-id').value);
+    const oldStore = document.getElementById('manual-old-store').value;
+    const oldMetric = document.getElementById('manual-old-metric').value;
+
+    const store = document.getElementById('manual-store-type').value;
+    const skillName = document.getElementById('manual-skill-input').value.trim();
+    const employee = document.getElementById('manual-employee-input').value.trim();
+    const dateStr = document.getElementById('manual-date-input').value.trim();
+    const metric = document.getElementById('manual-metric-input').value.trim();
+    const rawVal = document.getElementById('manual-value-input').value.trim();
+
+    if (!skillName) {
+        alert("Inserisci uno Skill o Prodotto.");
+        return;
+    }
+    if (!employee) {
+        alert("Inserisci il nome del collaboratore.");
+        return;
+    }
+    if (!dateStr) {
+        alert("Seleziona una data valida.");
+        return;
+    }
+    if (!metric) {
+        alert("Inserisci il nome della metrica.");
+        return;
+    }
+    if (rawVal === '') {
+        alert("Inserisci un valore.");
+        return;
+    }
+
+    let val = rawVal;
+    const num = parseFloat(rawVal.replace(',', '.'));
+    if (!isNaN(num) && String(num).length >= rawVal.replace(',', '.').trim().length - 2) {
+        val = num;
+    }
+
+    const year = dateStr.split('-')[0] || window.appState.activeYear;
+
+    if (mode === 'edit' && recordId && oldStore && oldMetric) {
+        const oldRecords = await appDb.getAll(oldStore);
+        const oldRecord = oldRecords.find(r => r.id === recordId);
+        if (oldRecord && oldRecord.data) {
+            delete oldRecord.data[oldMetric];
+            const remainingKeys = Object.keys(oldRecord.data);
+            if (remainingKeys.length === 0 || (oldStore === 'sales' && remainingKeys.length === 1 && remainingKeys[0] === 'Product')) {
+                await appDb.deleteRecord(oldStore, recordId);
+            } else {
+                const tx = appDb._db.transaction([oldStore], 'readwrite');
+                tx.objectStore(oldStore).put(oldRecord);
+            }
+        }
+    }
+
+    const targetRecords = await appDb.getAll(store, 'year', year);
+    let targetRec = targetRecords.find(r => {
+        if (r.date !== dateStr || r.employee !== employee) return false;
+        if (store === 'performance') return (r.skill || '') === skillName;
+        return (r.data && r.data.Product) === skillName;
+    });
+
+    if (targetRec) {
+        targetRec.data[metric] = val;
+        const tx = appDb._db.transaction([store], 'readwrite');
+        tx.objectStore(store).put(targetRec);
+    } else {
+        const newRec = {
+            year: year,
+            date: dateStr,
+            employee: employee,
+            data: {}
+        };
+        if (store === 'performance') {
+            newRec.skill = skillName;
+        } else {
+            newRec.data.Product = skillName;
+        }
+        newRec.data[metric] = val;
+        await appDb.addMultiple(store, [newRec]);
+    }
+
+    await autoAssignAnonIds([{ year, employee }]);
+
+    closeManualDataModal();
+    logImport(mode === 'edit' ? `Modificata riga metrica "${metric}".` : `Aggiunta nuova metrica "${metric}".`);
+    await refreshYearsList();
+    await renderImportedData();
+    if (window.renderStatistics) renderStatistics();
+}
+
+function setupManualDataModalListeners() {
+    const addBtn = document.getElementById('add-manual-data-btn');
+    const closeBtn = document.getElementById('close-manual-data-modal');
+    const cancelBtn = document.getElementById('cancel-manual-data-btn');
+    const saveBtn = document.getElementById('save-manual-data-btn');
+    const storeSelect = document.getElementById('manual-store-type');
+
+    if (addBtn) addBtn.addEventListener('click', () => openManualDataModal('add'));
+    if (closeBtn) closeBtn.addEventListener('click', closeManualDataModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeManualDataModal);
+    if (saveBtn) saveBtn.addEventListener('click', saveManualData);
+
+    if (storeSelect) {
+        storeSelect.addEventListener('change', (e) => {
+            populateManualDataDatalists(e.target.value);
+        });
+    }
+}
+
 

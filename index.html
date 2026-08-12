@@ -194,6 +194,10 @@
                         </select>
                         <input type="text" id="db-search-input" placeholder="Cerca collaboratore, metrica..." style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); width:220px;">
                         <button class="btn secondary" id="clear-filtered-db-btn" style="padding:6px 12px; font-size:0.85rem;" title="Elimina dati filtrati per l'anno corrente">Elimina Dati Filtrati</button>
+                        <button class="btn primary" id="add-manual-data-btn" style="padding:6px 12px; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Aggiungi Dato Manuale
+                        </button>
                     </div>
                 </div>
 
@@ -383,6 +387,60 @@
                 Nuovo Template
             </button>
             <button class="btn primary" id="save-templates-modal-btn">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Manual Data Modal -->
+    <div id="manual-data-modal" class="modal">
+        <div class="modal-header">
+            <h2 id="manual-data-modal-title">Aggiungi Dato Manuale</h2>
+            <button class="close-modal" id="close-manual-data-modal">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:16px 24px; display:flex; flex-direction:column; gap:14px; overflow-y:auto;">
+            <input type="hidden" id="manual-edit-mode" value="add">
+            <input type="hidden" id="manual-record-id" value="">
+            <input type="hidden" id="manual-old-store" value="">
+            <input type="hidden" id="manual-old-metric" value="">
+
+            <div>
+                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Tipo / Fonte:</label>
+                <select id="manual-store-type" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                    <option value="performance">Performance</option>
+                    <option value="sales">Sales</option>
+                </select>
+            </div>
+
+            <div>
+                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;" id="manual-skill-label">Skill / Prodotto:</label>
+                <input type="text" id="manual-skill-input" list="manual-skill-list" placeholder="Es. Voice Inbound, AOIT gew..." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                <datalist id="manual-skill-list"></datalist>
+            </div>
+
+            <div>
+                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Collaboratore:</label>
+                <input type="text" id="manual-employee-input" list="manual-employee-list" placeholder="Nome cognome..." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                <datalist id="manual-employee-list"></datalist>
+            </div>
+
+            <div>
+                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Data:</label>
+                <input type="date" id="manual-date-input" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+            </div>
+
+            <div>
+                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Metrica / Prodotto:</label>
+                <input type="text" id="manual-metric-input" list="manual-metric-list" placeholder="Es. Tempo Medio di Chiamata, Quantità..." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                <datalist id="manual-metric-list"></datalist>
+            </div>
+
+            <div>
+                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Valore:</label>
+                <input type="text" id="manual-value-input" placeholder="Es. 12.5, 100, ecc." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+            <button class="btn secondary" id="cancel-manual-data-btn">Annulla</button>
+            <button class="btn primary" id="save-manual-data-btn">Salva Dato</button>
         </div>
     </div>
 
