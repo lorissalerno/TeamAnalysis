@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const maxVal = g.target + plus;
                     toleranceHtml = `<p style="font-size:0.85rem; color:var(--text-muted); margin-top:2px;">Tolleranza: +${plus} / -${minus} (Range: ${minVal} - ${maxVal})</p>`;
                 } else if (g.toleranceType === 'percentage') {
-                    const minVal = (g.target * (1 - minus / 100)).toFixed(2);
-                    const maxVal = (g.target * (1 + plus / 100)).toFixed(2);
+                    const minVal = Math.round(g.target * (1 - minus / 100));
+                    const maxVal = Math.round(g.target * (1 + plus / 100));
                     toleranceHtml = `<p style="font-size:0.85rem; color:var(--text-muted); margin-top:2px;">Tolleranza: +${plus}% / -${minus}% (Range: ${minVal} - ${maxVal})</p>`;
                 }
             }
@@ -209,10 +209,10 @@ async function openGoalModal(goalId = null) {
 
         if (!isNaN(target)) {
             if (!isNaN(mPct)) {
-                minusNumInput.value = (target * (mPct / 100)).toFixed(2);
+                minusNumInput.value = Math.round(target * (mPct / 100));
             }
             if (!isNaN(pPct)) {
-                plusNumInput.value = (target * (pPct / 100)).toFixed(2);
+                plusNumInput.value = Math.round(target * (pPct / 100));
             }
         }
     }
@@ -221,7 +221,7 @@ async function openGoalModal(goalId = null) {
         const target = parseFloat(targetInput.value);
         const mNum = parseFloat(minusNumInput.value);
         if (!isNaN(target) && target !== 0 && !isNaN(mNum)) {
-            minusPctInput.value = ((mNum / target) * 100).toFixed(2);
+            minusPctInput.value = Math.round((mNum / target) * 100);
         }
     }
 
@@ -229,7 +229,7 @@ async function openGoalModal(goalId = null) {
         const target = parseFloat(targetInput.value);
         const pNum = parseFloat(plusNumInput.value);
         if (!isNaN(target) && target !== 0 && !isNaN(pNum)) {
-            plusPctInput.value = ((pNum / target) * 100).toFixed(2);
+            plusPctInput.value = Math.round((pNum / target) * 100);
         }
     }
 
