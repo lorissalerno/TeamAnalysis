@@ -689,17 +689,25 @@ async function renderImportedData() {
             ? `<span style="padding:3px 8px; border-radius:4px; background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`
             : `<span style="padding:3px 8px; border-radius:4px; background:#10b981; color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`;
 
+        const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+        let displayDate = r.date || '-';
+        if (r.date && r.date.includes('-')) {
+            const parts = r.date.split('-');
+            const m = parseInt(parts[1], 10);
+            if (m >= 1 && m <= 12) displayDate = monthNames[m - 1];
+        }
+
         tr.innerHTML = `
-            <td style="white-space:nowrap; font-weight:500;">${r.date || '-'}</td>
+            <td style="white-space:nowrap; font-weight:500;">${displayDate}</td>
             <td><strong>${dispEmployee}</strong></td>
             <td>${skillBadge}</td>
             <td style="font-weight:500;">${r.metric}</td>
-            <td style="font-weight:600;">${r.value}</td>
-            <td style="text-align:center;">
-                <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px;">
+            <td style="font-weight:600; text-align:center;">${r.value}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px; display:inline-flex; align-items:center; justify-content:center;">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
-                <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px;">
+                <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px; display:inline-flex; align-items:center; justify-content:center;">
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
                 </button>
             </td>
