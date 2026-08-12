@@ -653,6 +653,27 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         });
         return count > 0 ? Math.round(sum / count) : 0;
     });
+    // Check for goals
+    let relevantGoal = null;
+    const candidateGoals = goals.filter(g => {
+        if (g.metric !== statConfig.metric) return false;
+        if (isIndividual) {
+            if (g.employee === employeeName) return true;
+            if (!g.employee && showTeamGoal) return true;
+            return false;
+        } else {
+            return !g.employee && showTeamGoal;
+        }
+    });
+
+    if (statConfig.skill && statConfig.skill !== 'ALL') {
+        relevantGoal = candidateGoals.find(g => g.employee === employeeName && g.skill === statConfig.skill) ||
+                       candidateGoals.find(g => !g.employee && g.skill === statConfig.skill);
+    }
+    if (!relevantGoal) {
+        relevantGoal = candidateGoals.find(g => g.employee === employeeName && (!g.skill || g.skill === 'ALL')) ||
+                       candidateGoals.find(g => !g.employee && (!g.skill || g.skill === 'ALL'));
+    }
 
     if (statConfig.type === 'table') {
         if (isIndividual) {
@@ -682,6 +703,16 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 html += '</tr>';
             }
 
+            if (showTeamGoal && relevantGoal) {
+                html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
+                html += `<td>Obiettivo</td>`;
+                labels.forEach(() => {
+                    const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                    html += `<td style="text-align:center; color: var(--text-muted);">${targetVal}</td>`;
+                });
+                html += '</tr>';
+            }
+
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         } else if (teamAvgOnly) {
@@ -698,6 +729,17 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
             });
             html += '</tr>';
+
+            if (showTeamGoal && relevantGoal) {
+                html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
+                html += `<td>Obiettivo</td>`;
+                labels.forEach(() => {
+                    const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                    html += `<td style="text-align:center; color: var(--text-muted);">${targetVal}</td>`;
+                });
+                html += '</tr>';
+            }
+
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         } else {
@@ -730,6 +772,17 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 });
                 html += '</tr>';
             }
+
+            if (showTeamGoal && relevantGoal) {
+                html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
+                html += `<td>Obiettivo</td>`;
+                labels.forEach(() => {
+                    const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                    html += `<td style="text-align:center; color: var(--text-muted);">${targetVal}</td>`;
+                });
+                html += '</tr>';
+            }
+
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         }
@@ -843,28 +896,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     order: 1
                 });
             }
-        }
-        
-        // Check for goals
-        let relevantGoal = null;
-        const candidateGoals = goals.filter(g => {
-            if (g.metric !== statConfig.metric) return false;
-            if (isIndividual) {
-                if (g.employee === employeeName) return true;
-                if (!g.employee && showTeamGoal) return true;
-                return false;
-            } else {
-                return !g.employee && showTeamGoal;
-            }
-        });
-
-        if (statConfig.skill && statConfig.skill !== 'ALL') {
-            relevantGoal = candidateGoals.find(g => g.employee === employeeName && g.skill === statConfig.skill) ||
-                           candidateGoals.find(g => !g.employee && g.skill === statConfig.skill);
-        }
-        if (!relevantGoal) {
-            relevantGoal = candidateGoals.find(g => g.employee === employeeName && (!g.skill || g.skill === 'ALL')) ||
-                           candidateGoals.find(g => !g.employee && (!g.skill || g.skill === 'ALL'));
         }
 
         let maxTarget = undefined;
