@@ -1,7 +1,98 @@
-// js/statistics.js
+// Helper for templates
+async function getTemplates() {
+    let tpls = await appDb.getSetting('stat_templates', null);
+    if (!tpls || !Array.isArray(tpls) || tpls.length === 0) {
+        tpls = [{ id: 'default', name: 'Default' }];
+        await appDb.setSetting('stat_templates', tpls);
+    }
+    return tpls;
+}
 
-// Team view mode: 'all' = tutti i collaboratori, 'avg' = solo media team
-let teamViewMode = 'all';
+async function getActiveTemplateId() {
+    let activeId = await appDb.getSetting('active_stat_template', null);
+    const tpls = await getTemplates();
+    if (!activeId || !tpls.find(t => t.id === activeId)) {
+        activeId = tpls[0].id;
+        await appDb.setSetting('active_stat_template', activeId);
+    }
+    return activeId;
+}
+
+async function initTemplateControls() {
+    const select = document.getElementById('stat-template-select');
+    const newBtn = document.getElementById('new-template-btn');
+    const renameBtn = document.getElementById('rename-template-btn');
+    const deleteBtn = document.getElementById('delete-template-btn');
+    if (!select) return;
+
+    const tpls = await getTemplates();
+    const activeId = await getActiveTemplateId();
+
+    select.innerHTML = '';
+    tpls.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        if (t.id === activeId) opt.selected = true;
+        select.appendChild(opt);
+    });
+
+    select.onchange = async () => {
+        await appDb.setSetting('active_stat_template', select.value);
+        await renderStatistics();
+    };
+
+    newBtn.onclick = async () => {
+        const name = prompt('Nome del nuovo template:');
+        if (!name || !name.trim()) return;
+        const cleanName = name.trim();
+        const currentTpls = await getTemplates();
+        const newId = 'tpl_' + Date.now();
+        currentTpls.push({ id: newId, name: cleanName });
+        await appDb.setSetting('stat_templates', currentTpls);
+        await appDb.setSetting('active_stat_template', newId);
+        await initTemplateControls();
+        await renderStatistics();
+    };
+
+    renameBtn.onclick = async () => {
+        const currentTpls = await getTemplates();
+        const currentId = await getActiveTemplateId();
+        const target = currentTpls.find(t => t.id === currentId);
+        if (!target) return;
+        const newName = prompt('Nuovo nome per il template:', target.name);
+        if (!newName || !newName.trim()) return;
+        target.name = newName.trim();
+        await appDb.setSetting('stat_templates', currentTpls);
+        await initTemplateControls();
+    };
+
+    deleteBtn.onclick = async () => {
+        const currentTpls = await getTemplates();
+        if (currentTpls.length <= 1) {
+            alert('Impossibile eliminare l\'unico template rimasto.');
+            return;
+        }
+        const currentId = await getActiveTemplateId();
+        const target = currentTpls.find(t => t.id === currentId);
+        if (!target) return;
+
+        if (!confirm(`Eliminare il template "${target.name}" e tutte le sue statistiche?`)) return;
+
+        const allStats = await appDb.getAll('custom_stats');
+        for (const s of allStats) {
+            if (s.templateId === currentId || (!s.templateId && currentId === 'default')) {
+                await appDb.deleteRecord('custom_stats', s.id);
+            }
+        }
+
+        const remaining = currentTpls.filter(t => t.id !== currentId);
+        await appDb.setSetting('stat_templates', remaining);
+        await appDb.setSetting('active_stat_template', remaining[0].id);
+        await initTemplateControls();
+        await renderStatistics();
+    };
+}
 
 // Initialize statistics module
 document.addEventListener('DOMContentLoaded', () => {
@@ -51,6 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // We export a function to be called from app.js when year changes
     window.renderStatistics = async function() {
+        await initTemplateControls();
+
         // Populate individual select
         const select = document.getElementById('individual-select');
         const currentVal = select.value;
@@ -158,9 +251,12 @@ async function saveNewStat() {
     const type = document.getElementById('stat-type').value;
     const product = document.getElementById('stat-product').value;
     
+    const activeTemplateId = await getActiveTemplateId();
+
     const newStat = {
         id: 'stat_' + Date.now(),
         title, metric, skill, type, product,
+        templateId: activeTemplateId,
         year: window.appState.activeYear
     };
     
@@ -175,13 +271,13 @@ async function renderTeamStats() {
     container.innerHTML = '';
     
     const year = window.appState.activeYear;
-    // According to specs, settings/templates are reused. But if we scope to year, it's easier.
-    // Spec: "Le impostazioni di grafici e tabelle... restano invece disponibili come template riutilizzabile per il nuovo anno".
-    // So we fetch all custom_stats regardless of year, but populate with current year's data!
-    const stats = await appDb.getAll('custom_stats');
+    const activeTemplateId = await getActiveTemplateId();
+
+    const allStats = await appDb.getAll('custom_stats');
+    const stats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
     
     if (stats.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica creata. Usa il pulsante in alto.</p>';
+        container.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica presente in questo template. Usa il pulsante "Nuova Statistica".</p>';
         return;
     }
     
@@ -209,14 +305,18 @@ async function renderIndividualStats() {
     
     container.innerHTML = 'Caricamento...';
     const year = window.appState.activeYear;
-    const stats = await appDb.getAll('custom_stats');
+    const activeTemplateId = await getActiveTemplateId();
+
+    const allStats = await appDb.getAll('custom_stats');
+    const stats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
+
     const perfData = (await appDb.getAll('performance', 'year', year)).filter(d => d.employee === employee);
     const salesData = (await appDb.getAll('sales', 'year', year)).filter(d => d.employee === employee);
     const goals = await appDb.getAll('goals', 'year', year);
     
     container.innerHTML = '';
     if (stats.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica creata. Creale nella tab Team prima.</p>';
+        container.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica in questo template.</p>';
         return;
     }
     
@@ -507,13 +607,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 label: 'Media Team',
                 data: teamAvgPts,
                 type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#00f2fe', 0.75) : 'rgba(0, 242, 254, 0.2)',
-                borderColor: '#00f2fe',
+                backgroundColor: isBar ? hexToRgba('#2563eb', 0.75) : 'rgba(37, 99, 235, 0.2)',
+                borderColor: '#2563eb',
                 borderWidth: isBar ? 1 : 2,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
                 pointRadius: isBar ? 0 : 4,
-                pointBackgroundColor: '#00f2fe',
+                pointBackgroundColor: '#2563eb',
                 tension: 0.3,
                 order: 1
             });
@@ -542,12 +642,12 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 label: 'Media Team',
                 data: teamAvgPts,
                 type: 'line',
-                borderColor: '#00f2fe',
-                backgroundColor: '#00f2fe',
+                borderColor: '#2563eb',
+                backgroundColor: '#2563eb',
                 borderWidth: 3,
                 borderDash: [6, 4],
                 pointRadius: 4,
-                pointBackgroundColor: '#00f2fe',
+                pointBackgroundColor: '#2563eb',
                 fill: false,
                 order: 1
             });

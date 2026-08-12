@@ -173,7 +173,16 @@
         <!-- Statistics Section -->
         <section id="statistics" class="page-section">
             <div class="section-header">
-                <h1>Statistiche</h1>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <h1>Statistiche</h1>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <select id="stat-template-select" style="padding:6px 10px; border-radius:6px; background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem; font-weight:500; cursor:pointer;">
+                        </select>
+                        <button class="btn secondary" id="new-template-btn" title="Nuovo Template" style="padding:4px 8px; font-size:0.8rem;">+ Nuovo</button>
+                        <button class="btn secondary" id="rename-template-btn" title="Rinomina Template" style="padding:4px 8px; font-size:0.8rem;">✏️</button>
+                        <button class="btn secondary" id="delete-template-btn" title="Elimina Template" style="padding:4px 8px; font-size:0.8rem;">🗑</button>
+                    </div>
+                </div>
                 <div class="tabs">
                     <button class="tab-btn active" data-target="stat-team">Team</button>
                     <button class="tab-btn" data-target="stat-individual">Individuale</button>
