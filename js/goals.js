@@ -44,47 +44,66 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredGoals.forEach(g => {
             const card = document.createElement('div');
             card.className = 'card';
-            const skillLabel = g.skill && g.skill !== 'ALL' ? `Skill: ${g.skill}` : 'Tutti gli Skill';
-            const empLabel = g.employee ? ` | ${window.getDisplayName(g.employee)}` : ' (Tutto il Team)';
+            const skillText = g.skill && g.skill !== 'ALL' ? g.skill : 'Tutte le Skill';
+            const empText = g.employee ? window.getDisplayName(g.employee) : 'Tutto il Team';
             
-            let rangeHtml = '';
+            let minVal = null;
+            let maxVal = null;
+            let tolLabel = '';
+            
             if (g.toleranceType && g.toleranceType !== 'none') {
                 const plus = parseFloat(g.tolerancePlus) || 0;
                 const minus = parseFloat(g.toleranceMinus) || 0;
-                let minVal, maxVal, tolLabel;
                 if (g.toleranceType === 'numeric') {
                     minVal = g.target - minus;
                     maxVal = g.target + plus;
-                    tolLabel = `±${plus !== minus ? `${minus} / +${plus}` : plus}`;
+                    tolLabel = plus === minus ? `±${plus}` : `-${minus} / +${plus}`;
                 } else {
                     minVal = Math.round(g.target * (1 - minus / 100));
                     maxVal = Math.round(g.target * (1 + plus / 100));
-                    tolLabel = `±${plus !== minus ? `${minus}% / +${plus}%` : plus + '%'}`;
+                    tolLabel = plus === minus ? `±${plus}%` : `-${minus}% / +${plus}%`;
                 }
-                rangeHtml = `
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
-                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Range</span>
-                        <span style="font-size:0.85rem; color:var(--text-main); font-family:monospace; background:var(--bg-alt,var(--bg-base)); padding:2px 8px; border-radius:6px; border:1px solid var(--border,rgba(255,255,255,0.08))">${minVal} – ${maxVal}</span>
-                        <span style="font-size:0.78rem; color:var(--text-muted);">(Tolleranza ${tolLabel})</span>
-                    </div>`;
             }
 
+            card.style.cssText = 'display:flex; flex-direction:column; justify-content:space-between; gap:14px; padding:18px;';
+
             card.innerHTML = `
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px;">
-                    <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); line-height:1.3;">${g.metric}</div>
-                    <div style="display:flex; gap:4px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
-                        <span style="font-size:0.72rem; font-weight:600; padding:2px 7px; border-radius:20px; background:var(--primary-alpha,rgba(99,102,241,0.15)); color:var(--primary); white-space:nowrap;">${skillLabel}</span>
-                        <span style="font-size:0.72rem; font-weight:600; padding:2px 7px; border-radius:20px; background:var(--bg-alt,var(--bg-base)); border:1px solid var(--border,rgba(255,255,255,0.08)); color:var(--text-muted); white-space:nowrap;">${empLabel.replace(' | ','').trim()}</span>
+                <div>
+                    <!-- Badge Ambito -->
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                        <span style="font-size:0.75rem; font-weight:600; padding:3px 9px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary, #6366f1); border:1px solid rgba(99,102,241,0.25);">
+                            Skill: ${skillText}
+                        </span>
+                        <span style="font-size:0.75rem; font-weight:600; padding:3px 9px; border-radius:12px; background:var(--bg-alt, rgba(255,255,255,0.05)); color:var(--text-muted); border:1px solid var(--border, rgba(255,255,255,0.1));">
+                            ${empText}
+                        </span>
+                    </div>
+                    
+                    <!-- Titolo Metrica -->
+                    <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin:0 0 12px 0; line-height:1.35; word-break:break-word;">
+                        ${g.metric}
+                    </h3>
+
+                    <!-- Box Valori Target & Range -->
+                    <div style="background:var(--bg-alt, rgba(255,255,255,0.03)); border:1px solid var(--border, rgba(255,255,255,0.08)); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                        <div>
+                            <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:2px;">Target</div>
+                            <div style="font-size:1.35rem; font-weight:800; color:var(--primary, #6366f1); font-family:monospace;">${g.target}</div>
+                        </div>
+
+                        ${minVal !== null ? `
+                        <div style="text-align:right;">
+                            <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:2px;">Range (${tolLabel})</div>
+                            <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); font-family:monospace;">${minVal} – ${maxVal}</div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
-                <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:4px;">
-                    <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Target</span>
-                    <span style="font-size:1.35rem; font-weight:800; color:var(--primary);">${g.target}</span>
-                </div>
-                ${rangeHtml}
-                <div style="margin-top:14px; display:flex; gap:8px;">
-                    <button class="btn secondary" style="padding:5px 14px; font-size:0.82rem;" onclick="openGoalModal('${g.id}')">Modifica</button>
-                    <button class="btn secondary" style="padding:5px 14px; font-size:0.82rem;" onclick="deleteGoal('${g.id}')">Elimina</button>
+
+                <!-- Footer Azioni -->
+                <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border, rgba(255,255,255,0.08)); padding-top:10px; margin-top:2px;">
+                    <button class="btn secondary" style="padding:4px 12px; font-size:0.8rem;" onclick="openGoalModal('${g.id}')">Modifica</button>
+                    <button class="btn secondary" style="padding:4px 12px; font-size:0.8rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="deleteGoal('${g.id}')">Elimina</button>
                 </div>
             `;
             list.appendChild(card);
