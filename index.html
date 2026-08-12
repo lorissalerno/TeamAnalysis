@@ -200,10 +200,15 @@
                 <div id="team-stats-container" class="stats-grid"></div>
             </div>
             <div id="stat-individual" class="tab-content">
-                <div class="filter-bar">
+                <div class="filter-bar" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
                     <select id="individual-select">
                         <option value="">Seleziona Collaboratore...</option>
                     </select>
+                    <label class="toggle-switch" style="margin-left:auto; display:flex; align-items:center; cursor:pointer;">
+                        <input type="checkbox" id="show-team-avg-individual-toggle">
+                        <span class="slider"></span>
+                        <span class="label">Mostra Media Team</span>
+                    </label>
                 </div>
                 <div id="individual-stats-container" class="stats-grid"></div>
             </div>

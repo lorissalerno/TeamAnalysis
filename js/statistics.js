@@ -1,3 +1,5 @@
+// js/statistics.js
+
 // Helper for templates
 async function getTemplates() {
     let tpls = await appDb.getSetting('stat_templates', null);
@@ -94,6 +96,10 @@ async function initTemplateControls() {
     };
 }
 
+// Team view mode: 'all' = tutti i collaboratori, 'avg' = solo media team
+let teamViewMode = 'all';
+let showIndividualTeamAvg = false;
+
 // Initialize statistics module
 document.addEventListener('DOMContentLoaded', () => {
     const createBtn = document.getElementById('create-stat-btn');
@@ -105,6 +111,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const indSelect = document.getElementById('individual-select');
     if(indSelect) {
         indSelect.addEventListener('change', renderIndividualStats);
+    }
+
+    const indAvgToggle = document.getElementById('show-team-avg-individual-toggle');
+    if (indAvgToggle) {
+        indAvgToggle.addEventListener('change', (e) => {
+            showIndividualTeamAvg = e.target.checked;
+            renderIndividualStats();
+        });
     }
 
     // Setup Team view mode toggle
@@ -308,8 +322,8 @@ async function renderIndividualStats() {
     const allStats = await appDb.getAll('custom_stats');
     const stats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
 
-    const perfData = (await appDb.getAll('performance', 'year', year)).filter(d => d.employee === employee);
-    const salesData = (await appDb.getAll('sales', 'year', year)).filter(d => d.employee === employee);
+    const perfData = await appDb.getAll('performance', 'year', year);
+    const salesData = await appDb.getAll('sales', 'year', year);
     const goals = await appDb.getAll('goals', 'year', year);
     
     container.innerHTML = '';
@@ -319,7 +333,7 @@ async function renderIndividualStats() {
     }
     
     stats.forEach(stat => {
-        const card = buildStatCard(stat, perfData, salesData, goals, true, employee);
+        const card = buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg);
         container.appendChild(card);
     });
 }
@@ -357,7 +371,7 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false) {
+function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvgInIndividual = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
     card.style.position = 'relative';
@@ -537,7 +551,19 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 const displayVal = val === null ? '' : val;
                 html += `<td style="text-align:center;">${displayVal}</td>`;
             });
-            html += '</tr></tbody></table>';
+            html += '</tr>';
+
+            if (showTeamAvgInIndividual) {
+                html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
+                html += `<td>Media Team</td>`;
+                labels.forEach((date, idx) => {
+                    const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
+                    html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
+                });
+                html += '</tr>';
+            }
+
+            html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         } else if (teamAvgOnly) {
             // Solo Media Team nella tabella
@@ -611,6 +637,22 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 tension: 0.3,
                 order: 2
             });
+
+            if (showTeamAvgInIndividual) {
+                datasets.push({
+                    label: 'Media Team',
+                    data: teamAvgPts,
+                    type: 'line',
+                    borderColor: '#2563eb',
+                    backgroundColor: '#2563eb',
+                    borderWidth: 3,
+                    borderDash: [6, 4],
+                    pointRadius: 4,
+                    pointBackgroundColor: '#2563eb',
+                    fill: false,
+                    order: 1
+                });
+            }
         } else if (teamAvgOnly) {
             // Solo Media Team
             datasets.push({
