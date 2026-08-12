@@ -524,13 +524,20 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     if (statConfig.type === 'table') {
         if (isIndividual) {
-            let html = '<table class="data-table"><thead><tr><th>Mese</th><th>Valore</th></tr></thead><tbody>';
+            let html = '<table class="data-table"><thead><tr><th>Collaboratore</th>';
+            displayLabels.forEach(l => {
+                html += `<th style="text-align:center;">${l}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            const dispName = employeeName ? window.getDisplayName(employeeName) : 'Valore';
+            html += `<tr><td style="font-weight:600;">${dispName}</td>`;
             displayLabels.forEach((l, idx) => {
                 const val = dataPts[idx];
                 const displayVal = val === null ? '' : val;
-                html += `<tr><td>${l}</td><td>${displayVal}</td></tr>`;
+                html += `<td style="text-align:center;">${displayVal}</td>`;
             });
-            html += '</tbody></table>';
+            html += '</tr></tbody></table>';
             canvasContainer.innerHTML = html;
         } else if (teamAvgOnly) {
             // Solo Media Team nella tabella
