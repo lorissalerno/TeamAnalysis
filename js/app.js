@@ -1214,18 +1214,52 @@ function initWizardMonthSelect() {
     });
 }
 
+function updateWizardStepHeader() {
+    const isSales = wizardState.type === 'sales';
+    const step2Item = document.querySelector('.wizard-step-item[data-step="2"]');
+    const step3Item = document.querySelector('.wizard-step-item[data-step="3"]');
+    const step4Item = document.querySelector('.wizard-step-item[data-step="4"]');
+
+    const step3Title = document.getElementById('wizard-step-3-title');
+    const step4Title = document.getElementById('wizard-step-4-title');
+
+    if (isSales) {
+        if (step2Item) step2Item.style.display = 'none';
+        if (step3Item) {
+            const numEl = step3Item.querySelector('.step-num');
+            if (numEl) numEl.textContent = '2';
+        }
+        if (step4Item) {
+            const numEl = step4Item.querySelector('.step-num');
+            if (numEl) numEl.textContent = '3';
+        }
+        if (step3Title) step3Title.textContent = 'Passaggio 2: Seleziona il mese di sovrascrittura';
+        if (step4Title) step4Title.textContent = 'Passaggio 3: Seleziona ed importa il file CSV';
+    } else {
+        if (step2Item) step2Item.style.display = 'flex';
+        if (step3Item) {
+            const numEl = step3Item.querySelector('.step-num');
+            if (numEl) numEl.textContent = '3';
+        }
+        if (step4Item) {
+            const numEl = step4Item.querySelector('.step-num');
+            if (numEl) numEl.textContent = '4';
+        }
+        if (step3Title) step3Title.textContent = 'Passaggio 3: Seleziona il mese di sovrascrittura';
+        if (step4Title) step4Title.textContent = 'Passaggio 4: Seleziona ed importa il file CSV';
+    }
+}
+
 function updateWizardStepUI(step) {
     wizardState.currentStep = step;
+    updateWizardStepHeader();
 
     document.querySelectorAll('.wizard-step-item').forEach(item => {
         const itemStep = parseInt(item.getAttribute('data-step'));
         item.classList.remove('active', 'completed');
         
         if (itemStep === 2 && wizardState.type === 'sales') {
-            item.style.display = 'none';
             return;
-        } else if (itemStep === 2) {
-            item.style.display = 'flex';
         }
 
         if (itemStep === step) {
@@ -1322,6 +1356,7 @@ function setupImportWizard() {
             optPerf.style.borderColor = 'var(--primary)';
             optSales.classList.remove('active');
             optSales.style.borderColor = 'var(--border)';
+            updateWizardStepUI(wizardState.currentStep);
         });
 
         optSales.addEventListener('click', () => {
@@ -1330,6 +1365,7 @@ function setupImportWizard() {
             optSales.style.borderColor = 'var(--primary)';
             optPerf.classList.remove('active');
             optPerf.style.borderColor = 'var(--border)';
+            updateWizardStepUI(wizardState.currentStep);
         });
     }
 
