@@ -328,15 +328,58 @@ async function openStatModal() {
     if (!modal) {
         modal = createStatModalHTML();
     }
-    
-    const metricSelect = document.getElementById('stat-metric');
-    metricSelect.innerHTML = '';
-    Array.from(metrics).sort().forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        metricSelect.appendChild(opt);
-    });
+
+    const allMetrics = Array.from(metrics).sort();
+    const metricSearchInput = document.getElementById('stat-metric-search');
+    const metricDropdown = document.getElementById('stat-metric-dropdown');
+    const metricHidden = document.getElementById('stat-metric');
+
+    let statSelectedMetric = allMetrics.length > 0 ? allMetrics[0] : '';
+    metricHidden.value = statSelectedMetric;
+    metricSearchInput.value = statSelectedMetric;
+
+    function renderStatDropdown(filterText = '') {
+        metricDropdown.innerHTML = '';
+        const query = filterText.toLowerCase().trim();
+        const filtered = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
+        if (filtered.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
+            empty.textContent = 'Nessun risultato';
+            metricDropdown.appendChild(empty);
+            return;
+        }
+        filtered.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'searchable-dropdown-item' + (m === statSelectedMetric ? ' selected' : '');
+            item.textContent = m;
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                statSelectedMetric = m;
+                metricHidden.value = m;
+                metricSearchInput.value = m;
+                metricDropdown.classList.remove('open');
+                renderStatDropdown(m);
+            });
+            metricDropdown.appendChild(item);
+        });
+    }
+
+    renderStatDropdown('');
+
+    metricSearchInput.onfocus = () => {
+        metricSearchInput.select();
+        renderStatDropdown(metricSearchInput.value === statSelectedMetric ? '' : metricSearchInput.value);
+        metricDropdown.classList.add('open');
+    };
+    metricSearchInput.oninput = (e) => {
+        renderStatDropdown(e.target.value);
+        metricDropdown.classList.add('open');
+    };
+    metricSearchInput.onblur = () => {
+        metricDropdown.classList.remove('open');
+        if (statSelectedMetric) metricSearchInput.value = statSelectedMetric;
+    };
 
     const skillSelect = document.getElementById('stat-skill');
     skillSelect.innerHTML = '<option value="ALL">Tutte le Skill</option>';
@@ -359,7 +402,12 @@ function createStatModalHTML() {
         </div>
         <div class="modal-body">
             <label>Dato / Metrica:</label>
-            <select id="stat-metric" style="width:100%; padding:8px; margin-bottom:16px;"></select>
+            <div style="position:relative; margin-bottom:16px;">
+                <input type="text" id="stat-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <input type="hidden" id="stat-metric">
+                <div id="stat-metric-dropdown" class="searchable-dropdown"></div>
+            </div>
             
             <label>Filtro Skill Performance (opzionale):</label>
             <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>

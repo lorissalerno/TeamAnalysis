@@ -116,30 +116,57 @@ async function openGoalModal(goalId = null) {
     const allMetrics = Array.from(metricsSet).sort();
 
     const metricSearchInput = document.getElementById('goal-metric-search');
-    const metricSelect = document.getElementById('goal-metric');
-    
-    function populateMetricOptions(filterText = '') {
-        const selectedVal = metricSelect.value;
-        metricSelect.innerHTML = '';
+    const metricDropdown = document.getElementById('goal-metric-dropdown');
+    const metricHidden = document.getElementById('goal-metric');
+
+    let goalSelectedMetric = '';
+
+    function renderGoalDropdown(filterText = '') {
+        metricDropdown.innerHTML = '';
         const query = filterText.toLowerCase().trim();
-        allMetrics.forEach(m => {
-            if (!query || m.toLowerCase().includes(query)) {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = m;
-                metricSelect.appendChild(opt);
-            }
-        });
-        if (selectedVal && Array.from(metricSelect.options).some(o => o.value === selectedVal)) {
-            metricSelect.value = selectedVal;
-        } else if (metricSelect.options.length > 0) {
-            metricSelect.options[0].selected = true;
+        const filtered = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
+        if (filtered.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
+            empty.textContent = 'Nessun risultato';
+            metricDropdown.appendChild(empty);
+            return;
         }
+        filtered.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'searchable-dropdown-item' + (m === goalSelectedMetric ? ' selected' : '');
+            item.textContent = m;
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                goalSelectedMetric = m;
+                metricHidden.value = m;
+                metricSearchInput.value = m;
+                metricDropdown.classList.remove('open');
+                renderGoalDropdown(m);
+            });
+            metricDropdown.appendChild(item);
+        });
     }
-    
+
     metricSearchInput.value = '';
-    populateMetricOptions('');
-    metricSearchInput.oninput = (e) => populateMetricOptions(e.target.value);
+    goalSelectedMetric = allMetrics.length > 0 ? allMetrics[0] : '';
+    metricHidden.value = goalSelectedMetric;
+    if (goalSelectedMetric) metricSearchInput.value = goalSelectedMetric;
+    renderGoalDropdown('');
+
+    metricSearchInput.addEventListener('focus', () => {
+        metricSearchInput.select();
+        renderGoalDropdown(metricSearchInput.value === goalSelectedMetric ? '' : metricSearchInput.value);
+        metricDropdown.classList.add('open');
+    });
+    metricSearchInput.addEventListener('input', (e) => {
+        renderGoalDropdown(e.target.value);
+        metricDropdown.classList.add('open');
+    });
+    metricSearchInput.addEventListener('blur', () => {
+        metricDropdown.classList.remove('open');
+        if (goalSelectedMetric) metricSearchInput.value = goalSelectedMetric;
+    });
 
     // Populate skills
     const skillSelect = document.getElementById('goal-skill');
@@ -198,8 +225,10 @@ async function openGoalModal(goalId = null) {
         const goals = await appDb.getAll('goals', 'year', year);
         const existing = goals.find(g => g.id === editingGoalId);
         if (existing) {
-            populateMetricOptions('');
-            metricSelect.value = existing.metric || '';
+            goalSelectedMetric = existing.metric || '';
+            metricHidden.value = goalSelectedMetric;
+            metricSearchInput.value = goalSelectedMetric;
+            renderGoalDropdown('');
             document.getElementById('goal-target').value = existing.target ?? '';
             skillSelect.value = existing.skill || 'ALL';
             empSelect.value = existing.employee || '';
@@ -228,11 +257,13 @@ function createGoalModalHTML() {
             <button class="close-modal" onclick="document.getElementById('goal-config-modal').classList.remove('open')">&times;</button>
         </div>
         <div class="modal-body">
-            <label>Cerca Dato / Metrica:</label>
-            <input type="text" id="goal-metric-search" placeholder="Filtra metriche in tempo reale..." style="width:100%; padding:8px; margin-bottom:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
-            
             <label>Dato / Metrica:</label>
-            <select id="goal-metric" size="5" style="width:100%; padding:8px; margin-bottom:16px; min-height:110px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);"></select>
+            <div style="position:relative; margin-bottom:16px;">
+                <input type="text" id="goal-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <input type="hidden" id="goal-metric">
+                <div id="goal-metric-dropdown" class="searchable-dropdown"></div>
+            </div>
             
             <label>Target Numerico:</label>
             <input type="number" step="any" id="goal-target" style="width:100%; padding:8px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">

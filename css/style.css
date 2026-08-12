@@ -100,6 +100,41 @@ a:hover {
     background: var(--text-muted);
 }
 
+/* Searchable Dropdown */
+.searchable-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: var(--shadow-lg);
+    margin-top: 2px;
+}
+.searchable-dropdown.open {
+    display: block;
+}
+.searchable-dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    transition: background var(--transition);
+}
+.searchable-dropdown-item:hover {
+    background: var(--bg-surface-hover);
+}
+.searchable-dropdown-item.selected {
+    background: var(--accent-muted);
+    color: var(--primary);
+    font-weight: 600;
+}
+
 @media print {
     .sidebar { display: none !important; }
     .content { padding: 0; overflow: visible; }
