@@ -402,7 +402,7 @@
             <button class="close-modal" id="close-import-wizard">&times;</button>
         </div>
 
-        <div class="modal-body" style="padding: 20px 24px; overflow-y: auto;">
+        <div class="modal-body" style="padding: 20px 24px; overflow: visible;">
             <!-- Step Indicators -->
             <div class="wizard-steps-container" style="display:flex; justify-content:space-between; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
                 <div class="wizard-step-item active" data-step="1">
@@ -437,31 +437,30 @@
                     <div class="wizard-option-card" id="type-opt-sales" style="border:1px solid var(--border); padding:16px; border-radius:8px; cursor:pointer; background:var(--bg-base); text-align:center;">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                         <h4 style="margin:0 0 4px 0;">Sales</h4>
-                        <span style="font-size:0.8rem; color:var(--text-muted);">AOIT gew, Nuovi Abo, RET</span>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">AOIT gew., Nuovi Abo & RET</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 2: Skill / Prodotto -->
+            <!-- Step 2: Skill/Prodotto Selection -->
             <div class="wizard-step-content" id="wizard-step-2" style="display:none;">
-                <h3 style="font-size:1.05rem; margin-bottom:12px;" id="wizard-step-2-title">Passaggio 2: Seleziona Skill o Prodotto</h3>
-                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;" id="wizard-step-2-desc">Scegli a quale Skill associare i dati delle performance.</p>
+                <h3 style="font-size:1.05rem; margin-bottom:12px;" id="wizard-step-2-title">Passaggio 2: Seleziona lo Skill</h3>
+                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;" id="wizard-step-2-desc">Scegli a quale Skill associare i dati delle performance da importare.</p>
 
-                <div id="wizard-perf-skill-section">
-                    <label style="display:block; margin-bottom: 6px; font-weight: 500;">Skill Performance:</label>
-                    <div style="display:flex; gap:8px;">
-                        <select id="wizard-perf-skill-select" style="flex:1; padding:10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.95rem;"></select>
-                        <button type="button" class="btn secondary" id="wizard-edit-skills-btn" title="Gestisci gli skill">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Skill
-                        </button>
-                    </div>
+                <!-- Container per Performance (Skill Selection) -->
+                <div id="wizard-perf-skill-section" style="display:none;">
+                    <label style="display:block; font-weight:500; margin-bottom:8px;">Skill di destinazione:</label>
+                    <select id="wizard-perf-skill-select" class="form-control" style="width:100%;">
+                        <!-- Popolato dinamicamente -->
+                    </select>
                 </div>
 
+                <!-- Container per Sales (Report Type Selection) -->
                 <div id="wizard-sales-info-section" style="display:none;">
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
                         <div class="wizard-option-card active" id="sales-opt-aoit" style="border:2px solid var(--primary); padding:20px 16px; border-radius:8px; cursor:pointer; background:var(--bg-base); text-align:center;">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                            <h4 style="margin:0;">AOIT</h4>
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            <h4 style="margin:0;">AOIT gew.</h4>
                         </div>
                         <div class="wizard-option-card" id="sales-opt-nuovi" style="border:1px solid var(--border); padding:20px 16px; border-radius:8px; cursor:pointer; background:var(--bg-base); text-align:center;">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>
@@ -472,7 +471,7 @@
             </div>
 
             <!-- Step 3: Mese Sovrascrittura -->
-            <div class="wizard-step-content" id="wizard-step-3" style="display:none;">
+            <div class="wizard-step-content" id="wizard-step-3" style="display:none; padding-bottom: 60px;">
                 <h3 style="font-size:1.05rem; margin-bottom:12px;" id="wizard-step-3-title">Passaggio 3: Seleziona il mese di sovrascrittura</h3>
                 <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">
                     Seleziona da quale mese sovrascrivere i dati esistenti. I dati dal mese selezionato in poi verranno aggiornati.
