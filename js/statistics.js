@@ -15,44 +15,6 @@ const fullWidthGoalPlugin = {
 
             ctx.save();
 
-            // Tolleranza (area riempita viola trasparente)
-            if (goalConfig.minTarget !== undefined && goalConfig.maxTarget !== undefined && (goalConfig.maxTarget > goalConfig.minTarget)) {
-                const yMin = y.getPixelForValue(goalConfig.minTarget);
-                const yMax = y.getPixelForValue(goalConfig.maxTarget);
-                if (!isNaN(yMin) && !isNaN(yMax)) {
-                    ctx.fillStyle = 'rgba(147, 51, 234, 0.12)';
-                    ctx.fillRect(left, Math.min(yMin, yMax), right - left, Math.abs(yMin - yMax));
-                }
-            }
-
-            // Linea Tolleranza Max
-            if (goalConfig.maxTarget !== undefined && goalConfig.maxTarget > goalConfig.target) {
-                const yMax = y.getPixelForValue(goalConfig.maxTarget);
-                if (!isNaN(yMax)) {
-                    ctx.beginPath();
-                    ctx.setLineDash([3, 3]);
-                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
-                    ctx.lineWidth = 1;
-                    ctx.moveTo(left, yMax);
-                    ctx.lineTo(right, yMax);
-                    ctx.stroke();
-                }
-            }
-
-            // Linea Tolleranza Min
-            if (goalConfig.minTarget !== undefined && goalConfig.minTarget < goalConfig.target) {
-                const yMin = y.getPixelForValue(goalConfig.minTarget);
-                if (!isNaN(yMin)) {
-                    ctx.beginPath();
-                    ctx.setLineDash([3, 3]);
-                    ctx.strokeStyle = 'rgba(147, 51, 234, 0.45)';
-                    ctx.lineWidth = 1;
-                    ctx.moveTo(left, yMin);
-                    ctx.lineTo(right, yMin);
-                    ctx.stroke();
-                }
-            }
-
             // Linea Obiettivo Viola
             const yTarget = y.getPixelForValue(goalConfig.target);
             if (!isNaN(yTarget)) {
@@ -761,12 +723,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
         let datasets = [];
-        // Palette sfumature di Blu per collaboratori
-        const BLUE_PALETTE = [
-            '#2563EB', '#38BDF8', '#1D4ED8', '#0284C7', 
-            '#6366F1', '#0EA5E9', '#1E40AF', '#60A5FA', 
-            '#4F46E5', '#0369A1', '#93C5FD', '#1E3A8A'
-        ];
+        // Colore unico Blu per tutti i collaboratori
+        const BLUE_PALETTE = ['#2563EB'];
 
         const isBar = statConfig.type === 'bar';
 
