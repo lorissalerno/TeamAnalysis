@@ -737,8 +737,12 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
         let datasets = [];
-        // Colore unico Blu per tutti i collaboratori
-        const BLUE_PALETTE = ['#2563EB'];
+        // Palette di tonalità di blu diverse e armoniose per i vari collaboratori
+        const BLUE_PALETTE = [
+            '#2563EB', '#3B82F6', '#1D4ED8', '#0284C7', 
+            '#4F46E5', '#0369A1', '#60A5FA', '#1E40AF', 
+            '#0D9488', '#6366F1', '#38BDF8', '#4338CA'
+        ];
 
         const isBar = statConfig.type === 'bar';
 
