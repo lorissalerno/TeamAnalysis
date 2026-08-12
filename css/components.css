@@ -356,3 +356,59 @@ select, input[type="text"], input[type="number"] {
     gap: 4px;
 }
 
+/* Dashboard Custom Components */
+.dash-progress-track {
+    width: 100%;
+    height: 10px;
+    background-color: var(--bg-base);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 6px;
+    border: 1px solid var(--border);
+}
+
+.dash-progress-fill {
+    height: 100%;
+    background-color: var(--primary);
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+.dash-progress-fill.success {
+    background-color: #10b981;
+}
+
+.dash-progress-fill.warning {
+    background-color: #f59e0b;
+}
+
+.dash-progress-fill.danger {
+    background-color: #ef4444;
+}
+
+.severity-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.severity-high {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.severity-medium {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.severity-low {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+

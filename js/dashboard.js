@@ -1,215 +1,325 @@
 // js/dashboard.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    const addBtn = document.getElementById('add-widget-btn');
-    if (addBtn) {
-        addBtn.addEventListener('click', openWidgetModal);
+    const searchInput = document.getElementById('dash-tolerance-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            if (window.renderDashboard) window.renderDashboard();
+        });
     }
-    
-    // Enable simple Drag and Drop on grid
-    const grid = document.getElementById('dashboard-grid');
-    if (grid) {
-        let dragged;
-        grid.addEventListener('dragstart', (e) => {
-            dragged = e.target;
-            e.target.style.opacity = .5;
-        });
-        
-        grid.addEventListener('dragend', async (e) => {
-            e.target.style.opacity = "";
-            // Save new order
-            const newOrder = Array.from(grid.children).map(c => c.getAttribute('data-id'));
-            const widgets = await appDb.getAll('dashboard_widgets');
-            widgets.forEach(w => {
-                w.order = newOrder.indexOf(w.id);
-            });
-            await appDb.addMultiple('dashboard_widgets', widgets);
-        });
-        
-        grid.addEventListener('dragover', (e) => {
-            e.preventDefault();
-        });
-        
-        grid.addEventListener('dragenter', (e) => {
-            if (e.target.className === 'card stat-card') {
-                e.target.style.transform = 'scale(1.02)';
-            }
-        });
-        
-        grid.addEventListener('dragleave', (e) => {
-            if (e.target.className === 'card stat-card') {
-                e.target.style.transform = '';
-            }
-        });
-        
-        grid.addEventListener('drop', (e) => {
-            e.preventDefault();
-            let target = e.target.closest('.card');
-            if (target && target !== dragged) {
-                target.style.transform = '';
-                // Swap places visually
-                const all = Array.from(grid.children);
-                const draggedIdx = all.indexOf(dragged);
-                const targetIdx = all.indexOf(target);
-                if (draggedIdx < targetIdx) {
-                    target.parentNode.insertBefore(dragged, target.nextSibling);
-                } else {
-                    target.parentNode.insertBefore(dragged, target);
-                }
-            }
+
+    const skillFilter = document.getElementById('dash-tolerance-filter-skill');
+    if (skillFilter) {
+        skillFilter.addEventListener('change', () => {
+            if (window.renderDashboard) window.renderDashboard();
         });
     }
 });
 
-// We override the placeholder in app.js
-window.renderDashboard = async function() {
-    const grid = document.getElementById('dashboard-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    
-    const year = window.appState.activeYear;
-    let widgets = await appDb.getAll('dashboard_widgets');
-    
-    if (widgets.length === 0) {
-        grid.innerHTML = '<p style="color:var(--text-muted)">Nessun widget configurato. Aggiungi un widget.</p>';
-        return;
+// Helper function to extract numeric value for employee & metric
+function calculateEmployeeMetricValue(employee, metricStr, skillFilter, perfData, salesData) {
+    let isSales = metricStr.startsWith('Sales: ');
+    let metricName = metricStr.replace('Performance: ', '').replace('Sales: ', '');
+
+    if (isSales) {
+        const records = salesData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined);
+        if (records.length === 0) return 0;
+        return records.reduce((sum, r) => sum + (parseFloat(r.data[metricName]) || 0), 0);
+    } else {
+        let records = perfData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined);
+        if (skillFilter && skillFilter !== 'ALL') {
+            records = records.filter(d => d.skill === skillFilter);
+        }
+        if (records.length === 0) return 0;
+        const sum = records.reduce((acc, r) => acc + (parseFloat(r.data[metricName]) || 0), 0);
+        return sum / records.length;
     }
-    
-    // Sort by order
-    widgets.sort((a,b) => (a.order || 0) - (b.order || 0));
-    
+}
+
+// Helper to calculate team aggregate value for a metric
+function calculateTeamMetricValue(metricStr, skillFilter, perfData, salesData, activeEmployees) {
+    if (activeEmployees.length === 0) return 0;
+    const values = activeEmployees.map(emp => calculateEmployeeMetricValue(emp, metricStr, skillFilter, perfData, salesData));
+    const isSales = metricStr.startsWith('Sales: ');
+    if (isSales) {
+        return values.reduce((a, b) => a + b, 0);
+    } else {
+        const sum = values.reduce((a, b) => a + b, 0);
+        return sum / activeEmployees.length;
+    }
+}
+
+window.renderDashboard = async function() {
+    const year = window.appState.activeYear;
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
     const goals = await appDb.getAll('goals', 'year', year);
-    
-    widgets.forEach(w => {
-        // Reuse buildStatCard from statistics.js!
-        // We need to filter data if it's individual
-        let wPerf = perfData;
-        let wSales = salesData;
-        if (w.isIndividual && w.employee) {
-            wPerf = perfData.filter(d => d.employee === w.employee);
-            wSales = salesData.filter(d => d.employee === w.employee);
+
+    // Get all unique active collaborators
+    const activeEmployeesSet = new Set();
+    perfData.forEach(d => { if (d.employee) activeEmployeesSet.add(d.employee); });
+    salesData.forEach(d => { if (d.employee) activeEmployeesSet.add(d.employee); });
+    const activeEmployees = Array.from(activeEmployeesSet).sort();
+
+    renderCollaboratorsSummary(activeEmployees, perfData, salesData);
+    renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees);
+    await renderToleranceViolations(goals, perfData, salesData, activeEmployees);
+};
+
+// 1. Collaborators Summary & Breakdown by Skill
+async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) {
+    const summaryContainer = document.getElementById('dashboard-collab-summary');
+    if (!summaryContainer) return;
+
+    // Get skills list
+    const configuredSkills = await appDb.getSetting('skills', []);
+    const skillCounts = {};
+    configuredSkills.forEach(s => skillCounts[s] = new Set());
+
+    perfData.forEach(d => {
+        if (d.skill && d.employee) {
+            if (!skillCounts[d.skill]) skillCounts[d.skill] = new Set();
+            skillCounts[d.skill].add(d.employee);
         }
-        
-        const card = buildStatCard(w, wPerf, wSales, goals, w.isIndividual, w.employee);
-        card.setAttribute('draggable', 'true');
-        card.setAttribute('data-id', w.id);
-        card.style.cursor = 'grab';
-        
-        // Add delete button
-        const delBtn = document.createElement('button');
-        delBtn.innerHTML = '&times;';
-        delBtn.style.position = 'absolute';
-        delBtn.style.top = '16px';
-        delBtn.style.right = '16px';
-        delBtn.style.background = 'none';
-        delBtn.style.border = 'none';
-        delBtn.style.fontSize = '1.2rem';
-        delBtn.style.color = 'var(--danger)';
-        delBtn.style.cursor = 'pointer';
-        delBtn.onclick = async () => {
-            const tx = appDb._db.transaction(['dashboard_widgets'], 'readwrite');
-            tx.objectStore('dashboard_widgets').delete(w.id);
-            tx.oncomplete = () => renderDashboard();
-        };
-        card.appendChild(delBtn);
-        
-        grid.appendChild(card);
     });
+
+    let salesEmpCount = new Set();
+    salesData.forEach(d => { if (d.employee) salesEmpCount.add(d.employee); });
+
+    let skillBadgesHtml = '';
+    for (const [skillName, empSet] of Object.entries(skillCounts)) {
+        skillBadgesHtml += `
+            <div style="padding:10px 14px; border-radius:8px; background:var(--bg-base); border:1px solid var(--border); min-width:140px;">
+                <span style="display:block; font-size:0.75rem; color:var(--text-muted); font-weight:500;">${skillName}</span>
+                <strong style="font-size:1.2rem; color:var(--text-main);">${empSet.size}</strong> <span style="font-size:0.8rem; color:var(--text-muted);">collab.</span>
+            </div>
+        `;
+    }
+
+    if (salesEmpCount.size > 0) {
+        skillBadgesHtml += `
+            <div style="padding:10px 14px; border-radius:8px; background:var(--bg-base); border:1px solid var(--border); min-width:140px;">
+                <span style="display:block; font-size:0.75rem; color:var(--text-muted); font-weight:500;">Sales</span>
+                <strong style="font-size:1.2rem; color:var(--text-main);">${salesEmpCount.size}</strong> <span style="font-size:0.8rem; color:var(--text-muted);">collab.</span>
+            </div>
+        `;
+    }
+
+    summaryContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <div style="width:48px; height:48px; border-radius:12px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center;">
+                    <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Collaboratori Totali</h3>
+                    <div style="font-size:2rem; font-weight:700; color:var(--text-main); line-height:1.1;">${activeEmployees.length}</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; flex:1; justify-content:flex-end;">
+                ${skillBadgesHtml}
+            </div>
+        </div>
+    `;
 }
 
-async function openWidgetModal() {
-    let modal = document.getElementById('widget-config-modal');
-    if (!modal) {
-        modal = createWidgetModalHTML();
+// 2. Team Goals & Progressive Bars
+function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
+    const goalsContainer = document.getElementById('dashboard-team-goals-container');
+    if (!goalsContainer) return;
+
+    const teamGoals = goals.filter(g => !g.employee || g.employee === '');
+
+    if (teamGoals.length === 0) {
+        goalsContainer.innerHTML = '<p style="color:var(--text-muted); padding:12px 0;">Nessun obiettivo di team impostato per l\'anno attivo.</p>';
+        return;
     }
-    
-    const year = window.appState.activeYear;
-    const perfData = await appDb.getAll('performance', 'year', year);
-    const salesData = await appDb.getAll('sales', 'year', year);
-    
-    const metrics = new Set();
-    perfData.forEach(d => Object.keys(d.data).forEach(k => metrics.add(`Performance: ${k}`)));
-    salesData.forEach(d => {
-        Object.keys(d.data).forEach(k => {
-            if(k !== 'Product') metrics.add(`Sales: ${k}`);
+
+    let html = '<div style="display:flex; flex-direction:column; gap:16px;">';
+
+    teamGoals.forEach(g => {
+        const teamVal = calculateTeamMetricValue(g.metric, g.skill, perfData, salesData, activeEmployees);
+        const targetVal = parseFloat(g.target) || 1;
+        const pct = targetVal !== 0 ? ((teamVal / targetVal) * 100) : 0;
+        const formattedPct = pct.toFixed(1);
+        const clampedPct = Math.min(Math.max(pct, 0), 100);
+
+        // Tolerance calculation
+        let minVal = targetVal;
+        let maxVal = targetVal;
+        if (g.toleranceType === 'numeric') {
+            minVal = targetVal - (parseFloat(g.toleranceMinus) || 0);
+            maxVal = targetVal + (parseFloat(g.tolerancePlus) || 0);
+        } else if (g.toleranceType === 'percentage') {
+            minVal = targetVal * (1 - (parseFloat(g.toleranceMinus) || 0) / 100);
+            maxVal = targetVal * (1 + (parseFloat(g.tolerancePlus) || 0) / 100);
+        }
+
+        let statusClass = 'success';
+        if (teamVal < minVal) {
+            statusClass = 'danger';
+        } else if (teamVal < targetVal) {
+            statusClass = 'warning';
+        }
+
+        const skillBadge = g.skill && g.skill !== 'ALL' ? ` | Skill: ${g.skill}` : '';
+
+        html += `
+            <div style="background:var(--bg-base); padding:14px 16px; border-radius:8px; border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <div>
+                        <strong style="font-size:0.95rem; color:var(--text-main);">${g.metric}</strong>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">${skillBadge}</span>
+                    </div>
+                    <div style="font-weight:600; font-size:0.9rem;">
+                        <span style="color:var(--text-main);">${teamVal.toFixed(1)}</span> / <span style="color:var(--text-muted);">${targetVal}</span>
+                        <span style="margin-left:8px; padding:2px 8px; border-radius:12px; background:var(--bg-surface); border:1px solid var(--border); font-size:0.8rem; font-weight:600;">${formattedPct}%</span>
+                    </div>
+                </div>
+                <div class="dash-progress-track">
+                    <div class="dash-progress-fill ${statusClass}" style="width: ${clampedPct}%;"></div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    goalsContainer.innerHTML = html;
+}
+
+// 3. Tolerance Violations List ordered by Severity with Search & Filters
+async function renderToleranceViolations(goals, perfData, salesData, activeEmployees) {
+    const container = document.getElementById('dashboard-tolerance-container');
+    const skillSelect = document.getElementById('dash-tolerance-filter-skill');
+    if (!container) return;
+
+    // Populate skill select dropdown if empty or needed
+    const skillsList = await appDb.getSetting('skills', []);
+    if (skillSelect && skillSelect.children.length === 0) {
+        let optHtml = '<option value="ALL">Tutti gli Skill</option>';
+        skillsList.forEach(s => {
+            optHtml += `<option value="${s}">${s}</option>`;
+        });
+        skillSelect.innerHTML = optHtml;
+    }
+
+    const selectedSkill = skillSelect ? skillSelect.value : 'ALL';
+    const searchInput = document.getElementById('dash-tolerance-search');
+    const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    const violations = [];
+
+    goals.forEach(g => {
+        if (!g.toleranceType || g.toleranceType === 'none') return;
+        const targetVal = parseFloat(g.target) || 0;
+        let minVal = targetVal;
+        let maxVal = targetVal;
+
+        if (g.toleranceType === 'numeric') {
+            minVal = targetVal - (parseFloat(g.toleranceMinus) || 0);
+            maxVal = targetVal + (parseFloat(g.tolerancePlus) || 0);
+        } else if (g.toleranceType === 'percentage') {
+            minVal = targetVal * (1 - (parseFloat(g.toleranceMinus) || 0) / 100);
+            maxVal = targetVal * (1 + (parseFloat(g.tolerancePlus) || 0) / 100);
+        }
+
+        // Employees to check
+        const empList = g.employee ? [g.employee] : activeEmployees;
+
+        empList.forEach(emp => {
+            const actualVal = calculateEmployeeMetricValue(emp, g.metric, g.skill, perfData, salesData);
+            if (actualVal < minVal || actualVal > maxVal) {
+                const isUnder = actualVal < minVal;
+                const scostamento = isUnder ? (minVal - actualVal) : (actualVal - maxVal);
+                const severityRatio = targetVal !== 0 ? (scostamento / Math.abs(targetVal)) : scostamento;
+
+                let severityClass = 'severity-low';
+                let severityLabel = 'Lieve';
+                if (severityRatio >= 0.25) {
+                    severityClass = 'severity-high';
+                    severityLabel = 'Critico';
+                } else if (severityRatio >= 0.10) {
+                    severityClass = 'severity-medium';
+                    severityLabel = 'Alto';
+                }
+
+                violations.push({
+                    employee: emp,
+                    displayName: window.getDisplayName(emp),
+                    goalMetric: g.metric,
+                    goalSkill: g.skill || 'ALL',
+                    target: targetVal,
+                    minVal,
+                    maxVal,
+                    actualVal,
+                    scostamento,
+                    severityRatio,
+                    severityClass,
+                    severityLabel,
+                    type: isUnder ? 'Sotto la soglia' : 'Sopra la soglia'
+                });
+            }
         });
     });
-    
-    const metricSelect = document.getElementById('widget-metric');
-    metricSelect.innerHTML = '';
-    Array.from(metrics).sort().forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        metricSelect.appendChild(opt);
-    });
-    
-    const empSelect = document.getElementById('widget-employee');
-    empSelect.innerHTML = '<option value="">Tutto il Team</option>';
-    const names = Object.keys(window.appState.anonymousMap || {}).sort();
-    names.forEach(n => {
-        const opt = document.createElement('option');
-        opt.value = n;
-        opt.textContent = window.getDisplayName(n);
-        empSelect.appendChild(opt);
-    });
-    
-    modal.classList.add('open');
-}
 
-function createWidgetModalHTML() {
-    const html = `
-    <div id="widget-config-modal" class="modal">
-        <div class="modal-header">
-            <h2>Nuovo Widget Dashboard</h2>
-            <button class="close-modal" onclick="document.getElementById('widget-config-modal').classList.remove('open')">&times;</button>
-        </div>
-        <div class="modal-body">
-            <label>Titolo:</label>
-            <input type="text" id="widget-title" style="width:100%; padding:8px; margin-bottom:16px;">
-            
-            <label>Dato / Metrica:</label>
-            <select id="widget-metric" style="width:100%; padding:8px; margin-bottom:16px;"></select>
-            
-            <label>Livello Dettaglio (Dipendente):</label>
-            <select id="widget-employee" style="width:100%; padding:8px; margin-bottom:16px;"></select>
-            
-            <label>Tipo Visualizzazione:</label>
-            <select id="widget-type" style="width:100%; padding:8px; margin-bottom:16px;">
-                <option value="bar">Grafico a Barre</option>
-                <option value="line">Grafico a Linee</option>
-                <option value="table">Tabella Dati</option>
-            </select>
-        </div>
-        <div class="modal-footer">
-            <button class="btn primary" onclick="saveNewWidget()">Aggiungi Widget</button>
-        </div>
-    </div>
+    // Filter by skill
+    let filtered = violations;
+    if (selectedSkill !== 'ALL') {
+        filtered = filtered.filter(v => v.goalSkill === selectedSkill || v.goalSkill === 'ALL');
+    }
+
+    // Filter by search query (collaborator name)
+    if (searchQuery) {
+        filtered = filtered.filter(v => v.displayName.toLowerCase().includes(searchQuery) || v.employee.toLowerCase().includes(searchQuery));
+    }
+
+    // Sort by Severity Ratio descending (most critical first)
+    filtered.sort((a, b) => b.severityRatio - a.severityRatio);
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); padding:12px 0;">${violations.length === 0 ? 'Nessun collaboratore sfora le tolleranze stabilite.' : 'Nessuno sforamento trovato per i filtri selezionati.'}</p>`;
+        return;
+    }
+
+    let tableHtml = `
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>${window.appState.isAnonymous ? 'Collab' : 'Collaboratore'}</th>
+                        <th>Metrica / Skill</th>
+                        <th>Target (Soglie)</th>
+                        <th>Valore Reale</th>
+                        <th>Scostamento</th>
+                        <th style="text-align:center;">Gravità</th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
-    document.body.insertAdjacentHTML('beforeend', html);
-    return document.getElementById('widget-config-modal');
-}
 
-async function saveNewWidget() {
-    const title = document.getElementById('widget-title').value || 'Nuovo Widget';
-    const metric = document.getElementById('widget-metric').value;
-    const type = document.getElementById('widget-type').value;
-    const employee = document.getElementById('widget-employee').value;
-    
-    const widgets = await appDb.getAll('dashboard_widgets');
-    
-    const newWidget = {
-        id: 'widget_' + Date.now(),
-        title, metric, type,
-        isIndividual: employee !== "",
-        employee: employee,
-        order: widgets.length,
-        year: window.appState.activeYear
-    };
-    
-    await appDb.addMultiple('dashboard_widgets', [newWidget]);
-    document.getElementById('widget-config-modal').classList.remove('open');
-    renderDashboard();
+    filtered.forEach(v => {
+        const skillStr = v.goalSkill !== 'ALL' ? ` (${v.goalSkill})` : '';
+        tableHtml += `
+            <tr>
+                <td><strong>${v.displayName}</strong></td>
+                <td>${v.goalMetric}${skillStr}</td>
+                <td>${v.target} <span style="font-size:0.75rem; color:var(--text-muted);">(${v.minVal.toFixed(1)} - ${v.maxVal.toFixed(1)})</span></td>
+                <td style="font-weight:600;">${v.actualVal.toFixed(1)}</td>
+                <td style="color:${v.type === 'Sotto la soglia' ? 'var(--danger)' : '#f59e0b'}; font-weight:500;">
+                    ${v.type === 'Sotto la soglia' ? '-' : '+'}${v.scostamento.toFixed(1)}
+                </td>
+                <td style="text-align:center;">
+                    <span class="severity-badge ${v.severityClass}">${v.severityLabel}</span>
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = tableHtml;
 }

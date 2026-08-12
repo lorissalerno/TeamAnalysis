@@ -54,10 +54,37 @@
         <section id="dashboard" class="page-section active">
             <div class="section-header">
                 <h1>Dashboard</h1>
-                <button id="add-widget-btn" class="btn primary">Aggiungi Widget</button>
             </div>
-            <div class="dashboard-grid" id="dashboard-grid">
-                <!-- Widgets go here -->
+            
+            <!-- Summary Stats Card (Total Collaborators + Breakdown per Skill) -->
+            <div id="dashboard-collab-summary" class="card" style="margin-bottom: 24px;">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Team Goals & Progress Section -->
+            <div class="card" style="margin-bottom: 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 style="margin:0;">Obiettivi di Team e Raggiungimento</h2>
+                </div>
+                <div id="dashboard-team-goals-container">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Tolerance Violations Section -->
+            <div class="card" style="margin-bottom: 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                    <h2 style="margin:0;">Sforamenti Tolleranza per Collaboratore</h2>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <select id="dash-tolerance-filter-skill" style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                            <!-- Populated by JS -->
+                        </select>
+                        <input type="text" id="dash-tolerance-search" placeholder="Cerca collaboratore..." style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem; width:200px;">
+                    </div>
+                </div>
+                <div id="dashboard-tolerance-container">
+                    <!-- Populated by JS -->
+                </div>
             </div>
         </section>
 
