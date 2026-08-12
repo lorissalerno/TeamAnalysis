@@ -284,7 +284,16 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     // Process Data
     const sourceData = isPerf ? perfData : salesData;
     
+    const activeYr = window.appState.activeYear || new Date().getFullYear().toString();
     const datesSet = new Set();
+    const datesWithData = new Set();
+
+    // Always include all 12 months of the active year
+    for (let m = 1; m <= 12; m++) {
+        const monthStr = String(m).padStart(2, '0');
+        datesSet.add(`${activeYr}-${monthStr}-01`);
+    }
+    
     const empSet = new Set();
     const empDateMap = {};
     const aggregatedByDate = {};
@@ -302,6 +311,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const val = parseMetricValue(row.data[rawKey]);
 
         datesSet.add(date);
+        datesWithData.add(date);
         if (emp) empSet.add(emp);
 
         if (emp) {
@@ -319,14 +329,16 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     const employees = Array.from(empSet).sort();
 
     const dataPts = labels.map(l => {
+        if (!datesWithData.has(l)) return null;
         if (isIndividual && employeeName) {
             return (empDateMap[employeeName] && empDateMap[employeeName][l] !== undefined) ? empDateMap[employeeName][l] : 0;
         }
-        return aggregatedByDate[l] || 0;
+        return aggregatedByDate[l] !== undefined ? aggregatedByDate[l] : 0;
     });
 
     // Compute team average for each date
     const teamAvgPts = labels.map(date => {
+        if (!datesWithData.has(date)) return null;
         let sum = 0;
         let count = 0;
         employees.forEach(emp => {
@@ -343,16 +355,21 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         if (isIndividual) {
             csv = 'Mese,Valore\n';
             displayLabels.forEach((l, idx) => {
-                csv += `"${l}",${dataPts[idx]}\n`;
+                const v = dataPts[idx] === null ? '' : dataPts[idx];
+                csv += `"${l}",${v}\n`;
             });
         } else {
             csv = 'Collaboratore,' + displayLabels.map(l => `"${l}"`).join(',') + '\n';
             employees.forEach(emp => {
                 const dispName = window.getDisplayName(emp);
-                const rowVals = labels.map(date => (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0);
+                const rowVals = labels.map(date => {
+                    if (!datesWithData.has(date)) return '';
+                    return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
+                });
                 csv += `"${dispName}",${rowVals.join(',')}\n`;
             });
-            csv += `"Media Team",${teamAvgPts.join(',')}\n`;
+            const avgVals = teamAvgPts.map(v => v === null ? '' : v);
+            csv += `"Media Team",${avgVals.join(',')}\n`;
         }
         const blob = new Blob([csv], { type: 'text/csv' });
         const a = document.createElement('a');
@@ -365,7 +382,9 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         if (isIndividual) {
             let html = '<table class="data-table"><thead><tr><th>Mese</th><th>Valore</th></tr></thead><tbody>';
             displayLabels.forEach((l, idx) => {
-                html += `<tr><td>${l}</td><td>${dataPts[idx]}</td></tr>`;
+                const val = dataPts[idx];
+                const displayVal = val === null ? '' : val;
+                html += `<tr><td>${l}</td><td>${displayVal}</td></tr>`;
             });
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
@@ -380,8 +399,11 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 const dispName = window.getDisplayName(emp);
                 html += `<tr><td style="font-weight:600;">${dispName}</td>`;
                 labels.forEach(date => {
-                    const val = (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
-                    html += `<td style="text-align:center;">${val}</td>`;
+                    let cellVal = '';
+                    if (datesWithData.has(date)) {
+                        cellVal = (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
+                    }
+                    html += `<td style="text-align:center;">${cellVal}</td>`;
                 });
                 html += '</tr>';
             });
@@ -389,7 +411,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
             html += `<td>Media Team</td>`;
             labels.forEach((date, idx) => {
-                html += `<td style="text-align:center; color: var(--primary);">${teamAvgPts[idx]}</td>`;
+                const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
+                html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
             });
             html += '</tr>';
             html += '</tbody></table>';
@@ -421,7 +444,10 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         } else {
             employees.forEach((emp, idx) => {
                 const color = PALETTE[idx % PALETTE.length];
-                const empPts = labels.map(date => (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0);
+                const empPts = labels.map(date => {
+                    if (!datesWithData.has(date)) return null;
+                    return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
+                });
                 datasets.push({
                     label: window.getDisplayName(emp),
                     data: empPts,
