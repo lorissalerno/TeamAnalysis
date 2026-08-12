@@ -105,26 +105,35 @@
                             <label style="display:block; margin-bottom: 4px; font-weight: 500;">Skill Performance:</label>
                             <div style="display:flex; gap:8px;">
                                 <select id="perf-skill-select" style="flex:1; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);"></select>
-                                <button type="button" class="btn secondary" id="edit-skills-btn" title="Gestisci e rinomina gli skill">⚙️ Gestisci Skill</button>
+                                <button type="button" class="btn secondary" id="edit-skills-btn" title="Gestisci e rinomina gli skill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Gestisci Skill
+                                </button>
                             </div>
                         </div>
-                        <div>
-                            <label style="display:block; margin-bottom: 4px; font-weight: 500;">Mese inizio dati:</label>
-                            <select id="perf-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-                                <option value="">-- Importa Tutto (Nessuna sovrascrittura) --</option>
-                                <option value="01">Gennaio</option>
-                                <option value="02">Febbraio</option>
-                                <option value="03">Marzo</option>
-                                <option value="04">Aprile</option>
-                                <option value="05">Maggio</option>
-                                <option value="06">Giugno</option>
-                                <option value="07">Luglio</option>
-                                <option value="08">Agosto</option>
-                                <option value="09">Settembre</option>
-                                <option value="10">Ottobre</option>
-                                <option value="11">Novembre</option>
-                                <option value="12">Dicembre</option>
-                            </select>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                            <label style="font-weight: 500; white-space: nowrap;">Sovrascrivi dati dal mese di:</label>
+                            <div class="custom-month-select" id="perf-month-select">
+                                <button type="button" class="custom-month-trigger">
+                                    <span class="selected-text">-- Importa Tutto (Nessuna sovrascrittura) --</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; flex-shrink: 0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <div class="custom-month-dropdown searchable-dropdown">
+                                    <div class="searchable-dropdown-item selected" data-value="">-- Importa Tutto (Nessuna sovrascrittura) --</div>
+                                    <div class="searchable-dropdown-item" data-value="01">Gennaio</div>
+                                    <div class="searchable-dropdown-item" data-value="02">Febbraio</div>
+                                    <div class="searchable-dropdown-item" data-value="03">Marzo</div>
+                                    <div class="searchable-dropdown-item" data-value="04">Aprile</div>
+                                    <div class="searchable-dropdown-item" data-value="05">Maggio</div>
+                                    <div class="searchable-dropdown-item" data-value="06">Giugno</div>
+                                    <div class="searchable-dropdown-item" data-value="07">Luglio</div>
+                                    <div class="searchable-dropdown-item" data-value="08">Agosto</div>
+                                    <div class="searchable-dropdown-item" data-value="09">Settembre</div>
+                                    <div class="searchable-dropdown-item" data-value="10">Ottobre</div>
+                                    <div class="searchable-dropdown-item" data-value="11">Novembre</div>
+                                    <div class="searchable-dropdown-item" data-value="12">Dicembre</div>
+                                </div>
+                                <input type="hidden" id="perf-date" value="">
+                            </div>
                         </div>
                         <div>
                             <input type="file" id="perf-file" accept=".csv" style="display:none">
@@ -136,23 +145,30 @@
                     <h2>Sales</h2>
                     <p>Importa i dati di vendita (AOIT, Nuovi abo, RET).</p>
                     <div class="import-controls" style="display: flex; flex-direction: column; gap: 12px;">
-                        <div style="margin-top: auto;">
-                            <label style="display:block; margin-bottom: 4px; font-weight: 500;">Mese inizio dati:</label>
-                            <select id="sales-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-                                <option value="">-- Importa Tutto (Nessuna sovrascrittura) --</option>
-                                <option value="01">Gennaio</option>
-                                <option value="02">Febbraio</option>
-                                <option value="03">Marzo</option>
-                                <option value="04">Aprile</option>
-                                <option value="05">Maggio</option>
-                                <option value="06">Giugno</option>
-                                <option value="07">Luglio</option>
-                                <option value="08">Agosto</option>
-                                <option value="09">Settembre</option>
-                                <option value="10">Ottobre</option>
-                                <option value="11">Novembre</option>
-                                <option value="12">Dicembre</option>
-                            </select>
+                        <div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                            <label style="font-weight: 500; white-space: nowrap;">Sovrascrivi dati dal mese di:</label>
+                            <div class="custom-month-select" id="sales-month-select">
+                                <button type="button" class="custom-month-trigger">
+                                    <span class="selected-text">-- Importa Tutto (Nessuna sovrascrittura) --</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; flex-shrink: 0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <div class="custom-month-dropdown searchable-dropdown">
+                                    <div class="searchable-dropdown-item selected" data-value="">-- Importa Tutto (Nessuna sovrascrittura) --</div>
+                                    <div class="searchable-dropdown-item" data-value="01">Gennaio</div>
+                                    <div class="searchable-dropdown-item" data-value="02">Febbraio</div>
+                                    <div class="searchable-dropdown-item" data-value="03">Marzo</div>
+                                    <div class="searchable-dropdown-item" data-value="04">Aprile</div>
+                                    <div class="searchable-dropdown-item" data-value="05">Maggio</div>
+                                    <div class="searchable-dropdown-item" data-value="06">Giugno</div>
+                                    <div class="searchable-dropdown-item" data-value="07">Luglio</div>
+                                    <div class="searchable-dropdown-item" data-value="08">Agosto</div>
+                                    <div class="searchable-dropdown-item" data-value="09">Settembre</div>
+                                    <div class="searchable-dropdown-item" data-value="10">Ottobre</div>
+                                    <div class="searchable-dropdown-item" data-value="11">Novembre</div>
+                                    <div class="searchable-dropdown-item" data-value="12">Dicembre</div>
+                                </div>
+                                <input type="hidden" id="sales-date" value="">
+                            </div>
                         </div>
                         <div style="margin-top: auto;">
                             <input type="file" id="sales-file" accept=".csv" style="display:none">

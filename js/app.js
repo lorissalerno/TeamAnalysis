@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await refreshYearsList();
     await loadAnonymousMap();
     await populateSkillsUI();
+    setupCustomMonthSelects();
 
     // 3. Navigation
     async function navigateToSection(sectionId) {
@@ -832,3 +833,45 @@ function renderStatistics() {
         select.appendChild(opt);
     });
 }
+
+function setupCustomMonthSelects() {
+    document.querySelectorAll('.custom-month-select').forEach(container => {
+        const trigger = container.querySelector('.custom-month-trigger');
+        const dropdown = container.querySelector('.custom-month-dropdown');
+        const selectedText = container.querySelector('.selected-text');
+        const hiddenInput = container.querySelector('input[type="hidden"]');
+        const items = container.querySelectorAll('.searchable-dropdown-item');
+
+        if (!trigger || !dropdown || !hiddenInput) return;
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.custom-month-dropdown').forEach(d => {
+                if (d !== dropdown) d.classList.remove('open');
+            });
+            dropdown.classList.toggle('open');
+        });
+
+        items.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const val = item.getAttribute('data-value');
+                hiddenInput.value = val;
+                selectedText.textContent = item.textContent;
+
+                items.forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                dropdown.classList.remove('open');
+
+                hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.custom-month-select')) {
+            document.querySelectorAll('.custom-month-dropdown').forEach(d => d.classList.remove('open'));
+        }
+    });
+}
+

@@ -135,6 +135,34 @@ a:hover {
     font-weight: 600;
 }
 
+/* Custom Month Select Dropdown */
+.custom-month-select {
+    position: relative;
+    flex: 1;
+}
+.custom-month-trigger {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--bg-base);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: border-color var(--transition);
+}
+.custom-month-trigger:hover,
+.custom-month-trigger:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+.custom-month-dropdown {
+    top: calc(100% + 4px);
+}
+
 @media print {
     .sidebar { display: none !important; }
     .content { padding: 0; overflow: visible; }
@@ -142,3 +170,4 @@ a:hover {
     .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
     body { background: white; color: black; }
 }
+
