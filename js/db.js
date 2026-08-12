@@ -1,5 +1,5 @@
 const DB_NAME = 'TeamAnalysisDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const db = {
     _db: null,
@@ -44,6 +44,11 @@ const db = {
                 if (!db.objectStoreNames.contains('goals')) {
                     const goalsStore = db.createObjectStore('goals', { keyPath: 'id' });
                     goalsStore.createIndex('year', 'year', { unique: false });
+                }
+                // Import Logs Store
+                if (!db.objectStoreNames.contains('import_logs')) {
+                    const logStore = db.createObjectStore('import_logs', { keyPath: 'id', autoIncrement: true });
+                    logStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
 
                 // Migration v1 -> v2: add year index to goals if store already exists
@@ -240,6 +245,46 @@ const db = {
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
         });
+    },
+
+    addImportLog: function(text, isError = false, type = 'Import') {
+        return new Promise((resolve, reject) => {
+            if (!this._db || !this._db.objectStoreNames.contains('import_logs')) {
+                resolve();
+                return;
+            }
+            const tx = this._db.transaction(['import_logs'], 'readwrite');
+            const store = tx.objectStore('import_logs');
+            const logEntry = {
+                timestamp: Date.now(),
+                dateStr: new Date().toLocaleString(),
+                text: text,
+                isError: !!isError,
+                type: type
+            };
+            store.add(logEntry);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    },
+
+    getImportLogs: function() {
+        return this.getAll('import_logs');
+    },
+
+    cleanOldImportLogs: async function(days = 7) {
+        if (!this._db || !this._db.objectStoreNames.contains('import_logs')) return 0;
+        const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+        const logs = await this.getAll('import_logs');
+        const oldLogs = logs.filter(l => (l.timestamp || 0) < cutoff);
+
+        if (oldLogs.length > 0) {
+            const tx = this._db.transaction(['import_logs'], 'readwrite');
+            const store = tx.objectStore('import_logs');
+            oldLogs.forEach(l => store.delete(l.id));
+            await new Promise(resolve => { tx.oncomplete = resolve; });
+        }
+        return oldLogs.length;
     }
 };
 

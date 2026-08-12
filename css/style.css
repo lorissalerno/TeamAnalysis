@@ -163,6 +163,52 @@ a:hover {
     top: calc(100% + 4px);
 }
 
+/* Import Wizard Steps UI */
+.wizard-step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.5;
+    font-weight: 500;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+.wizard-step-item.active {
+    opacity: 1;
+    color: var(--primary);
+    font-weight: 600;
+}
+.wizard-step-item.completed {
+    opacity: 0.85;
+    color: var(--text-main);
+}
+.wizard-step-item .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+.wizard-step-item.active .step-num {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.wizard-step-item.completed .step-num {
+    background: var(--secondary);
+    color: var(--text-main);
+}
+.wizard-option-card {
+    transition: all var(--transition);
+}
+.wizard-option-card:hover {
+    border-color: var(--primary) !important;
+}
+
 @media print {
     .sidebar { display: none !important; }
     .content { padding: 0; overflow: visible; }
@@ -170,4 +216,5 @@ a:hover {
     .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
     body { background: white; color: black; }
 }
+
 

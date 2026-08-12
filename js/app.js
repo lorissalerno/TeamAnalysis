@@ -255,11 +255,27 @@ window.getDisplayName = function(realName) {
 
 // --- IMPORT CSV ---
 function logImport(msg, isError = false) {
-    const log = document.getElementById('import-log');
+    const liveLogs = document.getElementById('wizard-live-logs');
+    const oldLog = document.getElementById('import-log');
+    const timeStr = new Date().toLocaleTimeString();
+    
     const div = document.createElement('div');
-    div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    if (isError) div.style.color = 'var(--danger)';
-    log.prepend(div);
+    div.textContent = `[${timeStr}] ${msg}`;
+    if (isError) div.style.color = 'var(--danger, #ef4444)';
+
+    if (liveLogs) {
+        if (liveLogs.children.length === 1 && liveLogs.children[0].textContent.includes('Nessuna operazione')) {
+            liveLogs.innerHTML = '';
+        }
+        liveLogs.prepend(div.cloneNode(true));
+    }
+    if (oldLog) {
+        oldLog.prepend(div.cloneNode(true));
+    }
+
+    if (window.appDb && window.appDb.addImportLog) {
+        window.appDb.addImportLog(`[${timeStr}] ${msg}`, isError).catch(() => {});
+    }
 }
 
 function setupImports() {
@@ -271,6 +287,8 @@ function setupImports() {
     const clearFilteredBtn = document.getElementById('clear-filtered-db-btn');
 
     setupSkillsModal();
+    setupImportWizard();
+    setupLogHistoryModal();
 
     if (addSkillBtn) {
         addSkillBtn.addEventListener('click', async () => {
@@ -281,7 +299,8 @@ function setupImports() {
             if (!skills.includes(cleanName)) {
                 skills.push(cleanName);
                 await saveSkills(skills);
-                document.getElementById('perf-skill-select').value = cleanName;
+                const perfSel = document.getElementById('perf-skill-select') || document.getElementById('wizard-perf-skill-select');
+                if (perfSel) perfSel.value = cleanName;
                 logImport(`Creato nuovo skill: "${cleanName}"`);
             } else {
                 alert("Questo skill esiste già!");
@@ -334,74 +353,69 @@ function setupImports() {
         });
     }
 
-    perfInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const monthVal = document.getElementById('perf-date').value;
-        const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
-        
-        const selectedSkill = document.getElementById('perf-skill-select').value;
-        
-        if (!selectedSkill) {
-            alert("Seleziona o crea uno skill prima di importare i dati performance.");
+    if (perfInput) {
+        perfInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const monthVal = document.getElementById('perf-date') ? document.getElementById('perf-date').value : '';
+            const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
+            const selectedSkill = document.getElementById('perf-skill-select') ? document.getElementById('perf-skill-select').value : '';
+            
+            if (!selectedSkill) {
+                alert("Seleziona o crea uno skill prima di importare i dati performance.");
+                perfInput.value = '';
+                return;
+            }
+
+            try {
+                logImport(`Lettura ${file.name} per lo skill "${selectedSkill}"...`);
+                const parsed = await CSVParser.parse(file, startDate);
+                parsed.data.forEach(d => { d.skill = selectedSkill; });
+
+                if (startDate) {
+                    await appDb.deleteFromDate('performance', startDate, selectedSkill);
+                    logImport(`Eliminati vecchi dati performance ("${selectedSkill}") da ${monthVal}/${window.appState.activeYear} in poi.`);
+                }
+                
+                await appDb.addMultiple('performance', parsed.data);
+                logImport(`Importati ${parsed.data.length} record in Performance ("${selectedSkill}").`);
+                await autoAssignAnonIds(parsed.data);
+                await refreshYearsList();
+                await renderImportedData();
+            } catch (err) {
+                logImport(`Errore: ${err}`, true);
+            }
             perfInput.value = '';
-            return;
-        }
+        });
+    }
 
-        try {
-            logImport(`Lettura ${file.name} per lo skill "${selectedSkill}"...`);
-            const parsed = await CSVParser.parse(file, startDate);
+    if (salesInput) {
+        salesInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const monthVal = document.getElementById('sales-date') ? document.getElementById('sales-date').value : '';
+            const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
             
-            // Assign selected skill to all performance items
-            parsed.data.forEach(d => {
-                d.skill = selectedSkill;
-            });
-
-            if (startDate) {
-                await appDb.deleteFromDate('performance', startDate, selectedSkill);
-                logImport(`Eliminati vecchi dati performance ("${selectedSkill}") da ${monthVal}/${window.appState.activeYear} in poi.`);
+            try {
+                logImport(`Lettura ${file.name}...`);
+                const parsed = await CSVParser.parse(file, startDate);
+                
+                if (startDate) {
+                    await appDb.deleteFromDate('sales', startDate);
+                    logImport(`Eliminati vecchi dati sales da ${monthVal}/${window.appState.activeYear} in poi.`);
+                }
+                
+                await appDb.addMultiple('sales', parsed.data);
+                logImport(`Importati ${parsed.data.length} record in Sales.`);
+                await autoAssignAnonIds(parsed.data);
+                await refreshYearsList();
+                await renderImportedData();
+            } catch (err) {
+                logImport(`Errore: ${err}`, true);
             }
-            
-            await appDb.addMultiple('performance', parsed.data);
-            logImport(`Importati ${parsed.data.length} record in Performance ("${selectedSkill}").`);
-            
-            // Auto-assign anon IDs for new names
-            await autoAssignAnonIds(parsed.data);
-            
-            await refreshYearsList();
-            await renderImportedData();
-        } catch (err) {
-            logImport(`Errore: ${err}`, true);
-        }
-        perfInput.value = '';
-    });
-
-    salesInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const monthVal = document.getElementById('sales-date').value;
-        const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
-        
-        try {
-            logImport(`Lettura ${file.name}...`);
-            const parsed = await CSVParser.parse(file, startDate);
-            
-            if (startDate) {
-                await appDb.deleteFromDate('sales', startDate);
-                logImport(`Eliminati vecchi dati sales da ${monthVal}/${window.appState.activeYear} in poi.`);
-            }
-            
-            await appDb.addMultiple('sales', parsed.data);
-            logImport(`Importati ${parsed.data.length} record in Sales.`);
-            
-            await autoAssignAnonIds(parsed.data);
-            await refreshYearsList();
-            await renderImportedData();
-        } catch (err) {
-            logImport(`Errore: ${err}`, true);
-        }
-        salesInput.value = '';
-    });
+            salesInput.value = '';
+        });
+    }
 }
 
 // --- SKILLS MANAGEMENT MODAL ---
