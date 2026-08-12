@@ -640,13 +640,17 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#2563eb',
-                    backgroundColor: '#2563eb',
-                    borderWidth: 3,
-                    borderDash: [6, 4],
-                    pointRadius: 4,
-                    pointBackgroundColor: '#2563eb',
+                    borderColor: '#FFEA00',
+                    backgroundColor: '#FFEA00',
+                    borderWidth: 3.5,
+                    borderDash: [8, 4],
+                    pointRadius: 7,
+                    pointHoverRadius: 10,
+                    pointBackgroundColor: '#FFEA00',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
                     fill: false,
+                    tension: 0.35,
                     order: 1
                 });
             }
