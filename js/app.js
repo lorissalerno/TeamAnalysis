@@ -281,8 +281,8 @@ function setupImports() {
     perfInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        let startDate = document.getElementById('perf-date').value;
-        if (startDate && startDate.length === 7) startDate += '-01';
+        const monthVal = document.getElementById('perf-date').value;
+        const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
         
         const selectedSkill = document.getElementById('perf-skill-select').value;
         
@@ -303,7 +303,7 @@ function setupImports() {
 
             if (startDate) {
                 await appDb.deleteFromDate('performance', startDate, selectedSkill);
-                logImport(`Eliminati vecchi dati performance ("${selectedSkill}") dal ${startDate} in poi.`);
+                logImport(`Eliminati vecchi dati performance ("${selectedSkill}") da ${monthVal}/${window.appState.activeYear} in poi.`);
             }
             
             await appDb.addMultiple('performance', parsed.data);
@@ -323,8 +323,8 @@ function setupImports() {
     salesInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        let startDate = document.getElementById('sales-date').value;
-        if (startDate && startDate.length === 7) startDate += '-01';
+        const monthVal = document.getElementById('sales-date').value;
+        const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
         
         try {
             logImport(`Lettura ${file.name}...`);
@@ -332,7 +332,7 @@ function setupImports() {
             
             if (startDate) {
                 await appDb.deleteFromDate('sales', startDate);
-                logImport(`Eliminati vecchi dati sales dal ${startDate} in poi.`);
+                logImport(`Eliminati vecchi dati sales da ${monthVal}/${window.appState.activeYear} in poi.`);
             }
             
             await appDb.addMultiple('sales', parsed.data);

@@ -72,13 +72,26 @@
                             <label style="display:block; margin-bottom: 4px; font-weight: 500;">Skill Performance:</label>
                             <div style="display:flex; gap:8px;">
                                 <select id="perf-skill-select" style="flex:1; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);"></select>
-                                <button type="button" class="btn secondary" id="add-skill-btn" title="Crea un nuovo skill">+ Skill</button>
                                 <button type="button" class="btn secondary" id="edit-skills-btn" title="Gestisci e rinomina gli skill">⚙️ Gestisci Skill</button>
                             </div>
                         </div>
                         <div>
                             <label style="display:block; margin-bottom: 4px; font-weight: 500;">Mese inizio dati:</label>
-                            <input type="month" id="perf-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                            <select id="perf-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                                <option value="">-- Importa Tutto (Nessuna sovrascrittura) --</option>
+                                <option value="01">Gennaio</option>
+                                <option value="02">Febbraio</option>
+                                <option value="03">Marzo</option>
+                                <option value="04">Aprile</option>
+                                <option value="05">Maggio</option>
+                                <option value="06">Giugno</option>
+                                <option value="07">Luglio</option>
+                                <option value="08">Agosto</option>
+                                <option value="09">Settembre</option>
+                                <option value="10">Ottobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Dicembre</option>
+                            </select>
                         </div>
                         <div>
                             <input type="file" id="perf-file" accept=".csv" style="display:none">
@@ -92,7 +105,21 @@
                     <div class="import-controls" style="display: flex; flex-direction: column; gap: 12px;">
                         <div style="margin-top: auto;">
                             <label style="display:block; margin-bottom: 4px; font-weight: 500;">Mese inizio dati:</label>
-                            <input type="month" id="sales-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                            <select id="sales-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                                <option value="">-- Importa Tutto (Nessuna sovrascrittura) --</option>
+                                <option value="01">Gennaio</option>
+                                <option value="02">Febbraio</option>
+                                <option value="03">Marzo</option>
+                                <option value="04">Aprile</option>
+                                <option value="05">Maggio</option>
+                                <option value="06">Giugno</option>
+                                <option value="07">Luglio</option>
+                                <option value="08">Agosto</option>
+                                <option value="09">Settembre</option>
+                                <option value="10">Ottobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Dicembre</option>
+                            </select>
                         </div>
                         <div style="margin-top: auto;">
                             <input type="file" id="sales-file" accept=".csv" style="display:none">
