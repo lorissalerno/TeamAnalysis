@@ -19,7 +19,7 @@ const fullWidthGoalPlugin = {
             const yTarget = y.getPixelForValue(goalConfig.target);
             if (!isNaN(yTarget)) {
                 ctx.beginPath();
-                ctx.setLineDash([6, 4]);
+                ctx.setLineDash([]);
                 ctx.strokeStyle = '#9333EA';
                 ctx.lineWidth = 2;
                 ctx.moveTo(left, yTarget);
