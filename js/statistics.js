@@ -735,6 +735,49 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 pointRadius: 0,
                 order: 0
             });
+
+            if (relevantGoal.toleranceType && relevantGoal.toleranceType !== 'none') {
+                const plus = parseFloat(relevantGoal.tolerancePlus) || 0;
+                const minus = parseFloat(relevantGoal.toleranceMinus) || 0;
+                let maxTarget = relevantGoal.target;
+                let minTarget = relevantGoal.target;
+
+                if (relevantGoal.toleranceType === 'numeric') {
+                    maxTarget = relevantGoal.target + plus;
+                    minTarget = relevantGoal.target - minus;
+                } else if (relevantGoal.toleranceType === 'percentage') {
+                    maxTarget = relevantGoal.target * (1 + plus / 100);
+                    minTarget = relevantGoal.target * (1 - minus / 100);
+                }
+
+                if (plus > 0) {
+                    datasets.push({
+                        label: 'Tolleranza Max',
+                        data: labels.map(() => maxTarget),
+                        type: 'line',
+                        borderColor: 'rgba(239, 68, 68, 0.4)',
+                        borderWidth: 1,
+                        borderDash: [3, 3],
+                        fill: false,
+                        pointRadius: 0,
+                        order: 0
+                    });
+                }
+                if (minus > 0) {
+                    datasets.push({
+                        label: 'Tolleranza Min',
+                        data: labels.map(() => minTarget),
+                        type: 'line',
+                        borderColor: 'rgba(239, 68, 68, 0.4)',
+                        borderWidth: 1,
+                        borderDash: [3, 3],
+                        fill: plus > 0 ? '-1' : false,
+                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                        pointRadius: 0,
+                        order: 0
+                    });
+                }
+            }
         }
         
         // Calculate adaptive min and max for Y scale
