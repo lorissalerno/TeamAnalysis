@@ -242,8 +242,10 @@ async function refreshYearsList() {
 async function loadAnonymousMap() {
     const mappings = await appDb.getAll('anonymous_map', 'year', window.appState.activeYear);
     window.appState.anonymousMap = {};
+    window.appState.collaboratorSkills = {};
     mappings.forEach(m => {
         window.appState.anonymousMap[m.realName] = m.anonId;
+        window.appState.collaboratorSkills[m.realName] = m.skills || [];
     });
 }
 
@@ -798,50 +800,129 @@ async function autoAssignAnonIds(dataList) {
 function setupSettings() {
     const manageBtn = document.getElementById('manage-mapping-btn');
     const modal = document.getElementById('mapping-modal');
-    const closeBtn = document.querySelector('.close-modal');
+    const closeBtn = modal ? modal.querySelector('.close-modal') : null;
     const saveBtn = document.getElementById('save-mapping-btn');
-    
+    const addCollabBtn = document.getElementById('modal-add-collaborator-btn');
+
+    let deletedIds = [];
+
+    const renderMappingRow = (m, allSkills, fallbackAnonId = 1) => {
+        const tr = document.createElement('tr');
+        tr.className = 'mapping-row';
+        tr.setAttribute('data-id', m.id || 'new');
+        
+        const userSkills = m.skills || [];
+        
+        const skillsHtml = allSkills.length > 0
+            ? allSkills.map(skill => {
+                const checked = userSkills.includes(skill) ? 'checked' : '';
+                return `
+                    <label style="display:inline-flex; align-items:center; gap:4px; margin-right:6px; margin-bottom:4px; font-size:0.8rem; padding:3px 8px; background:var(--bg-base); border:1px solid var(--border); border-radius:12px; cursor:pointer;">
+                        <input type="checkbox" class="collab-skill-cb" value="${skill}" ${checked}>
+                        ${skill}
+                    </label>
+                `;
+            }).join('')
+            : '<span style="color:var(--text-muted); font-size:0.8rem;">Nessuna skill creata</span>';
+
+        tr.innerHTML = `
+            <td>
+                <input type="text" class="collab-name-input" value="${m.realName || ''}" placeholder="Nome collaboratore..." style="width:100%; padding:6px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+            </td>
+            <td>
+                <input type="number" class="anon-id-input" value="${m.anonId !== undefined ? m.anonId : fallbackAnonId}" style="width:100%; padding:6px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+            </td>
+            <td>
+                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                    ${skillsHtml}
+                </div>
+            </td>
+            <td style="text-align:center;">
+                <button type="button" class="btn secondary remove-collab-btn" style="color:var(--danger, #ef4444); padding:4px 8px;" title="Elimina">&times;</button>
+            </td>
+        `;
+
+        tr.querySelector('.remove-collab-btn').addEventListener('click', () => {
+            if (m.id && m.id !== 'new') {
+                deletedIds.push(m.id);
+            }
+            tr.remove();
+        });
+
+        return tr;
+    };
+
     manageBtn.addEventListener('click', async () => {
         const tbody = document.querySelector('#mapping-table tbody');
         tbody.innerHTML = '';
+        deletedIds = [];
         
+        const allSkills = await getSkills();
         const mappings = await appDb.getAll('anonymous_map', 'year', window.appState.activeYear);
-        mappings.sort((a,b) => a.realName.localeCompare(b.realName)).forEach(m => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${m.realName}</td>
-                <td><input type="number" class="anon-id-input" data-id="${m.id}" value="${m.anonId}"></td>
-            `;
-            tbody.appendChild(tr);
+        mappings.sort((a,b) => (a.realName || '').localeCompare(b.realName || ''));
+        
+        mappings.forEach(m => {
+            tbody.appendChild(renderMappingRow(m, allSkills));
         });
         
         modal.classList.add('open');
     });
-    
-    closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+
+    if (addCollabBtn) {
+        addCollabBtn.addEventListener('click', async () => {
+            const tbody = document.querySelector('#mapping-table tbody');
+            const allSkills = await getSkills();
+            const inputs = Array.from(document.querySelectorAll('.anon-id-input'));
+            const maxId = inputs.reduce((max, inp) => Math.max(max, parseInt(inp.value) || 0), 0);
+            
+            const newRow = renderMappingRow({ realName: '', anonId: maxId + 1, skills: [] }, allSkills, maxId + 1);
+            tbody.appendChild(newRow);
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+    }
     
     saveBtn.addEventListener('click', async () => {
-        const inputs = document.querySelectorAll('.anon-id-input');
-        const updates = [];
-        // To update, we must get the object, modify it, and put it back.
-        // It's faster to recreate the store or use a cursor, but we can do simple gets.
-        // For simplicity, let's just do it directly.
+        const rows = Array.from(document.querySelectorAll('#mapping-table tbody tr.mapping-row'));
         const transaction = appDb._db.transaction(['anonymous_map'], 'readwrite');
         const store = transaction.objectStore('anonymous_map');
-        
-        inputs.forEach(input => {
-            const req = store.get(parseInt(input.getAttribute('data-id')));
-            req.onsuccess = () => {
-                const data = req.result;
-                data.anonId = parseInt(input.value);
-                store.put(data);
-                if (data.year === window.appState.activeYear) {
-                    window.appState.anonymousMap[data.realName] = data.anonId;
-                }
-            };
+
+        deletedIds.forEach(id => {
+            store.delete(id);
         });
-        
-        transaction.oncomplete = () => {
+
+        rows.forEach(tr => {
+            const dataId = tr.getAttribute('data-id');
+            const realName = tr.querySelector('.collab-name-input').value.trim();
+            const anonId = parseInt(tr.querySelector('.anon-id-input').value) || 1;
+            const checkedSkills = Array.from(tr.querySelectorAll('.collab-skill-cb:checked')).map(cb => cb.value);
+
+            if (!realName) return;
+
+            if (dataId && dataId !== 'new') {
+                const req = store.get(parseInt(dataId));
+                req.onsuccess = () => {
+                    const data = req.result || {};
+                    data.realName = realName;
+                    data.anonId = anonId;
+                    data.skills = checkedSkills;
+                    data.year = data.year || window.appState.activeYear;
+                    store.put(data);
+                };
+            } else {
+                store.add({
+                    year: window.appState.activeYear,
+                    realName: realName,
+                    anonId: anonId,
+                    skills: checkedSkills
+                });
+            }
+        });
+
+        transaction.oncomplete = async () => {
+            await loadAnonymousMap();
             modal.classList.remove('open');
             if (window.renderDashboard) window.renderDashboard();
             if (window.renderStatistics) renderStatistics();

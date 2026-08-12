@@ -242,9 +242,9 @@
             </div>
             <div class="settings-cards">
                 <div class="card">
-                    <h2>Mappatura Nomi Anonimi</h2>
-                    <p>Assegna ID numerici ai collaboratori per l'anno in corso.</p>
-                    <button class="btn secondary" id="manage-mapping-btn">Gestisci Mappatura</button>
+                    <h2>Collaboratori</h2>
+                    <p>Gestisci i collaboratori del team, i loro ID numerici e le skill assegnate.</p>
+                    <button class="btn secondary" id="manage-mapping-btn">Gestisci Collaboratori</button>
                 </div>
                 <div class="card">
                     <h2>Backup Dati</h2>
@@ -259,24 +259,30 @@
 
     <!-- Modals -->
     <div id="modal-overlay" class="modal-overlay"></div>
-    <div id="mapping-modal" class="modal">
+    <div id="mapping-modal" class="modal" style="max-width: 850px; width: 92%;">
         <div class="modal-header">
-            <h2>Mappatura ID</h2>
+            <h2>Gestione Collaboratori</h2>
             <button class="close-modal">&times;</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+            <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">
+                Gestisci i collaboratori del team, i relativi ID per la modalità anonima e assegna le skill corrispondenti.
+            </p>
             <table class="data-table" id="mapping-table">
                 <thead>
                     <tr>
-                        <th>Nome Reale</th>
-                        <th>ID Assegnato</th>
+                        <th style="width: 25%;">Nome Collaboratore</th>
+                        <th style="width: 15%;">ID Anonimo</th>
+                        <th style="width: 48%;">Skill Assegnate</th>
+                        <th style="width: 12%; text-align: center;">Azione</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
         </div>
-        <div class="modal-footer">
-            <button class="btn primary" id="save-mapping-btn">Salva</button>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+            <button class="btn secondary" id="modal-add-collaborator-btn">+ Nuovo Collaboratore</button>
+            <button class="btn primary" id="save-mapping-btn">Salva Modifiche</button>
         </div>
     </div>
 
