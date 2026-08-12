@@ -212,10 +212,16 @@
 }
 
 /* Grids */
-.dashboard-grid, .goals-grid {
+.dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
+}
+
+.goals-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .stats-grid {
