@@ -118,32 +118,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const indAvgToggle = document.getElementById('show-team-avg-individual-toggle');
     if (indAvgToggle) {
-        indAvgToggle.addEventListener('change', (e) => {
+        indAvgToggle.addEventListener('change', async (e) => {
             showIndividualTeamAvg = e.target.checked;
+            await appDb.setSetting('stat_show_team_avg_ind', showIndividualTeamAvg);
             renderIndividualStats();
         });
     }
 
     const indGoalToggle = document.getElementById('show-team-goal-individual-toggle');
     if (indGoalToggle) {
-        indGoalToggle.addEventListener('change', (e) => {
+        indGoalToggle.addEventListener('change', async (e) => {
             showIndividualTeamGoal = e.target.checked;
+            await appDb.setSetting('stat_show_team_goal_ind', showIndividualTeamGoal);
             renderIndividualStats();
         });
     }
 
     const teamAvgToggle = document.getElementById('show-team-avg-team-toggle');
     if (teamAvgToggle) {
-        teamAvgToggle.addEventListener('change', (e) => {
+        teamAvgToggle.addEventListener('change', async (e) => {
             showTeamAvgInTeam = e.target.checked;
+            await appDb.setSetting('stat_show_team_avg_team', showTeamAvgInTeam);
             renderTeamStats();
         });
     }
 
     const teamGoalToggle = document.getElementById('show-team-goal-team-toggle');
     if (teamGoalToggle) {
-        teamGoalToggle.addEventListener('change', (e) => {
+        teamGoalToggle.addEventListener('change', async (e) => {
             showTeamGoalInTeam = e.target.checked;
+            await appDb.setSetting('stat_show_team_goal_team', showTeamGoalInTeam);
             renderTeamStats();
         });
     }
@@ -152,14 +156,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const allBtn = document.getElementById('team-view-all-btn');
     const avgBtn = document.getElementById('team-view-avg-btn');
     if (allBtn && avgBtn) {
-        allBtn.addEventListener('click', () => {
+        allBtn.addEventListener('click', async () => {
             teamViewMode = 'all';
+            await appDb.setSetting('stat_team_view_mode', 'all');
             allBtn.classList.add('active');
             avgBtn.classList.remove('active');
             renderTeamStats();
         });
-        avgBtn.addEventListener('click', () => {
+        avgBtn.addEventListener('click', async () => {
             teamViewMode = 'avg';
+            await appDb.setSetting('stat_team_view_mode', 'avg');
             avgBtn.classList.add('active');
             allBtn.classList.remove('active');
             renderTeamStats();
@@ -184,6 +190,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // We export a function to be called from app.js when year changes
     window.renderStatistics = async function() {
         await initTemplateControls();
+
+        // Restore saved toggle states from IndexedDB
+        showTeamAvgInTeam = await appDb.getSetting('stat_show_team_avg_team', false);
+        showTeamGoalInTeam = await appDb.getSetting('stat_show_team_goal_team', false);
+        showIndividualTeamAvg = await appDb.getSetting('stat_show_team_avg_ind', false);
+        showIndividualTeamGoal = await appDb.getSetting('stat_show_team_goal_ind', false);
+        teamViewMode = await appDb.getSetting('stat_team_view_mode', 'all');
+
+        if (teamAvgToggle) teamAvgToggle.checked = showTeamAvgInTeam;
+        if (teamGoalToggle) teamGoalToggle.checked = showTeamGoalInTeam;
+        if (indAvgToggle) indAvgToggle.checked = showIndividualTeamAvg;
+        if (indGoalToggle) indGoalToggle.checked = showIndividualTeamGoal;
+
+        if (allBtn && avgBtn) {
+            if (teamViewMode === 'avg') {
+                avgBtn.classList.add('active');
+                allBtn.classList.remove('active');
+            } else {
+                allBtn.classList.add('active');
+                avgBtn.classList.remove('active');
+            }
+        }
 
         // Populate individual select
         const select = document.getElementById('individual-select');
