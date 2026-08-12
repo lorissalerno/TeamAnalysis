@@ -248,7 +248,7 @@ async function loadAnonymousMap() {
 window.getDisplayName = function(realName) {
     if (!window.appState.isAnonymous) return realName;
     const id = window.appState.anonymousMap[realName];
-    return id ? `Collaboratore ${id}` : realName;
+    return id ? `${id}` : realName;
 };
 
 // --- IMPORT CSV ---
@@ -563,6 +563,11 @@ async function renderImportedData() {
     }
     badgesContainer.innerHTML = badgesHtml;
 
+    const dbColHeader = document.querySelector('#db-imported-table th:nth-child(2)');
+    if (dbColHeader) {
+        dbColHeader.textContent = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
+    }
+
     // Explode records into single rows (1 row per metric key-value)
     let singleRows = [];
 
@@ -815,7 +820,8 @@ function renderDashboard() {
 function renderStatistics() {
     // Populate individual select
     const select = document.getElementById('individual-select');
-    select.innerHTML = '<option value="">Seleziona Collaboratore...</option>';
+    const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
+    select.innerHTML = `<option value="">${placeholder}</option>`;
     
     const names = Object.keys(window.appState.anonymousMap).sort();
     names.forEach(name => {

@@ -288,7 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Populate individual select
         const select = document.getElementById('individual-select');
         const currentVal = select.value;
-        select.innerHTML = '<option value="">Seleziona Collaboratore...</option>';
+        const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
+        select.innerHTML = `<option value="">${placeholder}</option>`;
         
         const names = Object.keys(window.appState.anonymousMap || {}).sort();
         names.forEach(name => {
@@ -631,7 +632,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
 
     if (statConfig.type === 'table') {
         if (isIndividual) {
-            let html = '<table class="data-table"><thead><tr><th>Collaboratore</th>';
+            const colHeader = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
+            let html = `<table class="data-table"><thead><tr><th>${colHeader}</th>`;
             displayLabels.forEach(l => {
                 html += `<th style="text-align:center;">${l}</th>`;
             });
@@ -675,7 +677,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         } else {
-            let html = '<table class="data-table"><thead><tr><th>Collaboratore</th>';
+            const colHeader = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
+            let html = `<table class="data-table"><thead><tr><th>${colHeader}</th>`;
             displayLabels.forEach(l => {
                 html += `<th style="text-align:center;">${l}</th>`;
             });
