@@ -1,5 +1,5 @@
 const DB_NAME = 'TeamAnalysisDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const db = {
     _db: null,
@@ -10,6 +10,7 @@ const db = {
 
             request.onupgradeneeded = function(event) {
                 const db = event.target.result;
+                const oldVersion = event.oldVersion;
                 // Settings store
                 if (!db.objectStoreNames.contains('settings')) {
                     db.createObjectStore('settings', { keyPath: 'key' });
@@ -41,7 +42,16 @@ const db = {
                 }
                 // Goals
                 if (!db.objectStoreNames.contains('goals')) {
-                    db.createObjectStore('goals', { keyPath: 'id' });
+                    const goalsStore = db.createObjectStore('goals', { keyPath: 'id' });
+                    goalsStore.createIndex('year', 'year', { unique: false });
+                }
+
+                // Migration v1 -> v2: add year index to goals if store already exists
+                if (oldVersion < 2 && db.objectStoreNames.contains('goals')) {
+                    const goalsStore = event.currentTarget.transaction.objectStore('goals');
+                    if (!goalsStore.indexNames.contains('year')) {
+                        goalsStore.createIndex('year', 'year', { unique: false });
+                    }
                 }
             };
 
