@@ -107,13 +107,13 @@ a:hover {
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: 9999;
     max-height: 220px;
     overflow-y: auto;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
     margin-top: 2px;
 }
 .searchable-dropdown.open {
