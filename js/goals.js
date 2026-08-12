@@ -349,10 +349,10 @@ function createGoalModalHTML() {
                 </div>
             </div>
 
-            <label>Skill (opzionale):</label>
+            <label>Skill:</label>
             <select id="goal-skill" style="width:100%; padding:8px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);"></select>
             
-            <label>Assegna a dipendente (opzionale):</label>
+            <label>Assegna a dipendente:</label>
             <select id="goal-employee" style="width:100%; padding:8px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);"></select>
         </div>
         <div class="modal-footer">
