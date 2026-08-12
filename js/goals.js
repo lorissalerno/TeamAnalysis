@@ -69,8 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             card.innerHTML = `
                 <div>
+                    <!-- Titolo Metrica -->
+                    <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin:0 0 8px 0; line-height:1.35; word-break:break-word;">
+                        ${g.metric}
+                    </h3>
+
                     <!-- Badge Ambito -->
-                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
                         <span style="font-size:0.75rem; font-weight:600; padding:3px 9px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary, #6366f1); border:1px solid rgba(99,102,241,0.25);">
                             Skill: ${skillText}
                         </span>
@@ -78,11 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${empText}
                         </span>
                     </div>
-                    
-                    <!-- Titolo Metrica -->
-                    <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin:0 0 12px 0; line-height:1.35; word-break:break-word;">
-                        ${g.metric}
-                    </h3>
 
                     <!-- Box Valori Target & Range -->
                     <div style="background:var(--bg-alt, rgba(255,255,255,0.03)); border:1px solid var(--border, rgba(255,255,255,0.08)); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
