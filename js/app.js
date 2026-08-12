@@ -599,6 +599,7 @@ async function renderImportedData() {
                     type: 'Performance',
                     skill: skillName,
                     metric: metricName,
+                    qty: '-',
                     value: val
                 });
             });
@@ -622,12 +623,17 @@ async function renderImportedData() {
                 value = r.data['W- Value ACQ'];
                 metricKeyForRecord = 'W- Value ACQ';
             } else {
-                const keys = Object.keys(r.data).filter(k => k !== 'Product');
+                const keys = Object.keys(r.data).filter(k => k !== 'Product' && k !== 'Nb Events');
                 if (keys.length > 0) {
                     metricKeyForRecord = keys[0];
                     value = r.data[keys[0]];
                 }
             }
+        }
+
+        let qty = 1;
+        if (r.data && r.data['Nb Events'] !== undefined) {
+            qty = r.data['Nb Events'];
         }
 
         singleRows.push({
@@ -639,6 +645,7 @@ async function renderImportedData() {
             skill: skillName,
             metric: productName,
             metricKey: metricKeyForRecord,
+            qty: qty,
             value: value
         });
     });
@@ -687,6 +694,7 @@ async function renderImportedData() {
             <td><strong>${dispEmployee}</strong></td>
             <td>${skillBadge}</td>
             <td style="font-weight:500;">${r.metric}</td>
+            <td style="font-weight:500;">${r.qty}</td>
             <td style="font-weight:600;">${r.value}</td>
             <td style="text-align:center;">
                 <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px;">
