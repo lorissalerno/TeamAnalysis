@@ -183,37 +183,41 @@ async function saveSkills(skillsList) {
 
 async function populateSkillsUI() {
     const skills = await getSkills();
-    const perfSelect = document.getElementById('perf-skill-select');
+    const perfSelects = [
+        document.getElementById('perf-skill-select'),
+        document.getElementById('wizard-perf-skill-select')
+    ].filter(Boolean);
     const filterSelect = document.getElementById('db-filter-skill');
     
-    if (!perfSelect || !filterSelect) return;
-
-    const currentPerf = perfSelect.value;
-    const currentFilter = filterSelect.value;
-
-    perfSelect.innerHTML = '';
-    skills.forEach(skill => {
-        const opt = document.createElement('option');
-        opt.value = skill;
-        opt.textContent = skill;
-        perfSelect.appendChild(opt);
+    perfSelects.forEach(perfSelect => {
+        const currentPerf = perfSelect.value;
+        perfSelect.innerHTML = '';
+        skills.forEach(skill => {
+            const opt = document.createElement('option');
+            opt.value = skill;
+            opt.textContent = skill;
+            perfSelect.appendChild(opt);
+        });
+        if (currentPerf && skills.includes(currentPerf)) {
+            perfSelect.value = currentPerf;
+        }
     });
-    if (currentPerf && skills.includes(currentPerf)) {
-        perfSelect.value = currentPerf;
-    }
 
-    filterSelect.innerHTML = `
-        <option value="ALL">Tutte le fonti (Performance & Sales)</option>
-        <option value="SALES">Solo Sales</option>
-    `;
-    skills.forEach(skill => {
-        const opt = document.createElement('option');
-        opt.value = skill;
-        opt.textContent = `Skill: ${skill}`;
-        filterSelect.appendChild(opt);
-    });
-    if (currentFilter) {
-        filterSelect.value = currentFilter;
+    if (filterSelect) {
+        const currentFilter = filterSelect.value;
+        filterSelect.innerHTML = `
+            <option value="ALL">Tutte le fonti (Performance & Sales)</option>
+            <option value="SALES">Solo Sales</option>
+        `;
+        skills.forEach(skill => {
+            const opt = document.createElement('option');
+            opt.value = skill;
+            opt.textContent = `Skill: ${skill}`;
+            filterSelect.appendChild(opt);
+        });
+        if (currentFilter) {
+            filterSelect.value = currentFilter;
+        }
     }
 }
 
