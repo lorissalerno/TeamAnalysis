@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!list) return;
         
         const year = window.appState.activeYear;
-        const goals = await appDb.getAll('goals');
+        const goals = await appDb.getAll('goals', 'year', year);
         
         list.innerHTML = '';
         if (goals.length === 0) {
@@ -22,10 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
         goals.forEach(g => {
             const card = document.createElement('div');
             card.className = 'card';
+            const skillLabel = g.skill && g.skill !== 'ALL' ? `Skill: ${g.skill}` : 'Tutti gli Skill';
+            const empLabel = g.employee ? ` | ${window.getDisplayName(g.employee)}` : ' (Tutto il Team)';
             card.innerHTML = `
                 <h3>${g.metric}</h3>
                 <p style="margin-top:8px;">Target: <strong>${g.target}</strong></p>
-                <p style="font-size:0.85rem; color:var(--text-muted)">Applicato a: ${g.employee || 'Tutto il Team'}</p>
+                <p style="font-size:0.85rem; color:var(--text-muted)">Applicato a: ${skillLabel}${empLabel}</p>
                 <button class="btn secondary" style="margin-top:16px; padding:4px 8px; font-size:0.85rem;" onclick="deleteGoal('${g.id}')">Elimina</button>
             `;
             list.appendChild(card);
@@ -70,6 +72,22 @@ async function openGoalModal() {
         opt.textContent = m;
         metricSelect.appendChild(opt);
     });
+
+    // Populate skills
+    const skillSelect = document.getElementById('goal-skill');
+    skillSelect.innerHTML = '<option value="ALL">Tutti gli Skill (Default)</option>';
+    const skillsSet = new Set();
+    const savedSkills = await appDb.getSetting('skills', null);
+    if (savedSkills && Array.isArray(savedSkills)) {
+        savedSkills.forEach(s => skillsSet.add(s));
+    }
+    perfData.forEach(d => { if (d.skill) skillsSet.add(d.skill); });
+    Array.from(skillsSet).sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        skillSelect.appendChild(opt);
+    });
     
     // Populate employees
     const empSelect = document.getElementById('goal-employee');
@@ -99,7 +117,10 @@ function createGoalModalHTML() {
             <label>Target Numerico:</label>
             <input type="number" id="goal-target" style="width:100%; padding:8px; margin-bottom:16px;">
             
-            <label>Assegna a (opzionale):</label>
+            <label>Skill (opzionale):</label>
+            <select id="goal-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
+            
+            <label>Assegna a dipendente (opzionale):</label>
             <select id="goal-employee" style="width:100%; padding:8px; margin-bottom:16px;"></select>
         </div>
         <div class="modal-footer">
@@ -114,6 +135,7 @@ function createGoalModalHTML() {
 async function saveNewGoal() {
     const metric = document.getElementById('goal-metric').value;
     const target = parseFloat(document.getElementById('goal-target').value);
+    const skill = document.getElementById('goal-skill').value;
     const employee = document.getElementById('goal-employee').value;
     
     if (isNaN(target)) {
@@ -125,6 +147,7 @@ async function saveNewGoal() {
         id: 'goal_' + Date.now(),
         metric,
         target,
+        skill,
         employee,
         year: window.appState.activeYear
     };

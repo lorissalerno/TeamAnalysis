@@ -707,10 +707,20 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         
         // Check for goals
         let relevantGoal = null;
-        if (isIndividual) {
-            relevantGoal = goals.find(g => g.metric === statConfig.metric && (g.employee === employeeName || !g.employee));
-        } else {
-            relevantGoal = goals.find(g => g.metric === statConfig.metric && !g.employee);
+        const candidateGoals = goals.filter(g => {
+            if (g.metric !== statConfig.metric) return false;
+            if (isIndividual) {
+                return g.employee === employeeName || !g.employee;
+            } else {
+                return !g.employee;
+            }
+        });
+
+        if (statConfig.skill && statConfig.skill !== 'ALL') {
+            relevantGoal = candidateGoals.find(g => g.skill === statConfig.skill);
+        }
+        if (!relevantGoal) {
+            relevantGoal = candidateGoals.find(g => !g.skill || g.skill === 'ALL');
         }
         
         if (relevantGoal) {
