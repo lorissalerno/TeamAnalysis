@@ -1,33 +1,48 @@
 /* Buttons */
 .btn {
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
     font-family: var(--font-family);
+    font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-block;
+    transition: all var(--transition);
+    line-height: 1.5;
 }
 
 .btn.primary {
     background-color: var(--primary);
     color: #fff;
+    border-color: var(--primary);
 }
 
 .btn.primary:hover {
     background-color: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    border-color: var(--primary-hover);
 }
 
 .btn.secondary {
     background-color: var(--secondary);
     color: var(--secondary-text);
+    border-color: var(--border);
 }
 
 .btn.secondary:hover {
     background-color: var(--secondary-hover);
+}
+
+.btn.danger {
+    background-color: var(--danger);
+    color: #fff;
+}
+
+.btn.danger:hover {
+    opacity: 0.9;
 }
 
 .icon-btn {
@@ -35,9 +50,9 @@
     border: none;
     color: var(--text-muted);
     cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    transition: all 0.2s;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all var(--transition);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -65,24 +80,23 @@
 .slider {
     position: relative;
     display: inline-block;
-    width: 44px;
-    height: 24px;
+    width: 40px;
+    height: 22px;
     background-color: var(--secondary);
-    transition: .4s;
-    border-radius: 24px;
+    transition: var(--transition);
+    border-radius: 22px;
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
+    height: 16px;
+    width: 16px;
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: .4s;
+    transition: var(--transition);
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 input:checked + .slider {
@@ -90,13 +104,14 @@ input:checked + .slider {
 }
 
 input:checked + .slider:before {
-    transform: translateX(20px);
+    transform: translateX(18px);
 }
 
 .toggle-switch .label {
     margin-left: 10px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
+    font-weight: 500;
 }
 
 /* Modals */
@@ -104,8 +119,7 @@ input:checked + .slider:before {
     display: none;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
     z-index: 100;
 }
 
@@ -115,9 +129,10 @@ input:checked + .slider:before {
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     background: var(--bg-surface);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     width: 90%;
-    max-width: 600px;
+    max-width: 560px;
     max-height: 80vh;
     box-shadow: var(--shadow-lg);
     z-index: 101;
@@ -129,11 +144,16 @@ input:checked + .slider:before {
 }
 
 .modal-header {
-    padding: 20px 24px;
+    padding: 16px 24px;
     border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 1rem;
+    margin: 0;
 }
 
 .modal-body {
@@ -142,7 +162,7 @@ input:checked + .slider:before {
 }
 
 .modal-footer {
-    padding: 20px 24px;
+    padding: 16px 24px;
     border-top: 1px solid var(--border);
     text-align: right;
 }
@@ -150,9 +170,16 @@ input:checked + .slider:before {
 .close-modal {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     color: var(--text-muted);
     cursor: pointer;
+    transition: color var(--transition);
+    padding: 4px;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: var(--text-main);
 }
 
 /* Tables */
@@ -162,50 +189,74 @@ input:checked + .slider:before {
 }
 
 .data-table th, .data-table td {
-    padding: 12px 16px;
+    padding: 10px 16px;
     text-align: left;
     border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
 }
 
 .data-table th {
     font-weight: 600;
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: var(--bg-base);
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
-.data-table tr:hover {
+.data-table tbody tr {
+    transition: background-color var(--transition);
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: rgba(127, 127, 127, 0.03);
+}
+
+.data-table tbody tr:hover {
     background: var(--bg-surface-hover);
 }
 
 .data-table input[type="number"], .data-table input[type="text"] {
     width: 100%;
-    padding: 6px;
+    padding: 6px 8px;
     background: var(--bg-base);
     border: 1px solid var(--border);
     color: var(--text-main);
     border-radius: 4px;
+    font-family: var(--font-family);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.data-table input:focus {
+    border-color: var(--primary);
 }
 
 /* Logs */
 .log-area {
-    margin-top: 24px;
-    padding: 16px;
-    background: var(--bg-surface);
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: var(--bg-base);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 0.85rem;
-    max-height: 200px;
+    border-radius: 6px;
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+    font-size: 0.8rem;
+    max-height: 180px;
     overflow-y: auto;
     color: var(--text-muted);
+    line-height: 1.6;
 }
 
 /* Tabs */
 .tabs {
     display: flex;
-    gap: 8px;
+    gap: 4px;
 }
+
 .tab-btn {
     padding: 8px 16px;
     background: transparent;
@@ -214,15 +265,30 @@ input:checked + .slider:before {
     cursor: pointer;
     border-bottom: 2px solid transparent;
     font-weight: 500;
+    font-size: 0.875rem;
+    transition: all var(--transition);
+    font-family: var(--font-family);
 }
+
+.tab-btn:hover {
+    color: var(--text-main);
+}
+
 .tab-btn.active {
     color: var(--primary);
     border-bottom-color: var(--primary);
 }
+
 .tab-content {
     display: none;
 }
+
 .tab-content.active {
     display: block;
     animation: fadeIn 0.3s ease;
+}
+
+/* Form elements used inline in HTML */
+select, input[type="text"], input[type="number"] {
+    font-family: var(--font-family);
 }

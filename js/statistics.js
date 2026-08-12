@@ -188,6 +188,16 @@ async function renderIndividualStats() {
     });
 }
 
+function formatDateLabel(dateStr) {
+    const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    const parts = dateStr.split('-');
+    if (parts.length >= 2) {
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        if (monthIdx >= 0 && monthIdx < 12) return mesi[monthIdx];
+    }
+    return dateStr;
+}
+
 function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '') {
     const card = document.createElement('div');
     card.className = 'card stat-card';
@@ -195,28 +205,55 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     const title = document.createElement('h3');
     title.textContent = statConfig.title;
-    title.style.marginBottom = '16px';
+    title.style.marginBottom = '4px';
     card.appendChild(title);
     
-    const exportBtn = document.createElement('button');
-    exportBtn.textContent = 'CSV';
-    exportBtn.className = 'btn secondary';
-    exportBtn.style.position = 'absolute';
-    exportBtn.style.top = '16px';
-    exportBtn.style.right = '16px';
-    exportBtn.style.padding = '4px 8px';
-    exportBtn.style.fontSize = '0.75rem';
+    // Stat info line
+    const info = document.createElement('div');
+    info.className = 'stat-info';
+    const isPerf = statConfig.metric.startsWith('Performance: ');
+    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '');
+    let infoText = `${statConfig.metric}`;
+    if (isPerf && statConfig.skill && statConfig.skill !== 'ALL') {
+        infoText += ` · ${statConfig.skill}`;
+    }
+    if (!isPerf && statConfig.product) {
+        infoText += ` · ${statConfig.product}`;
+    }
+    const typeLabels = { bar: 'Barre', line: 'Linee', table: 'Tabella' };
+    infoText += ` · ${typeLabels[statConfig.type] || statConfig.type}`;
+    info.textContent = infoText;
+    card.appendChild(info);
+
+    // Action buttons
+    const actionsDiv = document.createElement('div');
+    actionsDiv.style.cssText = 'position:absolute; top:16px; right:16px; display:flex; gap:6px;';
     
-    card.appendChild(exportBtn);
+    const exportBtn = document.createElement('button');
+    exportBtn.textContent = '📥 CSV';
+    exportBtn.className = 'btn secondary';
+    exportBtn.style.cssText = 'padding:4px 10px; font-size:0.75rem;';
+    actionsDiv.appendChild(exportBtn);
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '🗑';
+    deleteBtn.className = 'btn secondary';
+    deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+    deleteBtn.onclick = async () => {
+        if (!confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
+        await appDb.deleteRecord('custom_stats', statConfig.id);
+        renderTeamStats();
+    };
+    actionsDiv.appendChild(deleteBtn);
+    card.appendChild(actionsDiv);
     
     const canvasContainer = document.createElement('div');
     canvasContainer.style.width = '100%';
     canvasContainer.style.height = '250px';
+    canvasContainer.style.marginTop = '12px';
     card.appendChild(canvasContainer);
     
     // Process Data
-    const isPerf = statConfig.metric.startsWith('Performance: ');
-    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '');
     const sourceData = isPerf ? perfData : salesData;
     
     // Aggregate by date (month/week)
@@ -237,6 +274,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     const labels = Object.keys(aggregated).sort();
     const dataPts = labels.map(l => aggregated[l]);
+    const displayLabels = labels.map(formatDateLabel);
     
     exportBtn.onclick = () => {
         let csv = 'Data,' + statConfig.title + '\n';
@@ -249,8 +287,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     };
     
     if (statConfig.type === 'table') {
-        let html = '<table class="data-table"><thead><tr><th>Data</th><th>Valore</th></tr></thead><tbody>';
-        labels.forEach((l, idx) => {
+        let html = '<table class="data-table"><thead><tr><th>Mese</th><th>Valore</th></tr></thead><tbody>';
+        displayLabels.forEach((l, idx) => {
             html += `<tr><td>${l}</td><td>${dataPts[idx]}</td></tr>`;
         });
         html += '</tbody></table>';
@@ -291,7 +329,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         new Chart(canvas, {
             type: statConfig.type,
             data: {
-                labels: labels,
+                labels: displayLabels,
                 datasets: datasets
             },
             options: {
