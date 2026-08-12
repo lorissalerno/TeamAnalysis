@@ -437,14 +437,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     const actionsDiv = document.createElement('div');
     actionsDiv.style.cssText = 'position:absolute; top:16px; right:16px; display:flex; gap:6px;';
     
-    const exportBtn = document.createElement('button');
-    exportBtn.textContent = '📥 CSV';
-    exportBtn.className = 'btn secondary';
-    exportBtn.style.cssText = 'padding:4px 10px; font-size:0.75rem;';
-    actionsDiv.appendChild(exportBtn);
-    
     const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '🗑';
+    deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
     deleteBtn.className = 'btn secondary';
     deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
     deleteBtn.onclick = async () => {
@@ -534,35 +528,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         });
         return count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
     });
-    
-    exportBtn.onclick = () => {
-        let csv = '';
-        if (isIndividual) {
-            csv = 'Mese,Valore\n';
-            displayLabels.forEach((l, idx) => {
-                const v = dataPts[idx] === null ? '' : dataPts[idx];
-                csv += `"${l}",${v}\n`;
-            });
-        } else {
-            csv = 'Collaboratore,' + displayLabels.map(l => `"${l}"`).join(',') + '\n';
-            employees.forEach(emp => {
-                const dispName = window.getDisplayName(emp);
-                const rowVals = labels.map(date => {
-                    if (!datesWithData.has(date)) return '';
-                    return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
-                });
-                csv += `"${dispName}",${rowVals.join(',')}\n`;
-            });
-            const avgVals = teamAvgPts.map(v => v === null ? '' : v);
-            csv += `"Media Team",${avgVals.join(',')}\n`;
-        }
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = statConfig.title.replace(/\s/g, '_') + '.csv';
-        a.click();
-    };
-    
+
     if (statConfig.type === 'table') {
         if (isIndividual) {
             let html = '<table class="data-table"><thead><tr><th>Collaboratore</th>';
@@ -645,10 +611,11 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         canvasContainer.appendChild(canvas);
         let datasets = [];
 
+        // Palette sgargiante ad alto contrasto
         const PALETTE = [
-            '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', 
-            '#06b6d4', '#f97316', '#84cc16', '#6366f1', '#14b8a6', 
-            '#e11d48', '#a855f7'
+            '#FF2D55', '#00E5FF', '#FFEA00', '#39FF14', '#FF6600',
+            '#BF5FFF', '#FF007F', '#00FFCC', '#FFB300', '#2979FF',
+            '#FF1744', '#00E676'
         ];
 
         const isBar = statConfig.type === 'bar';
@@ -658,12 +625,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
                 data: dataPts,
                 type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#3b82f6', 0.75) : 'rgba(59, 130, 246, 0.2)',
-                borderColor: '#3b82f6',
-                borderWidth: isBar ? 1 : 2,
+                backgroundColor: isBar ? hexToRgba('#2979FF', 0.8) : 'rgba(41, 121, 255, 0.15)',
+                borderColor: '#2979FF',
+                borderWidth: isBar ? 1 : 1.5,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
-                tension: 0.3,
+                pointRadius: isBar ? 0 : 0,
+                tension: 0.35,
                 order: 2
             });
 
@@ -688,14 +656,17 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 label: 'Media Team',
                 data: teamAvgPts,
                 type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#2563eb', 0.75) : 'rgba(37, 99, 235, 0.2)',
-                borderColor: '#2563eb',
-                borderWidth: isBar ? 1 : 2,
+                backgroundColor: isBar ? hexToRgba('#FFEA00', 0.85) : 'rgba(255, 234, 0, 0.15)',
+                borderColor: '#FFEA00',
+                borderWidth: isBar ? 1 : 3,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
-                pointRadius: isBar ? 0 : 4,
-                pointBackgroundColor: '#2563eb',
-                tension: 0.3,
+                pointRadius: isBar ? 0 : 7,
+                pointHoverRadius: 10,
+                pointBackgroundColor: '#FFEA00',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                tension: 0.35,
                 order: 1
             });
         } else {
@@ -709,12 +680,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: window.getDisplayName(emp),
                     data: empPts,
                     type: isBar ? 'bar' : 'line',
-                    backgroundColor: isBar ? hexToRgba(color, 0.75) : hexToRgba(color, 0.2),
+                    backgroundColor: isBar ? hexToRgba(color, 0.82) : hexToRgba(color, 0.12),
                     borderColor: color,
-                    borderWidth: isBar ? 1 : 2,
+                    borderWidth: isBar ? 1 : 1.5,
                     borderRadius: isBar ? 4 : 0,
                     minBarLength: isBar ? 4 : 0,
-                    tension: 0.3,
+                    pointRadius: isBar ? 0 : 0,
+                    tension: 0.35,
                     order: 2
                 });
             });
@@ -724,13 +696,17 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#2563eb',
-                    backgroundColor: '#2563eb',
-                    borderWidth: 3,
-                    borderDash: [6, 4],
-                    pointRadius: 4,
-                    pointBackgroundColor: '#2563eb',
+                    borderColor: '#FFEA00',
+                    backgroundColor: '#FFEA00',
+                    borderWidth: 3.5,
+                    borderDash: [8, 4],
+                    pointRadius: 7,
+                    pointHoverRadius: 10,
+                    pointBackgroundColor: '#FFEA00',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
                     fill: false,
+                    tension: 0.35,
                     order: 1
                 });
             }
