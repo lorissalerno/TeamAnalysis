@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (sectionId === 'dashboard' && window.renderDashboard) window.renderDashboard();
         if (sectionId === 'database') renderImportedData();
         if (sectionId === 'goals' && window.renderGoals) renderGoals();
+        if (sectionId === 'settings') updateCollabCountBadge();
     }
 
     document.querySelectorAll('.nav-links a').forEach(link => {
@@ -251,6 +252,13 @@ async function loadAnonymousMap() {
         window.appState.anonymousMap[m.realName] = m.anonId;
         window.appState.collaboratorSkills[m.realName] = m.skills || [];
     });
+}
+
+async function updateCollabCountBadge() {
+    const badge = document.getElementById('collab-count-badge');
+    if (!badge) return;
+    const mappings = await appDb.getAll('anonymous_map', 'year', window.appState.activeYear);
+    badge.textContent = mappings.length;
 }
 
 window.getDisplayName = function(realName) {

@@ -576,6 +576,28 @@ async function openStatModal() {
         opt.textContent = s;
         skillSelect.appendChild(opt);
     });
+
+    // Popola select gruppo
+    const groupSelect = document.getElementById('stat-group');
+    if (groupSelect) {
+        groupSelect.innerHTML = '<option value="">Nessun gruppo (statistica indipendente)</option>';
+        const savedGroups = (await appDb.getSetting('stat_groups', [])) || [];
+        savedGroups.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = g.name;
+            groupSelect.appendChild(opt);
+        });
+        const newOpt = document.createElement('option');
+        newOpt.value = '__new__';
+        newOpt.textContent = '+ Crea nuovo gruppo...';
+        groupSelect.appendChild(newOpt);
+        groupSelect.value = '';
+        document.getElementById('stat-new-group-row').style.display = 'none';
+        if (document.getElementById('stat-new-group-name')) {
+            document.getElementById('stat-new-group-name').value = '';
+        }
+    }
     
     modal.classList.add('open');
 }
@@ -608,6 +630,17 @@ function createStatModalHTML() {
             
             <label>Filtro Prodotto (solo per Sales, opzionale):</label>
             <input type="text" id="stat-product" placeholder="es. Multiroom Max" style="width:100%; padding:8px; margin-bottom:16px;">
+
+            <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                Associa a Gruppo
+                <span style="font-size:0.78rem; color:var(--text-muted); font-weight:400;">(collega statistiche correlate per calcoli futuri)</span>
+            </label>
+            <select id="stat-group" style="width:100%; padding:8px; margin-bottom:16px;">
+                <option value="">Nessun gruppo (statistica indipendente)</option>
+            </select>
+            <div id="stat-new-group-row" style="display:none; margin-top:-8px; margin-bottom:16px;">
+                <input type="text" id="stat-new-group-name" placeholder="Nome nuovo gruppo (es. Push Interactions)" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn primary" onclick="saveNewStat()">Salva Statistica</button>
@@ -615,6 +648,10 @@ function createStatModalHTML() {
     </div>
     `;
     document.body.insertAdjacentHTML('beforeend', html);
+    // Mostra/nascondi input nuovo gruppo
+    document.getElementById('stat-group').addEventListener('change', function() {
+        document.getElementById('stat-new-group-row').style.display = this.value === '__new__' ? 'block' : 'none';
+    });
     return document.getElementById('stat-config-modal');
 }
 
@@ -628,6 +665,20 @@ async function saveNewStat() {
     
     const activeTemplateId = await getActiveTemplateId();
 
+    // Gestione gruppo
+    const groupSelect = document.getElementById('stat-group');
+    let groupId = groupSelect ? groupSelect.value : '';
+    if (groupId === '__new__') {
+        const newGroupName = (document.getElementById('stat-new-group-name').value || '').trim();
+        groupId = newGroupName ? 'grp_' + newGroupName.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now() : '';
+        // Salva il nome del gruppo nelle settings per riferimento futuro
+        if (groupId && newGroupName) {
+            const groups = (await appDb.getSetting('stat_groups', [])) || [];
+            groups.push({ id: groupId, name: newGroupName });
+            await appDb.setSetting('stat_groups', groups);
+        }
+    }
+
     const allStats = await appDb.getAll('custom_stats');
     const templateStats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
     const maxOrder = templateStats.reduce((max, s) => Math.max(max, s.order !== undefined && s.order !== null ? s.order : -1), -1);
@@ -635,6 +686,7 @@ async function saveNewStat() {
     const newStat = {
         id: 'stat_' + Date.now(),
         title, metric, skill, type, product,
+        groupId: groupId || null,
         templateId: activeTemplateId,
         year: window.appState.activeYear,
         order: maxOrder + 1
@@ -773,6 +825,21 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     info.textContent = infoText;
     if (infoText) {
         card.appendChild(info);
+    }
+
+    // Badge gruppo (se presente)
+    if (statConfig.groupId) {
+        const groupBadge = document.createElement('div');
+        groupBadge.style.cssText = 'display:inline-flex; align-items:center; gap:4px; margin-top:4px; padding:2px 8px; border-radius:20px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); font-size:0.72rem; color:#818cf8; max-width:fit-content;';
+        groupBadge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="12" y1="12" x2="15.5" y2="7.5"/><line x1="12" y1="12" x2="15.5" y2="16.5"/></svg> <span id="group-badge-${statConfig.id}">Gruppo</span>`;
+        card.appendChild(groupBadge);
+        // Recupera nome gruppo in modo asincrono
+        appDb.getSetting('stat_groups', []).then(groups => {
+            const g = (groups || []).find(g => g.id === statConfig.groupId);
+            const span = document.getElementById(`group-badge-${statConfig.id}`);
+            if (span && g) span.textContent = g.name;
+            else if (span) span.textContent = 'Gruppo';
+        });
     }
 
     // Search text for filtering
