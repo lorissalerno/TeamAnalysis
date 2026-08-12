@@ -807,8 +807,53 @@ function setupSettings() {
     const closeBtn = modal ? modal.querySelector('.close-modal') : null;
     const saveBtn = document.getElementById('save-mapping-btn');
     const addCollabBtn = document.getElementById('modal-add-collaborator-btn');
+    const selectAllCb = document.getElementById('collab-select-all');
+    const bulkToolbar = document.getElementById('collab-bulk-toolbar');
+    const bulkCount = document.getElementById('collab-bulk-count');
+    const bulkSkillSelect = document.getElementById('collab-bulk-skill-select');
+    const bulkAddSkill = document.getElementById('collab-bulk-add-skill');
+    const bulkRemoveSkill = document.getElementById('collab-bulk-remove-skill');
+    const bulkDelete = document.getElementById('collab-bulk-delete');
 
     let deletedIds = [];
+
+    // Aggiorna visibilità toolbar e contatore selezione
+    const updateBulkToolbar = () => {
+        const checked = document.querySelectorAll('#mapping-table tbody .collab-row-cb:checked');
+        const count = checked.length;
+        if (count > 0) {
+            bulkToolbar.style.display = 'flex';
+            bulkCount.textContent = count === 1 ? '1 selezionato' : `${count} selezionati`;
+        } else {
+            bulkToolbar.style.display = 'none';
+        }
+        // Aggiorna select-all
+        const allCbs = document.querySelectorAll('#mapping-table tbody .collab-row-cb');
+        if (selectAllCb) {
+            selectAllCb.checked = allCbs.length > 0 && checked.length === allCbs.length;
+            selectAllCb.indeterminate = checked.length > 0 && checked.length < allCbs.length;
+        }
+    };
+
+    // Popola il select skill nella toolbar di massa
+    const populateBulkSkillSelect = async () => {
+        const allSkills = await getSkills();
+        bulkSkillSelect.innerHTML = '';
+        allSkills.forEach(skill => {
+            const opt = document.createElement('option');
+            opt.value = skill;
+            opt.textContent = skill;
+            bulkSkillSelect.appendChild(opt);
+        });
+    };
+
+    // Restituisce le righe selezionate
+    const getSelectedRows = () => {
+        return Array.from(document.querySelectorAll('#mapping-table tbody tr.mapping-row')).filter(tr => {
+            const cb = tr.querySelector('.collab-row-cb');
+            return cb && cb.checked;
+        });
+    };
 
     const renderMappingRow = (m, allSkills, fallbackAnonId = 1) => {
         const tr = document.createElement('tr');
@@ -830,6 +875,9 @@ function setupSettings() {
             : '<span style="color:var(--text-muted); font-size:0.8rem;">Nessuna skill creata</span>';
 
         tr.innerHTML = `
+            <td style="text-align:center;">
+                <input type="checkbox" class="collab-row-cb">
+            </td>
             <td>
                 <input type="text" class="collab-name-input" value="${m.realName || ''}" placeholder="Nome collaboratore..." style="width:100%; padding:6px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
             </td>
@@ -846,22 +894,78 @@ function setupSettings() {
             </td>
         `;
 
+        tr.querySelector('.collab-row-cb').addEventListener('change', updateBulkToolbar);
+
         tr.querySelector('.remove-collab-btn').addEventListener('click', () => {
             if (m.id && m.id !== 'new') {
                 deletedIds.push(m.id);
             }
             tr.remove();
+            updateBulkToolbar();
         });
 
         return tr;
     };
 
+    // Select all / deselect all
+    if (selectAllCb) {
+        selectAllCb.addEventListener('change', () => {
+            const allCbs = document.querySelectorAll('#mapping-table tbody .collab-row-cb');
+            allCbs.forEach(cb => { cb.checked = selectAllCb.checked; });
+            updateBulkToolbar();
+        });
+    }
+
+    // Azione: Assegna skill ai selezionati
+    if (bulkAddSkill) {
+        bulkAddSkill.addEventListener('click', () => {
+            const skill = bulkSkillSelect.value;
+            if (!skill) return;
+            getSelectedRows().forEach(tr => {
+                const cb = tr.querySelector(`.collab-skill-cb[value="${skill}"]`);
+                if (cb) cb.checked = true;
+            });
+        });
+    }
+
+    // Azione: Rimuovi skill dai selezionati
+    if (bulkRemoveSkill) {
+        bulkRemoveSkill.addEventListener('click', () => {
+            const skill = bulkSkillSelect.value;
+            if (!skill) return;
+            getSelectedRows().forEach(tr => {
+                const cb = tr.querySelector(`.collab-skill-cb[value="${skill}"]`);
+                if (cb) cb.checked = false;
+            });
+        });
+    }
+
+    // Azione: Elimina selezionati
+    if (bulkDelete) {
+        bulkDelete.addEventListener('click', () => {
+            const selected = getSelectedRows();
+            if (selected.length === 0) return;
+            if (!confirm(`Eliminare ${selected.length} collaborator${selected.length > 1 ? 'i' : 'e'}?`)) return;
+            selected.forEach(tr => {
+                const dataId = tr.getAttribute('data-id');
+                if (dataId && dataId !== 'new') {
+                    deletedIds.push(parseInt(dataId));
+                }
+                tr.remove();
+            });
+            updateBulkToolbar();
+        });
+    }
+
     manageBtn.addEventListener('click', async () => {
         const tbody = document.querySelector('#mapping-table tbody');
         tbody.innerHTML = '';
         deletedIds = [];
+        if (selectAllCb) selectAllCb.checked = false;
+        bulkToolbar.style.display = 'none';
         
         const allSkills = await getSkills();
+        await populateBulkSkillSelect();
         const mappings = await appDb.getAll('anonymous_map', 'year', window.appState.activeYear);
         mappings.sort((a,b) => (a.realName || '').localeCompare(b.realName || ''));
         
