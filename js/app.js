@@ -41,21 +41,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     await populateSkillsUI();
 
     // 3. Navigation
+    async function navigateToSection(sectionId) {
+        if (!sectionId || !document.getElementById(sectionId)) {
+            sectionId = 'dashboard';
+        }
+        
+        document.querySelectorAll('.nav-links a').forEach(a => {
+            if (a.getAttribute('data-section') === sectionId) {
+                a.classList.add('active');
+            } else {
+                a.classList.remove('active');
+            }
+        });
+
+        document.querySelectorAll('.page-section').forEach(s => {
+            if (s.id === sectionId) {
+                s.classList.add('active');
+            } else {
+                s.classList.remove('active');
+            }
+        });
+
+        window.location.hash = sectionId;
+        await appDb.setSetting('last_active_section', sectionId);
+
+        // Trigger specific section render if needed
+        if (sectionId === 'statistics') renderStatistics();
+        if (sectionId === 'dashboard') renderDashboard();
+        if (sectionId === 'database') renderImportedData();
+        if (sectionId === 'goals' && window.renderGoals) renderGoals();
+    }
+
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
-            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-            
-            e.target.classList.add('active');
-            const sectionId = e.target.getAttribute('data-section');
-            document.getElementById(sectionId).classList.add('active');
-            
-            // Trigger specific section render if needed
-            if (sectionId === 'statistics') renderStatistics();
-            if (sectionId === 'dashboard') renderDashboard();
-            if (sectionId === 'database') renderImportedData();
-            if (sectionId === 'goals' && window.renderGoals) renderGoals();
+            const sectionId = link.getAttribute('data-section');
+            navigateToSection(sectionId);
         });
     });
 
@@ -104,9 +125,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. Settings / Backup
     setupSettings();
     
-    // Initial render
-    renderDashboard();
-    renderImportedData();
+    // Restore active section on page reload
+    const hashSection = window.location.hash.replace('#', '');
+    const savedSection = await appDb.getSetting('last_active_section', 'dashboard');
+    const initialSection = hashSection || savedSection || 'dashboard';
+
+    await navigateToSection(initialSection);
 });
 
 // --- SKILLS MANAGEMENT ---
