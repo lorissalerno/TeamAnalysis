@@ -162,41 +162,85 @@ class CSVParser {
     }
 
     static parseSalesAOIT(lines) {
-        const row1 = this.parseLine(lines[0]); // Metrics
-        const row3 = this.parseLine(lines[2]); // Product names (?) actually row3 is "Additional Sales Basket", row2 is "KPI"
-        const row4 = this.parseLine(lines[3]); // Dates (e.g. 202626)
+        // Individua la riga contenente le intestazioni di data (stringhe da 6 cifre come 202626 o 202601)
+        let dateRowIdx = -1;
+        let dateRow = [];
         
-        const results = [];
-        // Data starts at row 5
-        for (let i = 4; i < lines.length; i++) {
+        for (let i = 0; i < Math.min(10, lines.length); i++) {
             const cols = this.parseLine(lines[i]);
-            if (cols.length < 4) continue;
+            const hasDateCols = cols.some(c => /^\d{6}$/.test(c.trim()));
+            if (hasDateCols) {
+                dateRowIdx = i;
+                dateRow = cols;
+                break;
+            }
+        }
+        
+        if (dateRowIdx === -1) {
+            dateRowIdx = 3;
+            dateRow = this.parseLine(lines[3] || '');
+        }
+
+        // Rileva se il file contiene dati mensili o settimanali
+        const fullHeaderStr = lines.slice(0, dateRowIdx + 1).join(' ').toLowerCase();
+        const hasMonthKeyword = fullHeaderStr.includes('month') || fullHeaderStr.includes('monat') || fullHeaderStr.includes('mese');
+        
+        let hasWeekNumGreaterThan12 = false;
+        for (let c = 2; c < dateRow.length; c++) {
+            const dateStr = dateRow[c] ? dateRow[c].trim() : '';
+            if (/^\d{6}$/.test(dateStr)) {
+                const part = parseInt(dateStr.substring(4, 6));
+                if (part > 12) {
+                    hasWeekNumGreaterThan12 = true;
+                    break;
+                }
+            }
+        }
+
+        const isWeekly = hasWeekNumGreaterThan12 || (!hasMonthKeyword);
+
+        const results = [];
+        for (let i = dateRowIdx + 1; i < lines.length; i++) {
+            const cols = this.parseLine(lines[i]);
+            if (cols.length < 3) continue;
             
-            const employee = cols[0];
-            const product = cols[1];
-            if (!employee || !product || product.toLowerCase() === 'total') continue;
+            const employee = cols[0] ? cols[0].trim() : '';
+            const product = cols[1] ? cols[1].trim() : '';
             
-            // Iterate over date columns
+            if (!employee || !product || product.toLowerCase() === 'total' || employee.toLowerCase() === 'total') continue;
+            
             for (let c = 2; c < cols.length; c += 2) {
-                const dateStr = row4[c];
-                if (!dateStr || dateStr.toLowerCase() === 'total') continue;
+                const dateStr = dateRow[c] ? dateRow[c].trim() : '';
+                if (!dateStr || dateStr.toLowerCase() === 'total' || !/^\d{6}$/.test(dateStr)) continue;
                 
                 const year = parseInt(dateStr.substring(0, 4));
-                const week = parseInt(dateStr.substring(4, 6));
-                const date = this.getDateFromWeek(year, week);
+                const part = parseInt(dateStr.substring(4, 6));
                 
-                const nbEvents = parseFloat(cols[c].replace(/\./g, '').replace(',', '.'));
-                const aoitGew = parseFloat(cols[c+1].replace(/\./g, '').replace(',', '.'));
+                const date = isWeekly
+                    ? this.getDateFromWeek(year, part)
+                    : this.getDateFromMonth(year, part);
                 
-                if (isNaN(nbEvents) && isNaN(aoitGew)) continue;
+                const rawNbStr = cols[c] ? cols[c].replace(/\./g, '').replace(',', '.').trim() : '';
+                const rawGewStr = (c + 1 < cols.length && cols[c + 1]) ? cols[c + 1].replace(/\./g, '').replace(',', '.').trim() : '';
                 
-                const dataObj = {
-                    "Product": product,
-                    "Nb Events": isNaN(nbEvents) ? 0 : nbEvents,
-                    "AOIT gew": isNaN(aoitGew) ? 0 : aoitGew
-                };
+                const rawNbEvents = parseFloat(rawNbStr);
+                const rawAoitGew = parseFloat(rawGewStr);
                 
-                results.push({ year: year.toString(), date, employee, data: dataObj, category: 'sales' });
+                if (isNaN(rawNbEvents) || rawNbEvents <= 0) continue;
+                
+                const count = Math.round(rawNbEvents);
+                const totalGew = isNaN(rawAoitGew) ? 0 : rawAoitGew;
+                const unitGew = count > 0 ? (totalGew / count) : 0;
+                
+                // Dividi in N record singoli di vendita
+                for (let k = 0; k < count; k++) {
+                    const dataObj = {
+                        "Product": product,
+                        "Nb Events": 1,
+                        "AOIT gew": Math.round(unitGew * 100) / 100
+                    };
+                    results.push({ year: year.toString(), date, employee, data: dataObj, category: 'sales' });
+                }
             }
         }
         return results;
