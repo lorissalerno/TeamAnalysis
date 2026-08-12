@@ -17,9 +17,22 @@ class CSVParser {
                 // Clean the lines (remove full-line wrapping quotes and unescape)
                 const cleanedLines = lines.map(line => {
                     let cLine = line.trim();
-                    if (cLine.startsWith('"') && cLine.endsWith('"') && cLine.length >= 2) {
-                        // Check if it's the wrapped format. If it has "" inside, it's highly likely
-                        if (cLine.includes('""')) {
+                    if (cLine.startsWith('"') && cLine.endsWith('"')) {
+                        let hasUnquotedComma = false;
+                        let inQuotes = false;
+                        for(let i=0; i<cLine.length; i++) {
+                            if(cLine[i] === '"') {
+                                if(i+1 < cLine.length && cLine[i+1] === '"') {
+                                    i++; // skip escaped quote
+                                } else {
+                                    inQuotes = !inQuotes;
+                                }
+                            } else if(cLine[i] === ',' && !inQuotes) {
+                                hasUnquotedComma = true;
+                                break;
+                            }
+                        }
+                        if (!hasUnquotedComma) {
                             cLine = cLine.substring(1, cLine.length - 1).replace(/""/g, '"');
                         }
                     }
