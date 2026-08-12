@@ -638,12 +638,11 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
         let datasets = [];
-
-        // Palette sgargiante ad alto contrasto
+        // Palette sgargiante ad alto contrasto e ottima leggibilità sia in dark che light mode
         const PALETTE = [
-            '#FF2D55', '#00E5FF', '#FFEA00', '#39FF14', '#FF6600',
-            '#BF5FFF', '#FF007F', '#00FFCC', '#FFB300', '#2979FF',
-            '#FF1744', '#00E676'
+            '#FF2600', '#00A8FF', '#9B51E0', '#00E676', '#FF007F', 
+            '#FF9100', '#00B8D9', '#7C4DFF', '#F50057', '#00C851', 
+            '#FFAB00', '#2979FF'
         ];
 
         const isBar = statConfig.type === 'bar';
@@ -658,7 +657,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 borderWidth: isBar ? 1 : 1.5,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
-                pointRadius: isBar ? 0 : 0,
+                pointRadius: 0,
+                pointHoverRadius: isBar ? 0 : 5,
                 tension: 0.35,
                 order: 2
             });
@@ -668,14 +668,14 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#FFEA00',
-                    backgroundColor: '#FFEA00',
+                    borderColor: '#00A3FF',
+                    backgroundColor: '#00A3FF',
                     borderWidth: 3.5,
-                    borderDash: [8, 4],
+                    borderDash: [6, 4],
                     pointRadius: 7,
                     pointHoverRadius: 10,
-                    pointBackgroundColor: '#FFEA00',
-                    pointBorderColor: '#fff',
+                    pointBackgroundColor: '#00A3FF',
+                    pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     fill: false,
                     tension: 0.35,
@@ -688,16 +688,17 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 label: 'Media Team',
                 data: teamAvgPts,
                 type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#FFEA00', 0.85) : 'rgba(255, 234, 0, 0.15)',
-                borderColor: '#FFEA00',
-                borderWidth: isBar ? 1 : 3,
+                backgroundColor: isBar ? hexToRgba('#00A3FF', 0.85) : 'rgba(0, 163, 255, 0.15)',
+                borderColor: '#00A3FF',
+                borderWidth: isBar ? 1 : 3.5,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
                 pointRadius: isBar ? 0 : 7,
-                pointHoverRadius: 10,
-                pointBackgroundColor: '#FFEA00',
-                pointBorderColor: '#fff',
+                pointHoverRadius: isBar ? 0 : 10,
+                pointBackgroundColor: '#00A3FF',
+                pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
+                borderDash: isBar ? [] : [6, 4],
                 tension: 0.35,
                 order: 1
             });
@@ -712,12 +713,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: window.getDisplayName(emp),
                     data: empPts,
                     type: isBar ? 'bar' : 'line',
-                    backgroundColor: isBar ? hexToRgba(color, 0.82) : hexToRgba(color, 0.12),
+                    backgroundColor: isBar ? hexToRgba(color, 0.8) : hexToRgba(color, 0.12),
                     borderColor: color,
                     borderWidth: isBar ? 1 : 1.5,
                     borderRadius: isBar ? 4 : 0,
                     minBarLength: isBar ? 4 : 0,
-                    pointRadius: isBar ? 0 : 0,
+                    pointRadius: 0,
+                    pointHoverRadius: isBar ? 0 : 5,
                     tension: 0.35,
                     order: 2
                 });
@@ -728,14 +730,14 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#FFEA00',
-                    backgroundColor: '#FFEA00',
+                    borderColor: '#00A3FF',
+                    backgroundColor: '#00A3FF',
                     borderWidth: 3.5,
-                    borderDash: [8, 4],
+                    borderDash: [6, 4],
                     pointRadius: 7,
                     pointHoverRadius: 10,
-                    pointBackgroundColor: '#FFEA00',
-                    pointBorderColor: '#fff',
+                    pointBackgroundColor: '#00A3FF',
+                    pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     fill: false,
                     tension: 0.35,
@@ -840,7 +842,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             if (val === 0) return 0;
             const absVal = Math.abs(val);
             if (absVal >= 1) return Math.ceil(val);
-            // For small decimals, round up to the next step in same order of magnitude
             const order = Math.pow(10, Math.floor(Math.log10(absVal)));
             return Math.ceil(val / order) * order;
         }
@@ -899,13 +900,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 scales: {
                     x: {
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
+                            color: 'rgba(128, 128, 128, 0.12)'
                         }
                     },
                     y: {
                         ...yScalesConfig,
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.08)'
+                            color: 'rgba(128, 128, 128, 0.15)'
                         }
                     }
                 }
