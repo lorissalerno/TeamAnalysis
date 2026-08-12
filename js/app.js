@@ -1193,7 +1193,6 @@ function resetWizardMonthSelect() {
 }
 
 function updateWizardStepHeader() {
-    const isSales = wizardState.type === 'sales';
     const step2Item = document.querySelector('.wizard-step-item[data-step="2"]');
     const step3Item = document.querySelector('.wizard-step-item[data-step="3"]');
     const step4Item = document.querySelector('.wizard-step-item[data-step="4"]');
@@ -1201,31 +1200,17 @@ function updateWizardStepHeader() {
     const step3Title = document.getElementById('wizard-step-3-title');
     const step4Title = document.getElementById('wizard-step-4-title');
 
-    if (isSales) {
-        if (step2Item) step2Item.style.display = 'none';
-        if (step3Item) {
-            const numEl = step3Item.querySelector('.step-num');
-            if (numEl) numEl.textContent = '2';
-        }
-        if (step4Item) {
-            const numEl = step4Item.querySelector('.step-num');
-            if (numEl) numEl.textContent = '3';
-        }
-        if (step3Title) step3Title.textContent = 'Passaggio 2: Seleziona il mese di sovrascrittura';
-        if (step4Title) step4Title.textContent = 'Passaggio 3: Seleziona ed importa il file CSV';
-    } else {
-        if (step2Item) step2Item.style.display = 'flex';
-        if (step3Item) {
-            const numEl = step3Item.querySelector('.step-num');
-            if (numEl) numEl.textContent = '3';
-        }
-        if (step4Item) {
-            const numEl = step4Item.querySelector('.step-num');
-            if (numEl) numEl.textContent = '4';
-        }
-        if (step3Title) step3Title.textContent = 'Passaggio 3: Seleziona il mese di sovrascrittura';
-        if (step4Title) step4Title.textContent = 'Passaggio 4: Seleziona ed importa il file CSV';
+    if (step2Item) step2Item.style.display = 'flex';
+    if (step3Item) {
+        const numEl = step3Item.querySelector('.step-num');
+        if (numEl) numEl.textContent = '3';
     }
+    if (step4Item) {
+        const numEl = step4Item.querySelector('.step-num');
+        if (numEl) numEl.textContent = '4';
+    }
+    if (step3Title) step3Title.textContent = 'Passaggio 3: Seleziona il mese di sovrascrittura';
+    if (step4Title) step4Title.textContent = 'Passaggio 4: Seleziona ed importa il file CSV';
 }
 
 function updateWizardStepUI(step) {
@@ -1235,10 +1220,6 @@ function updateWizardStepUI(step) {
     document.querySelectorAll('.wizard-step-item').forEach(item => {
         const itemStep = parseInt(item.getAttribute('data-step'));
         item.classList.remove('active', 'completed');
-        
-        if (itemStep === 2 && wizardState.type === 'sales') {
-            return;
-        }
 
         if (itemStep === step) {
             item.classList.add('active');
@@ -1252,8 +1233,24 @@ function updateWizardStepUI(step) {
         if (contentEl) contentEl.style.display = i === step ? 'block' : 'none';
     }
 
-    if (step === 2 && wizardState.type === 'performance') {
-        populateSkillsUI();
+    if (step === 2) {
+        const titleEl = document.getElementById('wizard-step-2-title');
+        const descEl = document.getElementById('wizard-step-2-desc');
+        const perfSection = document.getElementById('wizard-perf-skill-section');
+        const salesSection = document.getElementById('wizard-sales-info-section');
+
+        if (wizardState.type === 'performance') {
+            if (titleEl) titleEl.textContent = 'Passaggio 2: Seleziona lo Skill Performance';
+            if (descEl) descEl.textContent = 'Scegli a quale Skill associare i dati delle performance da importare.';
+            if (perfSection) perfSection.style.display = 'block';
+            if (salesSection) salesSection.style.display = 'none';
+            populateSkillsUI();
+        } else {
+            if (titleEl) titleEl.textContent = 'Passaggio 2: Seleziona Tipo Report Sales';
+            if (descEl) descEl.textContent = 'Seleziona se intendi importare un report AOIT gew oppure Nuovi Abo & RET.';
+            if (perfSection) perfSection.style.display = 'none';
+            if (salesSection) salesSection.style.display = 'block';
+        }
     }
 
     const prevBtn = document.getElementById('wizard-prev-btn');
@@ -1284,6 +1281,7 @@ function setupImportWizard() {
                 currentStep: 1,
                 type: 'performance',
                 skill: '',
+                salesType: 'aoit',
                 month: String(new Date().getMonth() + 1).padStart(2, '0'),
                 file: null
             };
@@ -1356,9 +1354,7 @@ function setupImportWizard() {
 
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
-            if (wizardState.currentStep === 3 && wizardState.type === 'sales') {
-                updateWizardStepUI(1);
-            } else if (wizardState.currentStep > 1) {
+            if (wizardState.currentStep > 1) {
                 updateWizardStepUI(wizardState.currentStep - 1);
             }
         });
@@ -1366,18 +1362,23 @@ function setupImportWizard() {
 
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
-            if (wizardState.currentStep === 1 && wizardState.type === 'sales') {
-                updateWizardStepUI(3);
-            } else if (wizardState.currentStep === 2 && wizardState.type === 'performance') {
-                const skillSelect = document.getElementById('wizard-perf-skill-select');
-                if (skillSelect && skillSelect.value) {
-                    wizardState.skill = skillSelect.value;
-                    updateWizardStepUI(3);
+            if (wizardState.currentStep === 2) {
+                if (wizardState.type === 'performance') {
+                    const skillSelect = document.getElementById('wizard-perf-skill-select');
+                    if (skillSelect && skillSelect.value) {
+                        wizardState.skill = skillSelect.value;
+                    } else {
+                        alert("Seleziona uno skill prima di proseguire.");
+                        return;
+                    }
                 } else {
-                    alert("Seleziona uno skill prima di proseguire.");
-                    return;
+                    const salesTypeSelect = document.getElementById('wizard-sales-type-select');
+                    if (salesTypeSelect) {
+                        wizardState.salesType = salesTypeSelect.value;
+                    }
                 }
-            } else if (wizardState.currentStep < 4) {
+            }
+            if (wizardState.currentStep < 4) {
                 updateWizardStepUI(wizardState.currentStep + 1);
             }
         });

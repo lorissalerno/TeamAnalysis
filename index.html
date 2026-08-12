@@ -439,9 +439,14 @@
                     </div>
                 </div>
 
-                <div id="wizard-sales-info-section" style="display:none; background:var(--bg-base); padding:16px; border-radius:6px; border:1px solid var(--border);">
-                    <p style="margin:0; font-size:0.9rem; color:var(--text-main);">
-                        I dati Sales vengono catalogati ed integrati in base ai prodotti identificati automaticamente dal file CSV (AOIT gew, Open Year Sales / Nuovi Abo, RET).
+                <div id="wizard-sales-info-section" style="display:none;">
+                    <label style="display:block; margin-bottom: 6px; font-weight: 500;">Tipo di Report Sales:</label>
+                    <select id="wizard-sales-type-select" style="width:100%; padding:10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.95rem;">
+                        <option value="aoit">AOIT gew (Report Prodotti AOIT)</option>
+                        <option value="nuovi_abo">Nuovi Abo & RET (Report Open Year Sales)</option>
+                    </select>
+                    <p style="margin-top:8px; font-size:0.85rem; color:var(--text-muted);">
+                        Seleziona la tipologia di report Sales che intendi importare.
                     </p>
                 </div>
             </div>
