@@ -849,6 +849,8 @@ function renderStatistics() {
 }
 
 function setupCustomMonthSelects() {
+    const currentMonthVal = String(new Date().getMonth() + 1).padStart(2, '0');
+
     document.querySelectorAll('.custom-month-select').forEach(container => {
         const trigger = container.querySelector('.custom-month-trigger');
         const dropdown = container.querySelector('.custom-month-dropdown');
@@ -857,6 +859,17 @@ function setupCustomMonthSelects() {
         const items = container.querySelectorAll('.searchable-dropdown-item');
 
         if (!trigger || !dropdown || !hiddenInput) return;
+
+        // Set default to current month
+        let defaultItem = Array.from(items).find(i => i.getAttribute('data-value') === currentMonthVal);
+        if (!defaultItem && items.length > 0) defaultItem = items[0];
+
+        if (defaultItem) {
+            items.forEach(i => i.classList.remove('selected'));
+            defaultItem.classList.add('selected');
+            hiddenInput.value = defaultItem.getAttribute('data-value');
+            selectedText.textContent = defaultItem.textContent;
+        }
 
         trigger.addEventListener('click', (e) => {
             e.stopPropagation();
