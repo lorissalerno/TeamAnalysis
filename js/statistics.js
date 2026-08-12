@@ -33,6 +33,21 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTeamStats();
         });
     }
+
+    // Setup search filter
+    const searchInput = document.getElementById('stat-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase().trim();
+            const container = document.getElementById('team-stats-container');
+            if (!container) return;
+            const cards = container.querySelectorAll('.stat-card');
+            cards.forEach(card => {
+                const text = (card.getAttribute('data-search-text') || '').toLowerCase();
+                card.style.display = text.includes(query) || query === '' ? '' : 'none';
+            });
+        });
+    }
     
     // We export a function to be called from app.js when year changes
     window.renderStatistics = async function() {
@@ -270,6 +285,9 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     infoText += ` · ${typeLabels[statConfig.type] || statConfig.type}`;
     info.textContent = infoText;
     card.appendChild(info);
+
+    // Search text for filtering
+    card.setAttribute('data-search-text', `${statConfig.title} ${infoText}`);
 
     // Action buttons
     const actionsDiv = document.createElement('div');
