@@ -214,6 +214,8 @@ function setupImports() {
     const searchInput = document.getElementById('db-search-input');
     const clearFilteredBtn = document.getElementById('clear-filtered-db-btn');
 
+    setupSkillsModal();
+
     if (addSkillBtn) {
         addSkillBtn.addEventListener('click', async () => {
             const name = prompt("Inserisci il nome del nuovo Skill (es. Performance MyService VAS):");
@@ -346,7 +348,126 @@ function setupImports() {
     });
 }
 
-// --- RENDER IMPORTED DATABASE DATA ---
+// --- SKILLS MANAGEMENT MODAL ---
+function setupSkillsModal() {
+    const editSkillsBtn = document.getElementById('edit-skills-btn');
+    const skillsModal = document.getElementById('skills-modal');
+    const closeSkillsModal = document.getElementById('close-skills-modal');
+    const saveSkillsModalBtn = document.getElementById('save-skills-modal-btn');
+    const modalAddSkillBtn = document.getElementById('modal-add-skill-btn');
+
+    if (editSkillsBtn) {
+        editSkillsBtn.addEventListener('click', async () => {
+            await renderSkillsModalList();
+            skillsModal.classList.add('open');
+        });
+    }
+
+    if (closeSkillsModal) {
+        closeSkillsModal.addEventListener('click', () => skillsModal.classList.remove('open'));
+    }
+
+    if (saveSkillsModalBtn) {
+        saveSkillsModalBtn.addEventListener('click', () => skillsModal.classList.remove('open'));
+    }
+
+    if (modalAddSkillBtn) {
+        modalAddSkillBtn.addEventListener('click', async () => {
+            const name = prompt("Inserisci il nome del nuovo Skill:");
+            if (!name || !name.trim()) return;
+            const cleanName = name.trim();
+            const skills = await getSkills();
+            if (!skills.includes(cleanName)) {
+                skills.push(cleanName);
+                await saveSkills(skills);
+                await renderSkillsModalList();
+                logImport(`Creato nuovo skill: "${cleanName}"`);
+            } else {
+                alert("Questo skill esiste già!");
+            }
+        });
+    }
+}
+
+async function renderSkillsModalList() {
+    const container = document.getElementById('skills-list-container');
+    if (!container) return;
+    const skills = await getSkills();
+    container.innerHTML = '';
+
+    if (skills.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);">Nessun skill presente.</p>';
+        return;
+    }
+
+    skills.forEach(skill => {
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.gap = '8px';
+        item.style.alignItems = 'center';
+
+        item.innerHTML = `
+            <input type="text" class="skill-edit-input" data-original="${skill}" value="${skill}" style="flex:1; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+            <button type="button" class="btn secondary save-skill-rename-btn" title="Rinomina questo skill">Salva</button>
+            <button type="button" class="btn secondary delete-skill-btn" title="Elimina questo skill" style="color:var(--danger, #ef4444);">&times;</button>
+        `;
+        container.appendChild(item);
+    });
+
+    container.querySelectorAll('.save-skill-rename-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const parent = e.currentTarget.parentElement;
+            const input = parent.querySelector('.skill-edit-input');
+            const oldName = input.getAttribute('data-original');
+            const newName = input.value.trim();
+
+            if (!newName) {
+                alert("Il nome dello skill non può essere vuoto.");
+                return;
+            }
+            if (oldName === newName) return;
+
+            const skillsList = await getSkills();
+            if (skillsList.includes(newName)) {
+                alert("Esiste già uno skill con questo nome.");
+                return;
+            }
+
+            const index = skillsList.indexOf(oldName);
+            if (index !== -1) {
+                skillsList[index] = newName;
+            } else {
+                skillsList.push(newName);
+            }
+
+            await appDb.renameSkill(oldName, newName);
+            await saveSkills(skillsList);
+            logImport(`Rinominato skill da "${oldName}" a "${newName}".`);
+            await renderSkillsModalList();
+            await renderImportedData();
+            if (window.renderStatistics) renderStatistics();
+        });
+    });
+
+    container.querySelectorAll('.delete-skill-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const parent = e.currentTarget.parentElement;
+            const input = parent.querySelector('.skill-edit-input');
+            const oldName = input.getAttribute('data-original');
+
+            if (confirm(`Sei sicuro di voler eliminare lo skill "${oldName}" dalla lista?`)) {
+                const skillsList = await getSkills();
+                const filtered = skillsList.filter(s => s !== oldName);
+                await saveSkills(filtered);
+                logImport(`Eliminato skill "${oldName}" dalla lista.`);
+                await renderSkillsModalList();
+                await renderImportedData();
+            }
+        });
+    });
+}
+
+// --- RENDER IMPORTED DATABASE DATA (SINGLE ROW PER METRIC) ---
 async function renderImportedData() {
     const activeYearLabel = document.getElementById('db-active-year-label');
     const tbody = document.getElementById('db-imported-tbody');
@@ -360,8 +481,10 @@ async function renderImportedData() {
     const perfRecords = await appDb.getAll('performance', 'year', activeYear);
     const salesRecords = await appDb.getAll('sales', 'year', activeYear);
     
-    const filterValue = document.getElementById('db-filter-skill').value;
-    const searchTerm = (document.getElementById('db-search-input').value || '').toLowerCase().trim();
+    const filterSelect = document.getElementById('db-filter-skill');
+    const filterValue = filterSelect ? filterSelect.value : 'ALL';
+    const searchInput = document.getElementById('db-search-input');
+    const searchTerm = (searchInput ? searchInput.value : '').toLowerCase().trim();
 
     // Summary badges calculation
     const skillCounts = {};
@@ -377,7 +500,7 @@ async function renderImportedData() {
         totalSales++;
     });
 
-    let badgesHtml = `<span style="padding:4px 10px; border-radius:12px; background:var(--secondary); font-size:0.8rem; font-weight:500;">Totale Anno: ${totalPerf + totalSales} record</span>`;
+    let badgesHtml = `<span style="padding:4px 10px; border-radius:12px; background:var(--secondary); font-size:0.8rem; font-weight:500;">Totale Anno: ${totalPerf + totalSales} importazioni</span>`;
     for (const [sk, count] of Object.entries(skillCounts)) {
         badgesHtml += `<span style="padding:4px 10px; border-radius:12px; background:var(--primary); color:#fff; font-size:0.8rem; font-weight:500;">${sk}: ${count}</span>`;
     }
@@ -386,67 +509,81 @@ async function renderImportedData() {
     }
     badgesContainer.innerHTML = badgesHtml;
 
-    // Combine records for table display
-    let allRecords = [];
-    
+    // Explode records into single rows (1 row per metric key-value)
+    let singleRows = [];
+
     perfRecords.forEach(r => {
-        allRecords.push({
-            id: r.id,
-            store: 'performance',
-            date: r.date,
-            employee: r.employee,
-            type: 'Performance',
-            skill: r.skill || 'Performance (Generale)',
-            data: r.data
-        });
+        const skillName = r.skill || 'Performance (Generale)';
+        if (r.data && typeof r.data === 'object') {
+            Object.entries(r.data).forEach(([metricName, val]) => {
+                singleRows.push({
+                    recordId: r.id,
+                    store: 'performance',
+                    date: r.date,
+                    employee: r.employee,
+                    type: 'Performance',
+                    skill: skillName,
+                    metric: metricName,
+                    value: val
+                });
+            });
+        }
     });
 
     salesRecords.forEach(r => {
-        allRecords.push({
-            id: r.id,
-            store: 'sales',
-            date: r.date,
-            employee: r.employee,
-            type: 'Sales',
-            skill: r.data.Product ? `Sales (${r.data.Product})` : 'Sales (Generale)',
-            data: r.data
-        });
+        const productName = r.data.Product || 'Generale';
+        const skillName = `Sales (${productName})`;
+        if (r.data && typeof r.data === 'object') {
+            Object.entries(r.data).forEach(([metricName, val]) => {
+                if (metricName === 'Product') return;
+                singleRows.push({
+                    recordId: r.id,
+                    store: 'sales',
+                    date: r.date,
+                    employee: r.employee,
+                    type: 'Sales',
+                    skill: skillName,
+                    metric: metricName,
+                    value: val
+                });
+            });
+        }
     });
 
     // Apply Filter by Skill / Sales
     if (filterValue === 'SALES') {
-        allRecords = allRecords.filter(r => r.store === 'sales');
+        singleRows = singleRows.filter(r => r.store === 'sales');
     } else if (filterValue !== 'ALL') {
-        allRecords = allRecords.filter(r => r.store === 'performance' && r.skill === filterValue);
+        singleRows = singleRows.filter(r => r.store === 'performance' && r.skill === filterValue);
     }
 
-    // Apply Search Filter by Employee Name
+    // Apply Search Filter across all fields
     if (searchTerm) {
-        allRecords = allRecords.filter(r => {
+        singleRows = singleRows.filter(r => {
             const dispName = window.getDisplayName(r.employee).toLowerCase();
             const realName = r.employee.toLowerCase();
-            return dispName.includes(searchTerm) || realName.includes(searchTerm);
+            const metric = r.metric.toLowerCase();
+            const skill = r.skill.toLowerCase();
+            const date = (r.date || '').toLowerCase();
+            const val = String(r.value).toLowerCase();
+            return dispName.includes(searchTerm) || realName.includes(searchTerm) || metric.includes(searchTerm) || skill.includes(searchTerm) || date.includes(searchTerm) || val.includes(searchTerm);
         });
     }
 
-    // Sort by date desc, then employee
-    allRecords.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.employee.localeCompare(b.employee));
+    // Sort by date desc, then employee asc, then metric asc
+    singleRows.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.employee.localeCompare(b.employee) || a.metric.localeCompare(b.metric));
 
     tbody.innerHTML = '';
 
-    if (allRecords.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">Nessun dato trovato nel database per l'anno ${activeYear}.</td></tr>`;
+    if (singleRows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">Nessuna riga trovata nel database per l'anno ${activeYear}.</td></tr>`;
         return;
     }
 
     const fragment = document.createDocumentFragment();
-    allRecords.forEach(r => {
+    singleRows.forEach(r => {
         const tr = document.createElement('tr');
         const dispEmployee = window.getDisplayName(r.employee);
-
-        const metricsStr = Object.entries(r.data)
-            .map(([k, v]) => `<span style="display:inline-block; margin-right:6px; margin-bottom:3px; padding:3px 8px; background:var(--bg-base); border:1px solid var(--border); border-radius:4px; font-size:0.78rem;"><strong>${k}:</strong> ${v}</span>`)
-            .join('');
 
         const skillBadge = r.store === 'performance' 
             ? `<span style="padding:3px 8px; border-radius:4px; background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`
@@ -456,9 +593,10 @@ async function renderImportedData() {
             <td style="white-space:nowrap; font-weight:500;">${r.date || '-'}</td>
             <td><strong>${dispEmployee}</strong></td>
             <td>${skillBadge}</td>
-            <td style="font-size:0.85rem;">${metricsStr}</td>
+            <td style="font-weight:500;">${r.metric}</td>
+            <td style="font-weight:600;">${r.value}</td>
             <td style="text-align:center;">
-                <button class="icon-btn delete-rec-btn" data-store="${r.store}" data-id="${r.id}" title="Elimina questo record" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px;">
+                <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px;">
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
                 </button>
             </td>
@@ -467,14 +605,27 @@ async function renderImportedData() {
     });
     tbody.appendChild(fragment);
 
-    // Attach single row delete event handlers
-    tbody.querySelectorAll('.delete-rec-btn').forEach(btn => {
+    // Attach row delete handlers
+    tbody.querySelectorAll('.delete-metric-row-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const id = parseInt(e.currentTarget.getAttribute('data-id'));
             const store = e.currentTarget.getAttribute('data-store');
-            if (confirm("Eliminare questo singolo record dal database?")) {
-                await appDb.deleteRecord(store, id);
-                logImport(`Record ID ${id} eliminato.`);
+            const metricKey = e.currentTarget.getAttribute('data-metric');
+
+            if (confirm(`Eliminare la riga metrica "${metricKey}"?`)) {
+                const records = await appDb.getAll(store);
+                const targetRecord = records.find(x => x.id === id);
+                if (targetRecord && targetRecord.data) {
+                    delete targetRecord.data[metricKey];
+                    const remainingKeys = Object.keys(targetRecord.data);
+                    if (remainingKeys.length === 0 || (store === 'sales' && remainingKeys.length === 1 && remainingKeys[0] === 'Product')) {
+                        await appDb.deleteRecord(store, id);
+                    } else {
+                        const transaction = appDb._db.transaction([store], 'readwrite');
+                        transaction.objectStore(store).put(targetRecord);
+                    }
+                }
+                logImport(`Eliminata riga metrica "${metricKey}".`);
                 await refreshYearsList();
                 await renderImportedData();
                 if (window.renderStatistics) renderStatistics();

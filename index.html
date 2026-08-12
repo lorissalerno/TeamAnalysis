@@ -73,6 +73,7 @@
                             <div style="display:flex; gap:8px;">
                                 <select id="perf-skill-select" style="flex:1; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);"></select>
                                 <button type="button" class="btn secondary" id="add-skill-btn" title="Crea un nuovo skill">+ Skill</button>
+                                <button type="button" class="btn secondary" id="edit-skills-btn" title="Gestisci e rinomina gli skill">⚙️ Gestisci Skill</button>
                             </div>
                         </div>
                         <div>
@@ -115,7 +116,7 @@
                             <option value="ALL">Tutte le fonti (Performance & Sales)</option>
                             <option value="SALES">Solo Sales</option>
                         </select>
-                        <input type="text" id="db-search-input" placeholder="Cerca collaboratore..." style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); width:180px;">
+                        <input type="text" id="db-search-input" placeholder="Cerca collaboratore, metrica..." style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); width:220px;">
                         <button class="btn secondary" id="clear-filtered-db-btn" style="padding:6px 12px; font-size:0.85rem;" title="Elimina dati filtrati per l'anno corrente">Elimina Dati Filtrati</button>
                     </div>
                 </div>
@@ -129,7 +130,8 @@
                                 <th>Data</th>
                                 <th>Collaboratore</th>
                                 <th>Tipo / Skill</th>
-                                <th>Dettaglio Metriche</th>
+                                <th>Metrica / Prodotto</th>
+                                <th>Valore</th>
                                 <th style="width:70px; text-align:center;">Azione</th>
                             </tr>
                         </thead>
@@ -215,6 +217,26 @@
         </div>
         <div class="modal-footer">
             <button class="btn primary" id="save-mapping-btn">Salva</button>
+        </div>
+    </div>
+
+    <!-- Skills Management Modal -->
+    <div id="skills-modal" class="modal">
+        <div class="modal-header">
+            <h2>Gestisci & Rinomina Skill</h2>
+            <button class="close-modal" id="close-skills-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">
+                Modifica o rinomina gli skill esistenti. Tutti i dati nel database e le statistiche associate verranno aggiornati automaticamente.
+            </p>
+            <div id="skills-list-container" style="display:flex; flex-direction:column; gap:12px;">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+            <button class="btn secondary" id="modal-add-skill-btn">+ Nuovo Skill</button>
+            <button class="btn primary" id="save-skills-modal-btn">Chiudi</button>
         </div>
     </div>
 

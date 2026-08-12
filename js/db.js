@@ -167,6 +167,29 @@ const db = {
             request.onerror = () => reject(request.error);
         });
     },
+
+    renameSkill: async function(oldName, newName) {
+        const perf = await this.getAll('performance');
+        const perfToUpdate = perf.filter(p => p.skill === oldName);
+        if (perfToUpdate.length > 0) {
+            const transaction = this._db.transaction(['performance'], 'readwrite');
+            const store = transaction.objectStore('performance');
+            perfToUpdate.forEach(p => {
+                p.skill = newName;
+                store.put(p);
+            });
+        }
+        const stats = await this.getAll('custom_stats');
+        const statsToUpdate = stats.filter(s => s.skill === oldName);
+        if (statsToUpdate.length > 0) {
+            const transaction = this._db.transaction(['custom_stats'], 'readwrite');
+            const store = transaction.objectStore('custom_stats');
+            statsToUpdate.forEach(s => {
+                s.skill = newName;
+                store.put(s);
+            });
+        }
+    },
     
     // Backup entire DB to JSON
     exportJSON: async function() {
