@@ -1,7 +1,7 @@
 // Plugin globale per estendere la linea dell'obiettivo viola da estremo a estremo (sinistra a destra)
 const fullWidthGoalPlugin = {
     id: 'fullWidthGoalPlugin',
-    beforeDatasetsDraw(chart) {
+    afterDatasetsDraw(chart) {
         try {
             const goalConfig = chart.options && chart.options.plugins && chart.options.plugins.fullWidthGoal;
             if (!goalConfig || goalConfig.target === undefined || goalConfig.target === null) return;
@@ -1044,8 +1044,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     backgroundColor: '#F59E0B',
                     borderWidth: 3.5,
                     borderDash: [6, 4],
-                    pointRadius: 7,
-                    pointHoverRadius: 10,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
                     pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
@@ -1065,8 +1065,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 borderWidth: isBar ? 1 : 3.5,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
-                pointRadius: isBar ? 0 : 7,
-                pointHoverRadius: isBar ? 0 : 10,
+                pointRadius: 0,
+                pointHoverRadius: isBar ? 0 : 5,
                 pointBackgroundColor: '#F59E0B',
                 pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
@@ -1092,6 +1092,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     minBarLength: isBar ? 4 : 0,
                     pointRadius: 0,
                     pointHoverRadius: isBar ? 0 : 5,
+                    pointBackgroundColor: color,
                     tension: 0.35,
                     order: 2
                 });
@@ -1106,8 +1107,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     backgroundColor: '#F59E0B',
                     borderWidth: 3.5,
                     borderDash: [6, 4],
-                    pointRadius: 7,
-                    pointHoverRadius: 10,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
                     pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
