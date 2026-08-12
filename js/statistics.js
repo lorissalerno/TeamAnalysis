@@ -1,5 +1,8 @@
 // js/statistics.js
 
+// Team view mode: 'all' = tutti i collaboratori, 'avg' = solo media team
+let teamViewMode = 'all';
+
 // Initialize statistics module
 document.addEventListener('DOMContentLoaded', () => {
     const createBtn = document.getElementById('create-stat-btn');
@@ -11,6 +14,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const indSelect = document.getElementById('individual-select');
     if(indSelect) {
         indSelect.addEventListener('change', renderIndividualStats);
+    }
+
+    // Setup Team view mode toggle
+    const allBtn = document.getElementById('team-view-all-btn');
+    const avgBtn = document.getElementById('team-view-avg-btn');
+    if (allBtn && avgBtn) {
+        allBtn.addEventListener('click', () => {
+            teamViewMode = 'all';
+            allBtn.classList.add('active');
+            avgBtn.classList.remove('active');
+            renderTeamStats();
+        });
+        avgBtn.addEventListener('click', () => {
+            teamViewMode = 'avg';
+            avgBtn.classList.add('active');
+            allBtn.classList.remove('active');
+            renderTeamStats();
+        });
     }
     
     // We export a function to be called from app.js when year changes
@@ -153,8 +174,10 @@ async function renderTeamStats() {
     const salesData = await appDb.getAll('sales', 'year', year);
     const goals = await appDb.getAll('goals', 'year', year);
     
+    const teamAvgOnly = (teamViewMode === 'avg');
+    
     stats.forEach(stat => {
-        const card = buildStatCard(stat, perfData, salesData, goals, false);
+        const card = buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly);
         container.appendChild(card);
     });
 }
@@ -221,7 +244,7 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '') {
+function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
     card.style.position = 'relative';
@@ -388,6 +411,22 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             });
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
+        } else if (teamAvgOnly) {
+            // Solo Media Team nella tabella
+            let html = '<table class="data-table"><thead><tr><th></th>';
+            displayLabels.forEach(l => {
+                html += `<th style="text-align:center;">${l}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            html += '<tr style="font-weight:700;">';
+            html += `<td>Media Team</td>`;
+            labels.forEach((date, idx) => {
+                const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
+                html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
+            });
+            html += '</tr>';
+            html += '</tbody></table>';
+            canvasContainer.innerHTML = html;
         } else {
             let html = '<table class="data-table"><thead><tr><th>Collaboratore</th>';
             displayLabels.forEach(l => {
@@ -443,6 +482,22 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 minBarLength: isBar ? 4 : 0,
                 tension: 0.3,
                 order: 2
+            });
+        } else if (teamAvgOnly) {
+            // Solo Media Team
+            datasets.push({
+                label: 'Media Team',
+                data: teamAvgPts,
+                type: isBar ? 'bar' : 'line',
+                backgroundColor: isBar ? hexToRgba('#00f2fe', 0.75) : 'rgba(0, 242, 254, 0.2)',
+                borderColor: '#00f2fe',
+                borderWidth: isBar ? 1 : 2,
+                borderRadius: isBar ? 4 : 0,
+                minBarLength: isBar ? 4 : 0,
+                pointRadius: isBar ? 0 : 4,
+                pointBackgroundColor: '#00f2fe',
+                tension: 0.3,
+                order: 1
             });
         } else {
             employees.forEach((emp, idx) => {

@@ -180,7 +180,13 @@
                 </div>
             </div>
             <div id="stat-team" class="tab-content active">
-                <button class="btn primary" id="create-stat-btn">Nuova Statistica</button>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <button class="btn primary" id="create-stat-btn">Nuova Statistica</button>
+                    <div class="tabs" style="margin-left:auto;">
+                        <button class="tab-btn active" id="team-view-all-btn">Tutti</button>
+                        <button class="tab-btn" id="team-view-avg-btn">Solo Media</button>
+                    </div>
+                </div>
                 <div id="team-stats-container" class="stats-grid"></div>
             </div>
             <div id="stat-individual" class="tab-content">
