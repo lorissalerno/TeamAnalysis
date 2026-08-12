@@ -1247,7 +1247,7 @@ function updateWizardStepUI(step) {
             populateSkillsUI();
         } else {
             if (titleEl) titleEl.textContent = 'Passaggio 2: Seleziona Tipo Report Sales';
-            if (descEl) descEl.textContent = 'Seleziona se intendi importare un report AOIT gew oppure Nuovi Abo & RET.';
+            if (descEl) descEl.textContent = 'Seleziona se intendi importare un report AOIT oppure Nuovi Abo & RET.';
             if (perfSection) perfSection.style.display = 'none';
             if (salesSection) salesSection.style.display = 'block';
         }
