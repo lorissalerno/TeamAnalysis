@@ -195,30 +195,49 @@ async function openGoalModal(goalId = null) {
         empSelect.appendChild(opt);
     });
 
-    // Tolerance field toggle logic
-    const toleranceTypeSelect = document.getElementById('goal-tolerance-type');
-    const toleranceContainer = document.getElementById('tolerance-fields-container');
-    const tolerancePlusInput = document.getElementById('goal-tolerance-plus');
-    const toleranceMinusInput = document.getElementById('goal-tolerance-minus');
+    // Live calculation logic between target, tolerance percentage, and numeric values
+    const targetInput = document.getElementById('goal-target');
+    const minusPctInput = document.getElementById('goal-tolerance-minus-pct');
+    const minusNumInput = document.getElementById('goal-tolerance-minus-num');
+    const plusPctInput = document.getElementById('goal-tolerance-plus-pct');
+    const plusNumInput = document.getElementById('goal-tolerance-plus-num');
 
-    const updateToleranceDisplay = () => {
-        const type = toleranceTypeSelect.value;
-        if (type === 'none') {
-            toleranceContainer.style.display = 'none';
-        } else {
-            toleranceContainer.style.display = 'flex';
-            const plusLabel = document.getElementById('tolerance-plus-label');
-            const minusLabel = document.getElementById('tolerance-minus-label');
-            if (type === 'percentage') {
-                if (plusLabel) plusLabel.textContent = 'Tolleranza + (%)';
-                if (minusLabel) minusLabel.textContent = 'Tolleranza - (%)';
-            } else {
-                if (plusLabel) plusLabel.textContent = 'Tolleranza + (Valore)';
-                if (minusLabel) minusLabel.textContent = 'Tolleranza - (Valore)';
+    function syncToleranceFromPct() {
+        const target = parseFloat(targetInput.value);
+        const mPct = parseFloat(minusPctInput.value);
+        const pPct = parseFloat(plusPctInput.value);
+
+        if (!isNaN(target)) {
+            if (!isNaN(mPct)) {
+                minusNumInput.value = (target * (mPct / 100)).toFixed(2);
+            }
+            if (!isNaN(pPct)) {
+                plusNumInput.value = (target * (pPct / 100)).toFixed(2);
             }
         }
-    };
-    toleranceTypeSelect.onchange = updateToleranceDisplay;
+    }
+
+    function syncToleranceMinusFromNum() {
+        const target = parseFloat(targetInput.value);
+        const mNum = parseFloat(minusNumInput.value);
+        if (!isNaN(target) && target !== 0 && !isNaN(mNum)) {
+            minusPctInput.value = ((mNum / target) * 100).toFixed(2);
+        }
+    }
+
+    function syncTolerancePlusFromNum() {
+        const target = parseFloat(targetInput.value);
+        const pNum = parseFloat(plusNumInput.value);
+        if (!isNaN(target) && target !== 0 && !isNaN(pNum)) {
+            plusPctInput.value = ((pNum / target) * 100).toFixed(2);
+        }
+    }
+
+    targetInput.oninput = syncToleranceFromPct;
+    minusPctInput.oninput = syncToleranceFromPct;
+    plusPctInput.oninput = syncToleranceFromPct;
+    minusNumInput.oninput = syncToleranceMinusFromNum;
+    plusNumInput.oninput = syncTolerancePlusFromNum;
 
     // Load existing goal values if editing
     if (editingGoalId) {
@@ -229,23 +248,36 @@ async function openGoalModal(goalId = null) {
             metricHidden.value = goalSelectedMetric;
             metricSearchInput.value = goalSelectedMetric;
             renderGoalDropdown('');
-            document.getElementById('goal-target').value = existing.target ?? '';
+            targetInput.value = existing.target ?? '';
             skillSelect.value = existing.skill || 'ALL';
             empSelect.value = existing.employee || '';
-            toleranceTypeSelect.value = existing.toleranceType || 'none';
-            tolerancePlusInput.value = existing.tolerancePlus ?? 0;
-            toleranceMinusInput.value = existing.toleranceMinus ?? 0;
+            
+            if (existing.toleranceType === 'percentage') {
+                minusPctInput.value = existing.toleranceMinus ?? 0;
+                plusPctInput.value = existing.tolerancePlus ?? 0;
+                syncToleranceFromPct();
+            } else if (existing.toleranceType === 'numeric') {
+                minusNumInput.value = existing.toleranceMinus ?? 0;
+                plusNumInput.value = existing.tolerancePlus ?? 0;
+                syncToleranceMinusFromNum();
+                syncTolerancePlusFromNum();
+            } else {
+                minusPctInput.value = 0;
+                plusPctInput.value = 0;
+                minusNumInput.value = 0;
+                plusNumInput.value = 0;
+            }
         }
     } else {
-        document.getElementById('goal-target').value = '';
+        targetInput.value = '';
         skillSelect.value = 'ALL';
         empSelect.value = '';
-        toleranceTypeSelect.value = 'none';
-        tolerancePlusInput.value = 0;
-        toleranceMinusInput.value = 0;
+        minusPctInput.value = 0;
+        plusPctInput.value = 0;
+        minusNumInput.value = 0;
+        plusNumInput.value = 0;
     }
 
-    updateToleranceDisplay();
     modal.classList.add('open');
 }
 
@@ -264,25 +296,43 @@ function createGoalModalHTML() {
                 <input type="hidden" id="goal-metric">
                 <div id="goal-metric-dropdown" class="searchable-dropdown"></div>
             </div>
-            
-            <label>Target Numerico:</label>
-            <input type="number" step="any" id="goal-target" style="width:100%; padding:8px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
-            
-            <label>Tipo Tolleranza:</label>
-            <select id="goal-tolerance-type" style="width:100%; padding:8px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
-                <option value="none">Nessuna Tolleranza</option>
-                <option value="numeric">Numerica (Valore Assoluto)</option>
-                <option value="percentage">Percentuale (%)</option>
-            </select>
-            
-            <div id="tolerance-fields-container" style="display:none; gap:12px; margin-bottom:16px;">
+
+            <!-- Single Row layout for Tolerance (-) | Target | Tolerance (+) -->
+            <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom:16px;">
+                <!-- Left: Tolleranza in meno -->
                 <div style="flex:1;">
-                    <label id="tolerance-plus-label">Tolleranza + (Valore):</label>
-                    <input type="number" step="any" id="goal-tolerance-plus" value="0" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Tolleranza -</label>
+                    <div style="display:flex; gap:4px;">
+                        <div style="flex:1;">
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">%</span>
+                            <input type="number" step="any" id="goal-tolerance-minus-pct" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        </div>
+                        <div style="flex:1;">
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">Valore</span>
+                            <input type="number" step="any" id="goal-tolerance-minus-num" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Center: Target / Obiettivo -->
                 <div style="flex:1;">
-                    <label id="tolerance-minus-label">Tolleranza - (Valore):</label>
-                    <input type="number" step="any" id="goal-tolerance-minus" value="0" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px; text-align:center;">Obiettivo (Target)</label>
+                    <input type="number" step="any" id="goal-target" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:bold; text-align:center;">
+                </div>
+
+                <!-- Right: Tolleranza in più -->
+                <div style="flex:1;">
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Tolleranza +</label>
+                    <div style="display:flex; gap:4px;">
+                        <div style="flex:1;">
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">%</span>
+                            <input type="number" step="any" id="goal-tolerance-plus-pct" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        </div>
+                        <div style="flex:1;">
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:block;">Valore</span>
+                            <input type="number" step="any" id="goal-tolerance-plus-num" value="0" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -304,9 +354,8 @@ function createGoalModalHTML() {
 async function saveNewGoal() {
     const metric = document.getElementById('goal-metric').value;
     const target = parseFloat(document.getElementById('goal-target').value);
-    const toleranceType = document.getElementById('goal-tolerance-type').value;
-    const tolerancePlus = parseFloat(document.getElementById('goal-tolerance-plus').value) || 0;
-    const toleranceMinus = parseFloat(document.getElementById('goal-tolerance-minus').value) || 0;
+    const tolerancePlus = parseFloat(document.getElementById('goal-tolerance-plus-pct').value) || 0;
+    const toleranceMinus = parseFloat(document.getElementById('goal-tolerance-minus-pct').value) || 0;
     const skill = document.getElementById('goal-skill').value;
     const employee = document.getElementById('goal-employee').value;
     
@@ -319,6 +368,8 @@ async function saveNewGoal() {
         return;
     }
     
+    const toleranceType = (tolerancePlus !== 0 || toleranceMinus !== 0) ? 'percentage' : 'none';
+
     const newGoal = {
         id: editingGoalId || ('goal_' + Date.now()),
         metric,
