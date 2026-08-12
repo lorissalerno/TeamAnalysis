@@ -1169,18 +1169,16 @@ let wizardState = {
     file: null
 };
 
-function initWizardMonthSelect() {
+function resetWizardMonthSelect() {
     const monthContainer = document.getElementById('wizard-month-select');
     if (!monthContainer) return;
 
     const currentMonthVal = String(new Date().getMonth() + 1).padStart(2, '0');
-    const trigger = monthContainer.querySelector('.custom-month-trigger');
-    const dropdown = monthContainer.querySelector('.custom-month-dropdown');
     const selectedText = monthContainer.querySelector('.selected-text');
     const hiddenInput = monthContainer.querySelector('#wizard-month-date');
     const items = monthContainer.querySelectorAll('.searchable-dropdown-item');
 
-    if (!trigger || !dropdown || !hiddenInput) return;
+    if (!hiddenInput) return;
 
     let defaultItem = Array.from(items).find(i => i.getAttribute('data-value') === currentMonthVal);
     if (!defaultItem && items.length > 0) defaultItem = items[0];
@@ -1189,29 +1187,9 @@ function initWizardMonthSelect() {
         items.forEach(i => i.classList.remove('selected'));
         defaultItem.classList.add('selected');
         hiddenInput.value = defaultItem.getAttribute('data-value');
-        selectedText.textContent = defaultItem.textContent;
+        if (selectedText) selectedText.textContent = defaultItem.textContent;
         wizardState.month = hiddenInput.value;
     }
-
-    trigger.onclick = (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('open');
-    };
-
-    items.forEach(item => {
-        item.onclick = (e) => {
-            e.stopPropagation();
-            const val = item.getAttribute('data-value');
-            hiddenInput.value = val;
-            selectedText.textContent = item.textContent;
-
-            items.forEach(i => i.classList.remove('selected'));
-            item.classList.add('selected');
-            dropdown.classList.remove('open');
-
-            wizardState.month = val;
-        };
-    });
 }
 
 function updateWizardStepHeader() {
@@ -1333,11 +1311,18 @@ function setupImportWizard() {
                 liveLogs.innerHTML = '<div style="color:var(--text-muted);">Nessuna operazione ancora eseguita.</div>';
             }
 
-            initWizardMonthSelect();
+            resetWizardMonthSelect();
             updateWizardStepUI(1);
 
             if (modal) modal.classList.add('open');
             if (overlay) overlay.classList.add('open');
+        });
+    }
+
+    const wizardMonthInput = document.getElementById('wizard-month-date');
+    if (wizardMonthInput) {
+        wizardMonthInput.addEventListener('change', (e) => {
+            wizardState.month = e.target.value;
         });
     }
 
