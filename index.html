@@ -250,6 +250,15 @@
                     <button class="btn secondary" id="manage-mapping-btn">Gestisci Collaboratori</button>
                 </div>
                 <div class="card">
+                    <h2>Gruppi Statistiche</h2>
+                    <p>Crea gruppi per associare statistiche correlate (es. Sr Push Interactions + Sr Push Avg. Focus Time), utili per analisi comparative avanzate.</p>
+                    <div id="stat-groups-list" style="margin:12px 0; display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
+                    <div style="display:flex; gap:8px; margin-top:4px;">
+                        <input type="text" id="new-group-name-input" placeholder="Nome gruppo (es. Sr Push)..." style="flex:1; padding:7px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.85rem;">
+                        <button class="btn primary" id="add-stat-group-btn" style="white-space:nowrap;">Aggiungi</button>
+                    </div>
+                </div>
+                <div class="card">
                     <h2>Backup Dati</h2>
                     <p>Salva tutti i dati in locale o ripristina un salvataggio.</p>
                     <button class="btn primary" id="export-backup-btn">Esporta JSON</button>

@@ -261,6 +261,70 @@ async function updateCollabCountBadge() {
     badge.textContent = mappings.length;
 }
 
+async function renderStatGroupsList() {
+    const container = document.getElementById('stat-groups-list');
+    if (!container) return;
+    const groups = (await appDb.getSetting('stat_groups', [])) || [];
+    const allStats = await appDb.getAll('custom_stats');
+    container.innerHTML = '';
+    if (groups.length === 0) {
+        container.innerHTML = '<p style="font-size:0.82rem; color:var(--text-muted);">Nessun gruppo definito.</p>';
+        return;
+    }
+    groups.forEach(g => {
+        const count = allStats.filter(s => s.groupId === g.id).length;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg-card,var(--bg-base)); border:1px solid var(--border); border-radius:8px;';
+        row.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2.5" style="flex-shrink:0;"><circle cx="9" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="12" y1="12" x2="15.5" y2="7.5"/><line x1="12" y1="12" x2="15.5" y2="16.5"/></svg>
+            <span style="flex:1; font-size:0.88rem; font-weight:500;" id="grp-name-${g.id}">${g.name}</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">${count} stat${count !== 1 ? 'istiche' : 'istica'}</span>
+            <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem;" onclick="renameStatGroup('${g.id}')">Rinomina</button>
+            <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem; color:var(--danger,#ef4444);" onclick="deleteStatGroup('${g.id}')">Elimina</button>
+        `;
+        container.appendChild(row);
+    });
+}
+
+async function addStatGroup() {
+    const input = document.getElementById('new-group-name-input');
+    const name = (input?.value || '').trim();
+    if (!name) return;
+    const groups = (await appDb.getSetting('stat_groups', [])) || [];
+    const id = 'grp_' + name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
+    groups.push({ id, name });
+    await appDb.setSetting('stat_groups', groups);
+    input.value = '';
+    await renderStatGroupsList();
+}
+
+async function renameStatGroup(groupId) {
+    const span = document.getElementById(`grp-name-${groupId}`);
+    const oldName = span ? span.textContent : '';
+    const newName = prompt('Nuovo nome per il gruppo:', oldName);
+    if (!newName || !newName.trim() || newName.trim() === oldName) return;
+    const groups = (await appDb.getSetting('stat_groups', [])) || [];
+    const g = groups.find(g => g.id === groupId);
+    if (g) {
+        g.name = newName.trim();
+        await appDb.setSetting('stat_groups', groups);
+        await renderStatGroupsList();
+    }
+}
+
+async function deleteStatGroup(groupId) {
+    const allStats = await appDb.getAll('custom_stats');
+    const count = allStats.filter(s => s.groupId === groupId).length;
+    const msg = count > 0
+        ? `Eliminare il gruppo? Le ${count} statistiche associate rimarranno ma perderanno l'associazione.`
+        : 'Eliminare il gruppo?';
+    if (!confirm(msg)) return;
+    const groups = (await appDb.getSetting('stat_groups', [])) || [];
+    const updated = groups.filter(g => g.id !== groupId);
+    await appDb.setSetting('stat_groups', updated);
+    await renderStatGroupsList();
+}
+
 window.getDisplayName = function(realName) {
     if (!window.appState.isAnonymous) return realName;
     const id = window.appState.anonymousMap[realName];
@@ -822,6 +886,14 @@ function setupSettings() {
     const bulkAddSkill = document.getElementById('collab-bulk-add-skill');
     const bulkRemoveSkill = document.getElementById('collab-bulk-remove-skill');
     const bulkDelete = document.getElementById('collab-bulk-delete');
+
+    // Gruppi Statistiche
+    const addGroupBtn = document.getElementById('add-stat-group-btn');
+    const newGroupInput = document.getElementById('new-group-name-input');
+    if (addGroupBtn) addGroupBtn.addEventListener('click', addStatGroup);
+    if (newGroupInput) {
+        newGroupInput.addEventListener('keydown', e => { if (e.key === 'Enter') addStatGroup(); });
+    }
 
     let deletedIds = [];
 
