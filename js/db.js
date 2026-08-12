@@ -140,7 +140,26 @@ const db = {
                 if (cursor) {
                     const item = cursor.value;
                     if (!skillName || item.skill === skillName) {
-                        cursor.delete();
+                        if (item.isManual) {
+                            if (item.data && item.manualMetrics) {
+                                let hasNonManual = false;
+                                Object.keys(item.data).forEach(k => {
+                                    if (storeName === 'sales' && k === 'Product') return;
+                                    if (!item.manualMetrics[k]) {
+                                        delete item.data[k];
+                                        hasNonManual = true;
+                                    }
+                                });
+                                const keys = Object.keys(item.data);
+                                if (keys.length === 0 || (storeName === 'sales' && keys.length === 1 && keys[0] === 'Product')) {
+                                    cursor.delete();
+                                } else if (hasNonManual) {
+                                    cursor.update(item);
+                                }
+                            }
+                        } else {
+                            cursor.delete();
+                        }
                     }
                     cursor.continue();
                 } else {
@@ -172,7 +191,26 @@ const db = {
                 if (cursor) {
                     const val = cursor.value;
                     if (val.skill === skillName && (!year || val.year === year)) {
-                        cursor.delete();
+                        if (val.isManual) {
+                            if (val.data && val.manualMetrics) {
+                                let hasNonManual = false;
+                                Object.keys(val.data).forEach(k => {
+                                    if (storeName === 'sales' && k === 'Product') return;
+                                    if (!val.manualMetrics[k]) {
+                                        delete val.data[k];
+                                        hasNonManual = true;
+                                    }
+                                });
+                                const keys = Object.keys(val.data);
+                                if (keys.length === 0 || (storeName === 'sales' && keys.length === 1 && keys[0] === 'Product')) {
+                                    cursor.delete();
+                                } else if (hasNonManual) {
+                                    cursor.update(val);
+                                }
+                            }
+                        } else {
+                            cursor.delete();
+                        }
                     }
                     cursor.continue();
                 } else {

@@ -1108,6 +1108,9 @@ async function saveManualData() {
     });
 
     if (targetRec) {
+        targetRec.isManual = true;
+        if (!targetRec.manualMetrics) targetRec.manualMetrics = {};
+        targetRec.manualMetrics[metric] = true;
         targetRec.data[metric] = val;
         const tx = appDb._db.transaction([store], 'readwrite');
         tx.objectStore(store).put(targetRec);
@@ -1116,6 +1119,8 @@ async function saveManualData() {
             year: year,
             date: dateStr,
             employee: employee,
+            isManual: true,
+            manualMetrics: { [metric]: true },
             data: {}
         };
         if (store === 'performance') {
@@ -1154,5 +1159,434 @@ function setupManualDataModalListeners() {
         });
     }
 }
+
+// --- IMPORT WIZARD & LOG HISTORY ---
+let wizardState = {
+    currentStep: 1,
+    type: 'performance',
+    skill: '',
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    file: null
+};
+
+function initWizardMonthSelect() {
+    const monthContainer = document.getElementById('wizard-month-select');
+    if (!monthContainer) return;
+
+    const currentMonthVal = String(new Date().getMonth() + 1).padStart(2, '0');
+    const trigger = monthContainer.querySelector('.custom-month-trigger');
+    const dropdown = monthContainer.querySelector('.custom-month-dropdown');
+    const selectedText = monthContainer.querySelector('.selected-text');
+    const hiddenInput = monthContainer.querySelector('#wizard-month-date');
+    const items = monthContainer.querySelectorAll('.searchable-dropdown-item');
+
+    if (!trigger || !dropdown || !hiddenInput) return;
+
+    let defaultItem = Array.from(items).find(i => i.getAttribute('data-value') === currentMonthVal);
+    if (!defaultItem && items.length > 0) defaultItem = items[0];
+
+    if (defaultItem) {
+        items.forEach(i => i.classList.remove('selected'));
+        defaultItem.classList.add('selected');
+        hiddenInput.value = defaultItem.getAttribute('data-value');
+        selectedText.textContent = defaultItem.textContent;
+        wizardState.month = hiddenInput.value;
+    }
+
+    trigger.onclick = (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+    };
+
+    items.forEach(item => {
+        item.onclick = (e) => {
+            e.stopPropagation();
+            const val = item.getAttribute('data-value');
+            hiddenInput.value = val;
+            selectedText.textContent = item.textContent;
+
+            items.forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            dropdown.classList.remove('open');
+
+            wizardState.month = val;
+        };
+    });
+}
+
+function updateWizardStepUI(step) {
+    wizardState.currentStep = step;
+
+    document.querySelectorAll('.wizard-step-item').forEach(item => {
+        const itemStep = parseInt(item.getAttribute('data-step'));
+        item.classList.remove('active', 'completed');
+        if (itemStep === step) {
+            item.classList.add('active');
+        } else if (itemStep < step) {
+            item.classList.add('completed');
+        }
+    });
+
+    for (let i = 1; i <= 4; i++) {
+        const contentEl = document.getElementById(`wizard-step-${i}`);
+        if (contentEl) contentEl.style.display = i === step ? 'block' : 'none';
+    }
+
+    if (step === 2) {
+        const titleEl = document.getElementById('wizard-step-2-title');
+        const descEl = document.getElementById('wizard-step-2-desc');
+        const perfSection = document.getElementById('wizard-perf-skill-section');
+        const salesSection = document.getElementById('wizard-sales-info-section');
+
+        if (wizardState.type === 'performance') {
+            if (titleEl) titleEl.textContent = 'Passaggio 2: Seleziona lo Skill Performance';
+            if (descEl) descEl.textContent = 'Scegli a quale Skill associare i dati delle performance da importare.';
+            if (perfSection) perfSection.style.display = 'block';
+            if (salesSection) salesSection.style.display = 'none';
+            populateSkillsUI();
+        } else {
+            if (titleEl) titleEl.textContent = 'Passaggio 2: Conferma Importazione Sales';
+            if (descEl) descEl.textContent = 'I dati di vendita verranno organizzati automaticamente per prodotto.';
+            if (perfSection) perfSection.style.display = 'none';
+            if (salesSection) salesSection.style.display = 'block';
+        }
+    }
+
+    const prevBtn = document.getElementById('wizard-prev-btn');
+    const nextBtn = document.getElementById('wizard-next-btn');
+    const submitBtn = document.getElementById('wizard-submit-btn');
+
+    if (prevBtn) prevBtn.style.visibility = step > 1 ? 'visible' : 'hidden';
+    if (nextBtn) nextBtn.style.display = step < 4 ? 'inline-block' : 'none';
+    if (submitBtn) submitBtn.style.display = step === 4 ? 'inline-block' : 'none';
+}
+
+function setupImportWizard() {
+    const openBtn = document.getElementById('open-import-wizard-btn');
+    const modal = document.getElementById('import-wizard-modal');
+    const closeBtn = document.getElementById('close-import-wizard');
+    const cancelBtn = document.getElementById('wizard-cancel-btn');
+    const prevBtn = document.getElementById('wizard-prev-btn');
+    const nextBtn = document.getElementById('wizard-next-btn');
+    const submitBtn = document.getElementById('wizard-submit-btn');
+    const overlay = document.getElementById('modal-overlay');
+
+    const optPerf = document.getElementById('type-opt-performance');
+    const optSales = document.getElementById('type-opt-sales');
+
+    if (openBtn) {
+        openBtn.addEventListener('click', () => {
+            wizardState = {
+                currentStep: 1,
+                type: 'performance',
+                skill: '',
+                month: String(new Date().getMonth() + 1).padStart(2, '0'),
+                file: null
+            };
+            
+            if (optPerf && optSales) {
+                optPerf.classList.add('active');
+                optPerf.style.borderColor = 'var(--primary)';
+                optSales.classList.remove('active');
+                optSales.style.borderColor = 'var(--border)';
+            }
+
+            const fileNameEl = document.getElementById('wizard-file-name');
+            const fileInput = document.getElementById('wizard-csv-file');
+            const statusBadge = document.getElementById('wizard-status-badge');
+            const liveLogs = document.getElementById('wizard-live-logs');
+
+            if (fileNameEl) fileNameEl.textContent = 'Fai clic o trascina qui il tuo file CSV';
+            if (fileInput) fileInput.value = '';
+            if (statusBadge) {
+                statusBadge.textContent = 'In attesa file';
+                statusBadge.style.background = 'var(--bg-base)';
+                statusBadge.style.color = 'var(--text-muted)';
+            }
+            if (liveLogs) {
+                liveLogs.innerHTML = '<div style="color:var(--text-muted);">Nessuna operazione ancora eseguita.</div>';
+            }
+
+            initWizardMonthSelect();
+            updateWizardStepUI(1);
+
+            if (modal) modal.classList.add('open');
+            if (overlay) overlay.classList.add('open');
+        });
+    }
+
+    const closeModalFunc = () => {
+        if (modal) modal.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModalFunc);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModalFunc);
+
+    if (optPerf && optSales) {
+        optPerf.addEventListener('click', () => {
+            wizardState.type = 'performance';
+            optPerf.classList.add('active');
+            optPerf.style.borderColor = 'var(--primary)';
+            optSales.classList.remove('active');
+            optSales.style.borderColor = 'var(--border)';
+        });
+
+        optSales.addEventListener('click', () => {
+            wizardState.type = 'sales';
+            optSales.classList.add('active');
+            optSales.style.borderColor = 'var(--primary)';
+            optPerf.classList.remove('active');
+            optPerf.style.borderColor = 'var(--border)';
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (wizardState.currentStep > 1) {
+                updateWizardStepUI(wizardState.currentStep - 1);
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (wizardState.currentStep === 2 && wizardState.type === 'performance') {
+                const skillSelect = document.getElementById('wizard-perf-skill-select');
+                if (skillSelect && skillSelect.value) {
+                    wizardState.skill = skillSelect.value;
+                } else {
+                    alert("Seleziona uno skill prima di proseguire.");
+                    return;
+                }
+            }
+            if (wizardState.currentStep < 4) {
+                updateWizardStepUI(wizardState.currentStep + 1);
+            }
+        });
+    }
+
+    const dropzone = document.getElementById('wizard-dropzone');
+    const csvFileInput = document.getElementById('wizard-csv-file');
+    const fileNameDisplay = document.getElementById('wizard-file-name');
+
+    if (dropzone && csvFileInput) {
+        dropzone.addEventListener('click', () => csvFileInput.click());
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--primary)';
+        });
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.borderColor = 'var(--border)';
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--border)';
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                csvFileInput.files = e.dataTransfer.files;
+                handleWizardFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+        csvFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleWizardFileSelection(e.target.files[0]);
+            }
+        });
+    }
+
+    function handleWizardFileSelection(file) {
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert("Seleziona un file valido con estensione .csv");
+            return;
+        }
+        wizardState.file = file;
+        if (fileNameDisplay) fileNameDisplay.textContent = `File selezionato: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        const statusBadge = document.getElementById('wizard-status-badge');
+        if (statusBadge) {
+            statusBadge.textContent = 'Pronto all\'importazione';
+            statusBadge.style.background = 'var(--primary)';
+            statusBadge.style.color = '#fff';
+        }
+    }
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async () => {
+            if (!wizardState.file) {
+                alert("Seleziona un file CSV prima di avviare l'importazione.");
+                return;
+            }
+
+            const monthVal = wizardState.month;
+            const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
+            const statusBadge = document.getElementById('wizard-status-badge');
+            
+            if (statusBadge) {
+                statusBadge.textContent = 'Elaborazione in corso...';
+                statusBadge.style.background = '#f59e0b';
+                statusBadge.style.color = '#fff';
+            }
+
+            submitBtn.disabled = true;
+
+            try {
+                const storeName = wizardState.type === 'performance' ? 'performance' : 'sales';
+                
+                let selectedSkill = '';
+                if (wizardState.type === 'performance') {
+                    const skillSelect = document.getElementById('wizard-perf-skill-select');
+                    selectedSkill = skillSelect ? skillSelect.value : wizardState.skill;
+                    if (!selectedSkill) {
+                        alert("Seleziona uno skill.");
+                        submitBtn.disabled = false;
+                        return;
+                    }
+                    logImport(`Avvio importazione file ${wizardState.file.name} per lo skill "${selectedSkill}"...`);
+                } else {
+                    logImport(`Avvio importazione file ${wizardState.file.name} per Sales...`);
+                }
+
+                const parsed = await CSVParser.parse(wizardState.file, startDate);
+                logImport(`Analisi CSV completata. Record estratti dal file: ${parsed.data.length}.`);
+
+                if (wizardState.type === 'performance') {
+                    parsed.data.forEach(d => { d.skill = selectedSkill; });
+                }
+
+                // Preserve manual metrics so CSV import does NOT overwrite user's manual additions/edits
+                const existingRecords = await appDb.getAll(storeName, 'year', window.appState.activeYear);
+                const manualMap = {};
+                existingRecords.forEach(r => {
+                    if (r.isManual && r.manualMetrics) {
+                        const targetSkill = storeName === 'performance' ? (r.skill || '') : (r.data && r.data.Product || '');
+                        const key = `${r.date}_${r.employee}_${targetSkill}`;
+                        manualMap[key] = r;
+                    }
+                });
+
+                if (Object.keys(manualMap).length > 0) {
+                    let preservedCount = 0;
+                    parsed.data.forEach(d => {
+                        const targetSkill = storeName === 'performance' ? (d.skill || '') : (d.data && d.data.Product || '');
+                        const key = `${d.date}_${d.employee}_${targetSkill}`;
+                        const manualRec = manualMap[key];
+                        if (manualRec && manualRec.data && manualRec.manualMetrics) {
+                            Object.keys(manualRec.manualMetrics).forEach(mKey => {
+                                if (manualRec.data[mKey] !== undefined) {
+                                    d.data[mKey] = manualRec.data[mKey];
+                                    preservedCount++;
+                                }
+                            });
+                        }
+                    });
+                    if (preservedCount > 0) {
+                        logImport(`Preservate ${preservedCount} metriche inserite/modificate manualmente.`);
+                    }
+                }
+
+                if (startDate) {
+                    if (wizardState.type === 'performance') {
+                        await appDb.deleteFromDate('performance', startDate, selectedSkill);
+                        logImport(`Eliminati vecchi dati automatici performance ("${selectedSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
+                    } else {
+                        await appDb.deleteFromDate('sales', startDate);
+                        logImport(`Eliminati vecchi dati automatici Sales da mese ${monthVal}/${window.appState.activeYear} in poi.`);
+                    }
+                }
+
+                await appDb.addMultiple(storeName, parsed.data);
+                logImport(`Importazione conclusa con successo! Registrati ${parsed.data.length} record in ${storeName === 'performance' ? `Performance ("${selectedSkill}")` : 'Sales'}.`);
+                await autoAssignAnonIds(parsed.data);
+
+                if (statusBadge) {
+                    statusBadge.textContent = 'Importazione Completata!';
+                    statusBadge.style.background = '#10b981';
+                    statusBadge.style.color = '#fff';
+                }
+
+                await refreshYearsList();
+                await renderImportedData();
+                if (window.renderStatistics) renderStatistics();
+
+            } catch (err) {
+                logImport(`ERRORE DURANTE L'IMPORTAZIONE: ${err}`, true);
+                if (statusBadge) {
+                    statusBadge.textContent = 'Errore Importazione';
+                    statusBadge.style.background = 'var(--danger, #ef4444)';
+                    statusBadge.style.color = '#fff';
+                }
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    const wizardEditSkillsBtn = document.getElementById('wizard-edit-skills-btn');
+    if (wizardEditSkillsBtn) {
+        wizardEditSkillsBtn.addEventListener('click', () => {
+            const skillsModal = document.getElementById('skills-modal');
+            if (skillsModal) skillsModal.classList.add('open');
+        });
+    }
+}
+
+function setupLogHistoryModal() {
+    const openLogsBtn = document.getElementById('open-import-logs-btn');
+    const logsModal = document.getElementById('import-logs-modal');
+    const closeBtn = document.getElementById('close-import-logs-modal');
+    const closeBtn2 = document.getElementById('close-logs-modal-btn');
+    const overlay = document.getElementById('modal-overlay');
+    const container = document.getElementById('logs-history-container');
+    const noticeEl = document.getElementById('logs-cleaned-notice');
+
+    const openModal = async () => {
+        if (!logsModal || !overlay) return;
+
+        let cleanedCount = 0;
+        if (window.appDb && window.appDb.cleanOldImportLogs) {
+            cleanedCount = await window.appDb.cleanOldImportLogs(7);
+        }
+
+        if (noticeEl) {
+            noticeEl.textContent = cleanedCount > 0 
+                ? `Eliminati ${cleanedCount} log più vecchi di 7 giorni.` 
+                : '';
+        }
+
+        if (container && window.appDb && window.appDb.getImportLogs) {
+            container.innerHTML = '<div style="color:var(--text-muted);">Caricamento log in corso...</div>';
+            const logs = await window.appDb.getImportLogs();
+            logs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            container.innerHTML = '';
+            if (logs.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">Nessun log salvato negli ultimi 7 giorni.</div>';
+            } else {
+                logs.forEach(l => {
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '6px';
+                    div.style.paddingBottom = '4px';
+                    div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                    div.textContent = `${l.text}`;
+                    if (l.isError) div.style.color = 'var(--danger, #ef4444)';
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        logsModal.classList.add('open');
+        overlay.classList.add('open');
+    };
+
+    const closeModal = () => {
+        if (logsModal) logsModal.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    };
+
+    if (openLogsBtn) openLogsBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (closeBtn2) closeBtn2.addEventListener('click', closeModal);
+}
+
 
 
