@@ -47,29 +47,44 @@ document.addEventListener('DOMContentLoaded', () => {
             const skillLabel = g.skill && g.skill !== 'ALL' ? `Skill: ${g.skill}` : 'Tutti gli Skill';
             const empLabel = g.employee ? ` | ${window.getDisplayName(g.employee)}` : ' (Tutto il Team)';
             
-            let toleranceHtml = '';
+            let rangeHtml = '';
             if (g.toleranceType && g.toleranceType !== 'none') {
                 const plus = parseFloat(g.tolerancePlus) || 0;
                 const minus = parseFloat(g.toleranceMinus) || 0;
+                let minVal, maxVal, tolLabel;
                 if (g.toleranceType === 'numeric') {
-                    const minVal = g.target - minus;
-                    const maxVal = g.target + plus;
-                    toleranceHtml = `<p style="font-size:0.85rem; color:var(--text-muted); margin-top:2px;">Tolleranza: +${plus} / -${minus} (Range: ${minVal} - ${maxVal})</p>`;
-                } else if (g.toleranceType === 'percentage') {
-                    const minVal = Math.round(g.target * (1 - minus / 100));
-                    const maxVal = Math.round(g.target * (1 + plus / 100));
-                    toleranceHtml = `<p style="font-size:0.85rem; color:var(--text-muted); margin-top:2px;">Tolleranza: +${plus}% / -${minus}% (Range: ${minVal} - ${maxVal})</p>`;
+                    minVal = g.target - minus;
+                    maxVal = g.target + plus;
+                    tolLabel = `±${plus !== minus ? `${minus} / +${plus}` : plus}`;
+                } else {
+                    minVal = Math.round(g.target * (1 - minus / 100));
+                    maxVal = Math.round(g.target * (1 + plus / 100));
+                    tolLabel = `±${plus !== minus ? `${minus}% / +${plus}%` : plus + '%'}`;
                 }
+                rangeHtml = `
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Range</span>
+                        <span style="font-size:0.85rem; color:var(--text-main); font-family:monospace; background:var(--bg-alt,var(--bg-base)); padding:2px 8px; border-radius:6px; border:1px solid var(--border,rgba(255,255,255,0.08))">${minVal} – ${maxVal}</span>
+                        <span style="font-size:0.78rem; color:var(--text-muted);">(Tolleranza ${tolLabel})</span>
+                    </div>`;
             }
 
             card.innerHTML = `
-                <h3>${g.metric}</h3>
-                <p style="margin-top:8px;">Target: <strong>${g.target}</strong></p>
-                ${toleranceHtml}
-                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">Applicato a: ${skillLabel}${empLabel}</p>
-                <div style="margin-top:16px; display:flex; gap:8px;">
-                    <button class="btn secondary" style="padding:4px 10px; font-size:0.85rem;" onclick="openGoalModal('${g.id}')">Modifica</button>
-                    <button class="btn secondary" style="padding:4px 10px; font-size:0.85rem;" onclick="deleteGoal('${g.id}')">Elimina</button>
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px;">
+                    <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); line-height:1.3;">${g.metric}</div>
+                    <div style="display:flex; gap:4px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
+                        <span style="font-size:0.72rem; font-weight:600; padding:2px 7px; border-radius:20px; background:var(--primary-alpha,rgba(99,102,241,0.15)); color:var(--primary); white-space:nowrap;">${skillLabel}</span>
+                        <span style="font-size:0.72rem; font-weight:600; padding:2px 7px; border-radius:20px; background:var(--bg-alt,var(--bg-base)); border:1px solid var(--border,rgba(255,255,255,0.08)); color:var(--text-muted); white-space:nowrap;">${empLabel.replace(' | ','').trim()}</span>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:4px;">
+                    <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Target</span>
+                    <span style="font-size:1.35rem; font-weight:800; color:var(--primary);">${g.target}</span>
+                </div>
+                ${rangeHtml}
+                <div style="margin-top:14px; display:flex; gap:8px;">
+                    <button class="btn secondary" style="padding:5px 14px; font-size:0.82rem;" onclick="openGoalModal('${g.id}')">Modifica</button>
+                    <button class="btn secondary" style="padding:5px 14px; font-size:0.82rem;" onclick="deleteGoal('${g.id}')">Elimina</button>
                 </div>
             `;
             list.appendChild(card);
