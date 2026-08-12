@@ -651,7 +651,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 count++;
             }
         });
-        return count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+        return count > 0 ? Math.round(sum / count) : 0;
     });
 
     if (statConfig.type === 'table') {
