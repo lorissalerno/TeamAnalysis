@@ -514,6 +514,23 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             }
         });
 
+        // Round up/down to a "nice" number respecting magnitude
+        function niceRoundUp(val) {
+            if (val === 0) return 0;
+            const absVal = Math.abs(val);
+            if (absVal >= 1) return Math.ceil(val);
+            // For small decimals, round up to the next step in same order of magnitude
+            const order = Math.pow(10, Math.floor(Math.log10(absVal)));
+            return Math.ceil(val / order) * order;
+        }
+        function niceRoundDown(val) {
+            if (val === 0) return 0;
+            const absVal = Math.abs(val);
+            if (absVal >= 1) return Math.floor(val);
+            const order = Math.pow(10, Math.floor(Math.log10(absVal)));
+            return Math.floor(val / order) * order;
+        }
+
         let yScalesConfig = {};
         if (allVals.length > 0) {
             const minVal = Math.min(...allVals);
@@ -522,22 +539,14 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             if (minVal === 0 && maxVal === 0) {
                 yScalesConfig = { min: 0, max: 1 };
             } else {
-                const delta = maxVal - minVal;
-                if (delta === 0) {
-                    const margin = Math.abs(maxVal) * 0.1 || 1;
-                    yScalesConfig = {
-                        min: Math.max(0, Math.floor(minVal - margin)),
-                        max: Math.ceil(maxVal + margin)
-                    };
-                } else {
-                    const margin = delta * 0.1;
-                    const calculatedMin = (minVal <= delta * 0.5 && minVal >= 0) ? 0 : Math.max(0, Math.floor(minVal - margin));
-                    const calculatedMax = Math.ceil(maxVal + margin);
-                    yScalesConfig = {
-                        min: calculatedMin,
-                        max: calculatedMax
-                    };
-                }
+                const range = maxVal - minVal;
+                const margin = (range > 0 ? range : Math.abs(maxVal) || 1) * 0.15;
+                const calculatedMin = (minVal >= 0 && minVal <= maxVal * 0.3) ? 0 : Math.max(0, niceRoundDown(minVal - margin));
+                const calculatedMax = niceRoundUp(maxVal + margin);
+                yScalesConfig = {
+                    min: calculatedMin,
+                    max: calculatedMax || 1
+                };
             }
         } else {
             yScalesConfig = { beginAtZero: true };
