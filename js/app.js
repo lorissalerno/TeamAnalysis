@@ -99,6 +99,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         await appDb.setSetting('theme', next);
     });
 
+    // Sidebar Toggle
+    const sidebar = document.getElementById('app-sidebar') || document.querySelector('.sidebar');
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+    const savedSidebarCollapsed = await appDb.getSetting('sidebar_collapsed', false);
+
+    if (savedSidebarCollapsed && sidebar) {
+        sidebar.classList.add('collapsed');
+        if (sidebarToggleBtn) sidebarToggleBtn.title = "Espandi Menu";
+    }
+
+    if (sidebarToggleBtn && sidebar) {
+        sidebarToggleBtn.addEventListener('click', async () => {
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            sidebarToggleBtn.title = isCollapsed ? "Espandi Menu" : "Comprimi Menu";
+            await appDb.setSetting('sidebar_collapsed', isCollapsed);
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 260);
+        });
+    }
+
     // Anon Toggle
     document.getElementById('anon-toggle').addEventListener('change', async (e) => {
         window.appState.isAnonymous = e.target.checked;

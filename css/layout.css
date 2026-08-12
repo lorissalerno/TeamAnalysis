@@ -7,11 +7,16 @@
     flex-direction: column;
     flex-shrink: 0;
     z-index: 10;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-header {
-    padding: 20px 24px;
+    padding: 20px 20px;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .sidebar-header h2 {
@@ -19,6 +24,28 @@
     font-weight: 700;
     letter-spacing: -0.03em;
     color: var(--primary);
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition), color var(--transition), transform 0.25s ease;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: var(--bg-surface-hover);
+    color: var(--text-main);
 }
 
 .nav-links {
@@ -26,6 +53,7 @@
     padding: 12px;
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .nav-links li {
@@ -33,12 +61,16 @@
 }
 
 .nav-links a {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 10px 16px;
     color: var(--text-muted);
     border-radius: 6px;
     font-weight: 500;
     font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
     transition: all var(--transition);
 }
 
@@ -53,9 +85,74 @@
     font-weight: 600;
 }
 
+.nav-links .nav-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+.nav-links .nav-label {
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+}
+
 .sidebar-footer {
     padding: 16px 20px;
     border-top: 1px solid var(--border);
+    transition: padding 0.25s ease;
+}
+
+/* Sidebar Collapsed state */
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+}
+
+.sidebar.collapsed .sidebar-header {
+    padding: 20px 12px;
+    justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-header h2 {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-toggle-btn {
+    transform: rotate(180deg);
+}
+
+.sidebar.collapsed .nav-links {
+    padding: 12px 8px;
+}
+
+.sidebar.collapsed .nav-links a {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.sidebar.collapsed .nav-links .nav-label {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-footer {
+    padding: 16px 8px;
+}
+
+.sidebar.collapsed .controls {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.sidebar.collapsed .toggle-switch .label {
+    display: none;
+}
+
+.sidebar.collapsed .year-selector select {
+    padding: 6px 2px;
+    font-size: 0.75rem;
+    text-align: center;
 }
 
 .controls {
