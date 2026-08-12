@@ -45,7 +45,7 @@ class CSVParser {
                     } else if (type === 'sales_nuovi') {
                         parsedData = this.parseSalesNuovi(cleanedLines);
                     } else {
-                        throw new Error("Formato CSV non riconosciuto");
+                        throw new Error(`Formato CSV non riconosciuto. Intestazione trovata: "${cleanedLines[0].substring(0, 50)}..."`);
                     }
 
                     // Filter by startDate if provided
