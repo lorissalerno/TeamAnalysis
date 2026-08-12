@@ -422,23 +422,67 @@ function setupSkillsModal() {
     }
 
     if (saveSkillsModalBtn) {
-        saveSkillsModalBtn.addEventListener('click', () => skillsModal.classList.remove('open'));
+        saveSkillsModalBtn.addEventListener('click', async () => {
+            const inputs = Array.from(document.querySelectorAll('#skills-list-container .skill-edit-input'));
+            const newSkillsList = [];
+
+            for (const input of inputs) {
+                const val = input.value.trim();
+                if (!val) {
+                    alert("Il nome dello skill non può essere vuoto.");
+                    input.focus();
+                    return;
+                }
+                if (newSkillsList.includes(val)) {
+                    alert(`Lo skill "${val}" è presente più volte.`);
+                    input.focus();
+                    return;
+                }
+                newSkillsList.push(val);
+            }
+
+            // Process renames in DB
+            for (const input of inputs) {
+                const oldName = input.getAttribute('data-original');
+                const newName = input.value.trim();
+                if (oldName && oldName !== newName) {
+                    await appDb.renameSkill(oldName, newName);
+                    logImport(`Rinominato skill da "${oldName}" a "${newName}".`);
+                }
+            }
+
+            await saveSkills(newSkillsList);
+            await renderImportedData();
+            if (window.renderStatistics) renderStatistics();
+            skillsModal.classList.remove('open');
+        });
     }
 
     if (modalAddSkillBtn) {
-        modalAddSkillBtn.addEventListener('click', async () => {
-            const name = prompt("Inserisci il nome del nuovo Skill:");
-            if (!name || !name.trim()) return;
-            const cleanName = name.trim();
-            const skills = await getSkills();
-            if (!skills.includes(cleanName)) {
-                skills.push(cleanName);
-                await saveSkills(skills);
-                await renderSkillsModalList();
-                logImport(`Creato nuovo skill: "${cleanName}"`);
-            } else {
-                alert("Questo skill esiste già!");
-            }
+        modalAddSkillBtn.addEventListener('click', () => {
+            const container = document.getElementById('skills-list-container');
+            if (!container) return;
+
+            const emptyMsg = container.querySelector('p');
+            if (emptyMsg) emptyMsg.remove();
+
+            const item = document.createElement('div');
+            item.style.display = 'flex';
+            item.style.gap = '8px';
+            item.style.alignItems = 'center';
+
+            item.innerHTML = `
+                <input type="text" class="skill-edit-input" data-original="" value="" placeholder="Nome nuovo skill..." style="flex:1; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                <button type="button" class="btn secondary delete-skill-btn" title="Elimina questo skill" style="color:var(--danger, #ef4444);">&times;</button>
+            `;
+            container.appendChild(item);
+
+            const input = item.querySelector('input');
+            input.focus();
+
+            item.querySelector('.delete-skill-btn').addEventListener('click', () => {
+                item.remove();
+            });
         });
     }
 }
@@ -462,61 +506,15 @@ async function renderSkillsModalList() {
 
         item.innerHTML = `
             <input type="text" class="skill-edit-input" data-original="${skill}" value="${skill}" style="flex:1; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-            <button type="button" class="btn secondary save-skill-rename-btn" title="Rinomina questo skill">Salva</button>
             <button type="button" class="btn secondary delete-skill-btn" title="Elimina questo skill" style="color:var(--danger, #ef4444);">&times;</button>
         `;
         container.appendChild(item);
     });
 
-    container.querySelectorAll('.save-skill-rename-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const parent = e.currentTarget.parentElement;
-            const input = parent.querySelector('.skill-edit-input');
-            const oldName = input.getAttribute('data-original');
-            const newName = input.value.trim();
-
-            if (!newName) {
-                alert("Il nome dello skill non può essere vuoto.");
-                return;
-            }
-            if (oldName === newName) return;
-
-            const skillsList = await getSkills();
-            if (skillsList.includes(newName)) {
-                alert("Esiste già uno skill con questo nome.");
-                return;
-            }
-
-            const index = skillsList.indexOf(oldName);
-            if (index !== -1) {
-                skillsList[index] = newName;
-            } else {
-                skillsList.push(newName);
-            }
-
-            await appDb.renameSkill(oldName, newName);
-            await saveSkills(skillsList);
-            logImport(`Rinominato skill da "${oldName}" a "${newName}".`);
-            await renderSkillsModalList();
-            await renderImportedData();
-            if (window.renderStatistics) renderStatistics();
-        });
-    });
-
     container.querySelectorAll('.delete-skill-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', (e) => {
             const parent = e.currentTarget.parentElement;
-            const input = parent.querySelector('.skill-edit-input');
-            const oldName = input.getAttribute('data-original');
-
-            if (confirm(`Sei sicuro di voler eliminare lo skill "${oldName}" dalla lista?`)) {
-                const skillsList = await getSkills();
-                const filtered = skillsList.filter(s => s !== oldName);
-                await saveSkills(filtered);
-                logImport(`Eliminato skill "${oldName}" dalla lista.`);
-                await renderSkillsModalList();
-                await renderImportedData();
-            }
+            parent.remove();
         });
     });
 }
