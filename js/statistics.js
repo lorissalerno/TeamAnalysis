@@ -435,11 +435,14 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             datasets.push({
                 label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
                 data: dataPts,
+                type: isBar ? 'bar' : 'line',
                 backgroundColor: isBar ? hexToRgba('#3b82f6', 0.75) : 'rgba(59, 130, 246, 0.2)',
                 borderColor: '#3b82f6',
                 borderWidth: isBar ? 1 : 2,
                 borderRadius: isBar ? 4 : 0,
-                tension: 0.3
+                minBarLength: isBar ? 4 : 0,
+                tension: 0.3,
+                order: 2
             });
         } else {
             employees.forEach((emp, idx) => {
@@ -451,11 +454,14 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 datasets.push({
                     label: window.getDisplayName(emp),
                     data: empPts,
+                    type: isBar ? 'bar' : 'line',
                     backgroundColor: isBar ? hexToRgba(color, 0.75) : hexToRgba(color, 0.2),
                     borderColor: color,
                     borderWidth: isBar ? 1 : 2,
                     borderRadius: isBar ? 4 : 0,
-                    tension: 0.3
+                    minBarLength: isBar ? 4 : 0,
+                    tension: 0.3,
+                    order: 2
                 });
             });
 
@@ -470,7 +476,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 pointRadius: 4,
                 pointBackgroundColor: '#00f2fe',
                 fill: false,
-                order: -1
+                order: 1
             });
         }
         
@@ -492,12 +498,12 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 borderDash: [5, 5],
                 fill: false,
                 pointRadius: 0,
-                order: -2
+                order: 0
             });
         }
         
         new Chart(canvas, {
-            type: statConfig.type,
+            type: isBar ? 'bar' : 'line',
             data: {
                 labels: displayLabels,
                 datasets: datasets
@@ -520,8 +526,16 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     }
                 },
                 scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        }
+                    },
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.08)'
+                        }
                     }
                 }
             }
