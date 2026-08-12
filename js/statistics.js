@@ -216,9 +216,6 @@ function createStatModalHTML() {
             <button class="close-modal" onclick="document.getElementById('stat-config-modal').classList.remove('open')">&times;</button>
         </div>
         <div class="modal-body">
-            <label>Titolo:</label>
-            <input type="text" id="stat-title" style="width:100%; padding:8px; margin-bottom:16px;">
-            
             <label>Dato / Metrica:</label>
             <select id="stat-metric" style="width:100%; padding:8px; margin-bottom:16px;"></select>
             
@@ -245,8 +242,9 @@ function createStatModalHTML() {
 }
 
 async function saveNewStat() {
-    const title = document.getElementById('stat-title').value || 'Nuova Statistica';
     const metric = document.getElementById('stat-metric').value;
+    const rawKey = metric.replace('Performance: ', '').replace('Sales: ', '');
+    const title = rawKey;
     const skill = document.getElementById('stat-skill').value;
     const type = document.getElementById('stat-type').value;
     const product = document.getElementById('stat-product').value;
@@ -364,30 +362,35 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     card.className = 'card stat-card';
     card.style.position = 'relative';
     
+    const isPerf = statConfig.metric.startsWith('Performance: ');
+    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '');
+    
     const title = document.createElement('h3');
-    title.textContent = statConfig.title;
+    title.textContent = statConfig.title || rawKey;
     title.style.marginBottom = '4px';
     card.appendChild(title);
     
     // Stat info line
     const info = document.createElement('div');
     info.className = 'stat-info';
-    const isPerf = statConfig.metric.startsWith('Performance: ');
-    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '');
-    let infoText = `${statConfig.metric}`;
-    if (isPerf && statConfig.skill && statConfig.skill !== 'ALL') {
-        infoText += ` · ${statConfig.skill}`;
+    let infoParts = [];
+    if (isPerf) {
+        if (statConfig.skill && statConfig.skill !== 'ALL') {
+            infoParts.push(statConfig.skill);
+        }
+    } else {
+        if (statConfig.product) {
+            infoParts.push(statConfig.product);
+        }
     }
-    if (!isPerf && statConfig.product) {
-        infoText += ` · ${statConfig.product}`;
-    }
-    const typeLabels = { bar: 'Barre', line: 'Linee', table: 'Tabella' };
-    infoText += ` · ${typeLabels[statConfig.type] || statConfig.type}`;
+    const infoText = infoParts.join(' · ');
     info.textContent = infoText;
-    card.appendChild(info);
+    if (infoText) {
+        card.appendChild(info);
+    }
 
     // Search text for filtering
-    card.setAttribute('data-search-text', `${statConfig.title} ${infoText}`);
+    card.setAttribute('data-search-text', `${title.textContent} ${infoText}`);
 
     // Action buttons
     const actionsDiv = document.createElement('div');
