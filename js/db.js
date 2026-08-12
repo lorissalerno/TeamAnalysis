@@ -110,7 +110,7 @@ const db = {
     },
 
     // Delete records from a date onwards (for CSV import replace logic)
-    deleteFromDate: function(storeName, dateString) {
+    deleteFromDate: function(storeName, dateString, skillName = null) {
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction([storeName], 'readwrite');
             const store = transaction.objectStore(storeName);
@@ -123,7 +123,42 @@ const db = {
             request.onsuccess = (event) => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    cursor.delete();
+                    const item = cursor.value;
+                    if (!skillName || item.skill === skillName) {
+                        cursor.delete();
+                    }
+                    cursor.continue();
+                } else {
+                    resolve();
+                }
+            };
+            request.onerror = () => reject(request.error);
+        });
+    },
+
+    deleteRecord: function(storeName, id) {
+        return new Promise((resolve, reject) => {
+            const transaction = this._db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.delete(id);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    },
+
+    deleteBySkill: function(storeName, skillName, year = null) {
+        return new Promise((resolve, reject) => {
+            const transaction = this._db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.openCursor();
+            
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const val = cursor.value;
+                    if (val.skill === skillName && (!year || val.year === year)) {
+                        cursor.delete();
+                    }
                     cursor.continue();
                 } else {
                     resolve();

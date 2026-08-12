@@ -66,26 +66,79 @@
             <div class="db-cards">
                 <div class="card">
                     <h2>Performance</h2>
-                    <p>Importa i dati delle performance dei team.</p>
-                    <div class="import-controls">
-                        <label>Data inizio dati:</label>
-                        <input type="date" id="perf-date">
-                        <input type="file" id="perf-file" accept=".csv" style="display:none">
-                        <button class="btn secondary" onclick="document.getElementById('perf-file').click()">Scegli CSV</button>
+                    <p>Importa i dati delle performance dividendo per Skill.</p>
+                    <div class="import-controls" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div>
+                            <label style="display:block; margin-bottom: 4px; font-weight: 500;">Skill Performance:</label>
+                            <div style="display:flex; gap:8px;">
+                                <select id="perf-skill-select" style="flex:1; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);"></select>
+                                <button type="button" class="btn secondary" id="add-skill-btn" title="Crea un nuovo skill">+ Skill</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom: 4px; font-weight: 500;">Data inizio dati:</label>
+                            <input type="date" id="perf-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                        </div>
+                        <div>
+                            <input type="file" id="perf-file" accept=".csv" style="display:none">
+                            <button class="btn primary" style="width:100%; margin-top:4px;" onclick="document.getElementById('perf-file').click()">Importa Performance CSV</button>
+                        </div>
                     </div>
                 </div>
                 <div class="card">
                     <h2>Sales</h2>
                     <p>Importa i dati di vendita (AOIT, Nuovi abo, RET).</p>
-                    <div class="import-controls">
-                        <label>Data inizio dati:</label>
-                        <input type="date" id="sales-date">
-                        <input type="file" id="sales-file" accept=".csv" style="display:none">
-                        <button class="btn secondary" onclick="document.getElementById('sales-file').click()">Scegli CSV</button>
+                    <div class="import-controls" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="margin-top: auto;">
+                            <label style="display:block; margin-bottom: 4px; font-weight: 500;">Data inizio dati:</label>
+                            <input type="date" id="sales-date" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                        </div>
+                        <div style="margin-top: auto;">
+                            <input type="file" id="sales-file" accept=".csv" style="display:none">
+                            <button class="btn primary" style="width:100%; margin-top:4px;" onclick="document.getElementById('sales-file').click()">Importa Sales CSV</button>
+                        </div>
                     </div>
                 </div>
             </div>
+            
             <div id="import-log" class="log-area"></div>
+
+            <!-- List of Imported Data -->
+            <div class="card" style="margin-top: 24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <h2 style="margin:0;">Dati Importati nel Database</h2>
+                        <span id="db-active-year-label" style="font-size:0.85rem; color:var(--text-muted);"></span>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <select id="db-filter-skill" style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                            <option value="ALL">Tutte le fonti (Performance & Sales)</option>
+                            <option value="SALES">Solo Sales</option>
+                        </select>
+                        <input type="text" id="db-search-input" placeholder="Cerca collaboratore..." style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); width:180px;">
+                        <button class="btn secondary" id="clear-filtered-db-btn" style="padding:6px 12px; font-size:0.85rem;" title="Elimina dati filtrati per l'anno corrente">Elimina Dati Filtrati</button>
+                    </div>
+                </div>
+
+                <div id="db-summary-badges" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;"></div>
+
+                <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+                    <table class="data-table" id="db-imported-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Collaboratore</th>
+                                <th>Tipo / Skill</th>
+                                <th>Dettaglio Metriche</th>
+                                <th style="width:70px; text-align:center;">Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="db-imported-tbody">
+                            <!-- Populated dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
         <!-- Statistics Section -->

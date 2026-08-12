@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await refreshYearsList();
     await loadAnonymousMap();
+    await populateSkillsUI();
 
     // 3. Navigation
     document.querySelectorAll('.nav-links a').forEach(link => {
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Trigger specific section render if needed
             if (sectionId === 'statistics') renderStatistics();
             if (sectionId === 'dashboard') renderDashboard();
+            if (sectionId === 'database') renderImportedData();
             if (sectionId === 'goals' && window.renderGoals) renderGoals();
         });
     });
@@ -83,6 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Refresh views
         renderDashboard();
         renderStatistics();
+        renderImportedData();
     });
 
     // Year Change
@@ -92,9 +95,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadAnonymousMap();
         renderDashboard();
         renderStatistics();
+        renderImportedData();
     });
 
-    // 4. Database Imports
+    // 4. Database Imports & Skills
     setupImports();
 
     // 5. Settings / Backup
@@ -102,7 +106,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initial render
     renderDashboard();
+    renderImportedData();
 });
+
+// --- SKILLS MANAGEMENT ---
+async function getSkills() {
+    const saved = await appDb.getSetting('skills', null);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+        return saved;
+    }
+    const defaults = ["Performance MyService VAS", "Performance MyService OP", "Performance Wline"];
+    await appDb.setSetting('skills', defaults);
+    return defaults;
+}
+
+async function saveSkills(skillsList) {
+    await appDb.setSetting('skills', skillsList);
+    await populateSkillsUI();
+}
+
+async function populateSkillsUI() {
+    const skills = await getSkills();
+    const perfSelect = document.getElementById('perf-skill-select');
+    const filterSelect = document.getElementById('db-filter-skill');
+    
+    if (!perfSelect || !filterSelect) return;
+
+    const currentPerf = perfSelect.value;
+    const currentFilter = filterSelect.value;
+
+    perfSelect.innerHTML = '';
+    skills.forEach(skill => {
+        const opt = document.createElement('option');
+        opt.value = skill;
+        opt.textContent = skill;
+        perfSelect.appendChild(opt);
+    });
+    if (currentPerf && skills.includes(currentPerf)) {
+        perfSelect.value = currentPerf;
+    }
+
+    filterSelect.innerHTML = `
+        <option value="ALL">Tutte le fonti (Performance & Sales)</option>
+        <option value="SALES">Solo Sales</option>
+    `;
+    skills.forEach(skill => {
+        const opt = document.createElement('option');
+        opt.value = skill;
+        opt.textContent = `Skill: ${skill}`;
+        filterSelect.appendChild(opt);
+    });
+    if (currentFilter) {
+        filterSelect.value = currentFilter;
+    }
+}
 
 // --- STATE MANAGEMENT ---
 async function refreshYearsList() {
@@ -152,28 +209,107 @@ function logImport(msg, isError = false) {
 function setupImports() {
     const perfInput = document.getElementById('perf-file');
     const salesInput = document.getElementById('sales-file');
+    const addSkillBtn = document.getElementById('add-skill-btn');
+    const filterSelect = document.getElementById('db-filter-skill');
+    const searchInput = document.getElementById('db-search-input');
+    const clearFilteredBtn = document.getElementById('clear-filtered-db-btn');
+
+    if (addSkillBtn) {
+        addSkillBtn.addEventListener('click', async () => {
+            const name = prompt("Inserisci il nome del nuovo Skill (es. Performance MyService VAS):");
+            if (!name || !name.trim()) return;
+            const cleanName = name.trim();
+            const skills = await getSkills();
+            if (!skills.includes(cleanName)) {
+                skills.push(cleanName);
+                await saveSkills(skills);
+                document.getElementById('perf-skill-select').value = cleanName;
+                logImport(`Creato nuovo skill: "${cleanName}"`);
+            } else {
+                alert("Questo skill esiste già!");
+            }
+        });
+    }
+
+    if (filterSelect) {
+        filterSelect.addEventListener('change', () => renderImportedData());
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderImportedData());
+    }
+
+    if (clearFilteredBtn) {
+        clearFilteredBtn.addEventListener('click', async () => {
+            const filterValue = document.getElementById('db-filter-skill').value;
+            const activeYear = window.appState.activeYear;
+
+            let confirmMsg = "";
+            if (filterValue === 'ALL') {
+                confirmMsg = `Sei sicuro di voler eliminare TUTTI i dati (Performance e Sales) per l'anno ${activeYear}?`;
+            } else if (filterValue === 'SALES') {
+                confirmMsg = `Sei sicuro di voler eliminare tutti i dati Sales per l'anno ${activeYear}?`;
+            } else {
+                confirmMsg = `Sei sicuro di voler eliminare tutti i dati della Skill "${filterValue}" per l'anno ${activeYear}?`;
+            }
+
+            if (!confirm(confirmMsg)) return;
+
+            if (filterValue === 'ALL') {
+                const perf = await appDb.getAll('performance', 'year', activeYear);
+                const sales = await appDb.getAll('sales', 'year', activeYear);
+                for (const r of perf) await appDb.deleteRecord('performance', r.id);
+                for (const r of sales) await appDb.deleteRecord('sales', r.id);
+                logImport(`Eliminati tutti i dati per l'anno ${activeYear}.`);
+            } else if (filterValue === 'SALES') {
+                const sales = await appDb.getAll('sales', 'year', activeYear);
+                for (const r of sales) await appDb.deleteRecord('sales', r.id);
+                logImport(`Eliminati tutti i dati Sales per l'anno ${activeYear}.`);
+            } else {
+                await appDb.deleteBySkill('performance', filterValue, activeYear);
+                logImport(`Eliminati tutti i dati della Skill "${filterValue}" per l'anno ${activeYear}.`);
+            }
+
+            await refreshYearsList();
+            await renderImportedData();
+            if (window.renderStatistics) renderStatistics();
+        });
+    }
 
     perfInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const startDate = document.getElementById('perf-date').value;
+        const selectedSkill = document.getElementById('perf-skill-select').value;
         
+        if (!selectedSkill) {
+            alert("Seleziona o crea uno skill prima di importare i dati performance.");
+            perfInput.value = '';
+            return;
+        }
+
         try {
-            logImport(`Lettura ${file.name}...`);
+            logImport(`Lettura ${file.name} per lo skill "${selectedSkill}"...`);
             const parsed = await CSVParser.parse(file, startDate);
             
+            // Assign selected skill to all performance items
+            parsed.data.forEach(d => {
+                d.skill = selectedSkill;
+            });
+
             if (startDate) {
-                await appDb.deleteFromDate('performance', startDate);
-                logImport(`Eliminati vecchi dati performance dal ${startDate} in poi.`);
+                await appDb.deleteFromDate('performance', startDate, selectedSkill);
+                logImport(`Eliminati vecchi dati performance ("${selectedSkill}") dal ${startDate} in poi.`);
             }
             
             await appDb.addMultiple('performance', parsed.data);
-            logImport(`Importati ${parsed.data.length} record in Performance.`);
+            logImport(`Importati ${parsed.data.length} record in Performance ("${selectedSkill}").`);
             
             // Auto-assign anon IDs for new names
             await autoAssignAnonIds(parsed.data);
             
             await refreshYearsList();
+            await renderImportedData();
         } catch (err) {
             logImport(`Errore: ${err}`, true);
         }
@@ -190,8 +326,6 @@ function setupImports() {
             const parsed = await CSVParser.parse(file, startDate);
             
             if (startDate) {
-                // If we know which subset of sales we are replacing, it's better.
-                // For now, simple replace all sales >= startDate
                 await appDb.deleteFromDate('sales', startDate);
                 logImport(`Eliminati vecchi dati sales dal ${startDate} in poi.`);
             }
@@ -201,10 +335,148 @@ function setupImports() {
             
             await autoAssignAnonIds(parsed.data);
             await refreshYearsList();
+            await renderImportedData();
         } catch (err) {
             logImport(`Errore: ${err}`, true);
         }
         salesInput.value = '';
+    });
+}
+
+// --- RENDER IMPORTED DATABASE DATA ---
+async function renderImportedData() {
+    const activeYearLabel = document.getElementById('db-active-year-label');
+    const tbody = document.getElementById('db-imported-tbody');
+    const badgesContainer = document.getElementById('db-summary-badges');
+    
+    if (!tbody || !activeYearLabel) return;
+
+    const activeYear = window.appState.activeYear;
+    activeYearLabel.textContent = `Anno attivo: ${activeYear}`;
+
+    const perfRecords = await appDb.getAll('performance', 'year', activeYear);
+    const salesRecords = await appDb.getAll('sales', 'year', activeYear);
+    
+    const filterValue = document.getElementById('db-filter-skill').value;
+    const searchTerm = (document.getElementById('db-search-input').value || '').toLowerCase().trim();
+
+    // Summary badges calculation
+    const skillCounts = {};
+    let totalPerf = 0;
+    let totalSales = 0;
+
+    perfRecords.forEach(r => {
+        totalPerf++;
+        const sk = r.skill || 'Performance (Generale)';
+        skillCounts[sk] = (skillCounts[sk] || 0) + 1;
+    });
+    salesRecords.forEach(() => {
+        totalSales++;
+    });
+
+    let badgesHtml = `<span style="padding:4px 10px; border-radius:12px; background:var(--secondary); font-size:0.8rem; font-weight:500;">Totale Anno: ${totalPerf + totalSales} record</span>`;
+    for (const [sk, count] of Object.entries(skillCounts)) {
+        badgesHtml += `<span style="padding:4px 10px; border-radius:12px; background:var(--primary); color:#fff; font-size:0.8rem; font-weight:500;">${sk}: ${count}</span>`;
+    }
+    if (totalSales > 0) {
+        badgesHtml += `<span style="padding:4px 10px; border-radius:12px; background:#10b981; color:#fff; font-size:0.8rem; font-weight:500;">Sales: ${totalSales}</span>`;
+    }
+    badgesContainer.innerHTML = badgesHtml;
+
+    // Combine records for table display
+    let allRecords = [];
+    
+    perfRecords.forEach(r => {
+        allRecords.push({
+            id: r.id,
+            store: 'performance',
+            date: r.date,
+            employee: r.employee,
+            type: 'Performance',
+            skill: r.skill || 'Performance (Generale)',
+            data: r.data
+        });
+    });
+
+    salesRecords.forEach(r => {
+        allRecords.push({
+            id: r.id,
+            store: 'sales',
+            date: r.date,
+            employee: r.employee,
+            type: 'Sales',
+            skill: r.data.Product ? `Sales (${r.data.Product})` : 'Sales (Generale)',
+            data: r.data
+        });
+    });
+
+    // Apply Filter by Skill / Sales
+    if (filterValue === 'SALES') {
+        allRecords = allRecords.filter(r => r.store === 'sales');
+    } else if (filterValue !== 'ALL') {
+        allRecords = allRecords.filter(r => r.store === 'performance' && r.skill === filterValue);
+    }
+
+    // Apply Search Filter by Employee Name
+    if (searchTerm) {
+        allRecords = allRecords.filter(r => {
+            const dispName = window.getDisplayName(r.employee).toLowerCase();
+            const realName = r.employee.toLowerCase();
+            return dispName.includes(searchTerm) || realName.includes(searchTerm);
+        });
+    }
+
+    // Sort by date desc, then employee
+    allRecords.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.employee.localeCompare(b.employee));
+
+    tbody.innerHTML = '';
+
+    if (allRecords.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">Nessun dato trovato nel database per l'anno ${activeYear}.</td></tr>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    allRecords.forEach(r => {
+        const tr = document.createElement('tr');
+        const dispEmployee = window.getDisplayName(r.employee);
+
+        const metricsStr = Object.entries(r.data)
+            .map(([k, v]) => `<span style="display:inline-block; margin-right:6px; margin-bottom:3px; padding:3px 8px; background:var(--bg-base); border:1px solid var(--border); border-radius:4px; font-size:0.78rem;"><strong>${k}:</strong> ${v}</span>`)
+            .join('');
+
+        const skillBadge = r.store === 'performance' 
+            ? `<span style="padding:3px 8px; border-radius:4px; background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`
+            : `<span style="padding:3px 8px; border-radius:4px; background:#10b981; color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`;
+
+        tr.innerHTML = `
+            <td style="white-space:nowrap; font-weight:500;">${r.date || '-'}</td>
+            <td><strong>${dispEmployee}</strong></td>
+            <td>${skillBadge}</td>
+            <td style="font-size:0.85rem;">${metricsStr}</td>
+            <td style="text-align:center;">
+                <button class="icon-btn delete-rec-btn" data-store="${r.store}" data-id="${r.id}" title="Elimina questo record" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+                </button>
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+    tbody.appendChild(fragment);
+
+    // Attach single row delete event handlers
+    tbody.querySelectorAll('.delete-rec-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const id = parseInt(e.currentTarget.getAttribute('data-id'));
+            const store = e.currentTarget.getAttribute('data-store');
+            if (confirm("Eliminare questo singolo record dal database?")) {
+                await appDb.deleteRecord(store, id);
+                logImport(`Record ID ${id} eliminato.`);
+                await refreshYearsList();
+                await renderImportedData();
+                if (window.renderStatistics) renderStatistics();
+            }
+        });
     });
 }
 

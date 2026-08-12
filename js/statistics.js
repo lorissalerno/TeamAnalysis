@@ -43,13 +43,16 @@ async function openStatModal() {
     const metrics = new Set();
     perfData.forEach(d => Object.keys(d.data).forEach(k => metrics.add(`Performance: ${k}`)));
     salesData.forEach(d => {
-        // For sales, metrics are properties in data, but also product based. Let's just use properties.
         Object.keys(d.data).forEach(k => {
             if(k !== 'Product') metrics.add(`Sales: ${k}`);
         });
     });
     
-    // 2. Show Modal (we will dynamically create or use an existing one in HTML)
+    // Gather unique skills from performance
+    const skills = new Set();
+    perfData.forEach(d => { if (d.skill) skills.add(d.skill); });
+
+    // 2. Show Modal
     let modal = document.getElementById('stat-config-modal');
     if (!modal) {
         modal = createStatModalHTML();
@@ -62,6 +65,15 @@ async function openStatModal() {
         opt.value = m;
         opt.textContent = m;
         metricSelect.appendChild(opt);
+    });
+
+    const skillSelect = document.getElementById('stat-skill');
+    skillSelect.innerHTML = '<option value="ALL">Tutte le Skill</option>';
+    Array.from(skills).sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        skillSelect.appendChild(opt);
     });
     
     modal.classList.add('open');
@@ -81,6 +93,9 @@ function createStatModalHTML() {
             <label>Dato / Metrica:</label>
             <select id="stat-metric" style="width:100%; padding:8px; margin-bottom:16px;"></select>
             
+            <label>Filtro Skill Performance (opzionale):</label>
+            <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
+
             <label>Tipo Visualizzazione:</label>
             <select id="stat-type" style="width:100%; padding:8px; margin-bottom:16px;">
                 <option value="bar">Grafico a Barre</option>
@@ -103,13 +118,14 @@ function createStatModalHTML() {
 async function saveNewStat() {
     const title = document.getElementById('stat-title').value || 'Nuova Statistica';
     const metric = document.getElementById('stat-metric').value;
+    const skill = document.getElementById('stat-skill').value;
     const type = document.getElementById('stat-type').value;
     const product = document.getElementById('stat-product').value;
     
     const newStat = {
         id: 'stat_' + Date.now(),
-        title, metric, type, product,
-        year: window.appState.activeYear // save as a template for this year
+        title, metric, skill, type, product,
+        year: window.appState.activeYear
     };
     
     await appDb.addMultiple('custom_stats', [newStat]);
@@ -206,6 +222,9 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     // Aggregate by date (month/week)
     const aggregated = {};
     sourceData.forEach(row => {
+        if (isPerf && statConfig.skill && statConfig.skill !== 'ALL') {
+            if (row.skill !== statConfig.skill) return;
+        }
         if (!isPerf && statConfig.product) {
             if (row.data['Product'] !== statConfig.product) return;
         }
