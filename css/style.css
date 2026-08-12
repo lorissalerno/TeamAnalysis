@@ -161,6 +161,7 @@ a:hover {
 }
 .custom-month-dropdown {
     top: calc(100% + 4px);
+    z-index: 10005;
 }
 
 /* Import Wizard Steps UI */
