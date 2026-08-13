@@ -510,17 +510,18 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     tbody.innerHTML = '';
     tfoot.innerHTML = '';
 
-    const productTargetTotals = {};
-    products.forEach(p => {
-        productTargetTotals[p.key] = 0;
-    });
-
     let totalWorkPctSum = 0;
     employees.forEach(emp => {
         totalWorkPctSum += (collabWorkPcts[emp] ?? 100);
     });
 
-    employees.forEach(emp => {
+    const formatVal = (v, isCHF) => {
+        if (!v) return '—';
+        if (isCHF) return Math.round(v).toLocaleString('de-CH') + '.-';
+        return Number.isInteger(v) ? v.toString() : v.toFixed(1);
+    };
+
+    employees.forEach((emp, empIdx) => {
         const empWorkPct = collabWorkPcts[emp] ?? 100;
         const displayName = window.getDisplayName(emp);
 
@@ -538,33 +539,37 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
 
         products.forEach(p => {
             if (p.mode === 'team') {
-                const teamVal = savedTargets['TEAM_' + p.key] ?? 0;
-                const calcVal = totalWorkPctSum > 0 ? Math.round(teamVal * (empWorkPct / totalWorkPctSum)) : 0;
-                savedTargets[emp + '_' + p.key] = calcVal;
-
-                rowHtml += `
-                    <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                        <input type="number" step="any" class="sales-target-input team-calc-target" data-emp="${emp}" data-key="${p.key}" value="${calcVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-muted); font-weight:600; font-size:0.88rem;" title="Calcolato automaticamente in base a % Lavoro">
-                    </td>
-                `;
+                // Cella TEAM: un solo riquadro centrato con rowspan, solo al primo collaboratore
+                if (empIdx === 0) {
+                    const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
+                    rowHtml += `
+                        <td rowspan="${employees.length}" style="padding:16px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.04);">
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; opacity:0.8;">Obiettivo Team</span>
+                                <span class="team-total-display" data-key="${p.key}" style="font-size:1.2rem; font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</span>
+                            </div>
+                        </td>
+                    `;
+                }
             } else {
-                const targetVal = savedTargets[emp + '_' + p.key] ?? 0;
-                productTargetTotals[p.key] += targetVal;
+                // Cella INDIV.: valore calcolato in sola lettura
+                const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
+                const calcVal = totalWorkPctSum > 0 ? Math.round(indivTotal * (empWorkPct / totalWorkPctSum)) : 0;
 
                 rowHtml += `
                     <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                        <input type="number" step="any" class="sales-target-input" data-emp="${emp}" data-key="${p.key}" value="${targetVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:700; font-size:0.88rem;">
+                        <span class="indiv-calc-display" data-emp="${emp}" data-key="${p.key}" style="display:inline-block; width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-muted); font-weight:600; font-size:0.88rem;">${calcVal || '—'}</span>
                     </td>
                 `;
             }
         });
 
-        rowHtml += `<td></td>`; // empty cell for action column
+        rowHtml += `<td></td>`;
         tr.innerHTML = rowHtml;
         tbody.appendChild(tr);
     });
 
-    // RIGA TOTALI TEAM OBIETTIVI
+    // RIGA TOTALI TEAM — solo qui si può inserire il valore
     const teamTr = document.createElement('tr');
     teamTr.style.cssText = 'background:var(--bg-base); font-weight:700; border-top:2px solid var(--border);';
     let teamHtml = `
@@ -573,17 +578,16 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     `;
 
     products.forEach(p => {
-        // Sia TEAM che INDIV.: input editabile nel tfoot
-        const teamVal = p.mode === 'team'
+        const storedVal = p.mode === 'team'
             ? (savedTargets['TEAM_' + p.key] ?? 0)
-            : (savedTargets['INDIV_TOTAL_' + p.key] ?? productTargetTotals[p.key] ?? 0);
+            : (savedTargets['INDIV_TOTAL_' + p.key] ?? 0);
 
-        const borderColor = p.mode === 'team' ? 'var(--primary, #6366f1)' : 'var(--border)';
         const inputClass = p.mode === 'team' ? 'sales-team-target-input' : 'sales-indiv-total-input';
+        const borderColor = p.mode === 'team' ? 'var(--primary, #6366f1)' : 'var(--border)';
 
         teamHtml += `
             <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                <input type="number" step="any" class="${inputClass}" data-key="${p.key}" data-mode="${p.mode}" value="${teamVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:2px solid ${borderColor}; background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:0.95rem;">
+                <input type="number" step="any" class="${inputClass}" data-key="${p.key}" data-mode="${p.mode}" value="${storedVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:2px solid ${borderColor}; background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:0.95rem;">
             </td>
         `;
     });
@@ -591,7 +595,7 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     teamTr.innerHTML = teamHtml;
     tfoot.appendChild(teamTr);
 
-    // Event listener per ricalcolo in tempo reale
+    // Ricalcolo in tempo reale al cambio del totale o della % lavoro
     const handleDynamicRecalc = () => {
         let currentTotalWork = 0;
         container.querySelectorAll('.collab-work-pct-input').forEach(inp => {
@@ -602,20 +606,27 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
         if (totalWorkEl) totalWorkEl.textContent = `${currentTotalWork}%`;
 
         products.forEach(p => {
-            const selector = p.mode === 'team' ? `.sales-team-target-input[data-key="${p.key}"]` : `.sales-indiv-total-input[data-key="${p.key}"]`;
+            const selector = p.mode === 'team'
+                ? `.sales-team-target-input[data-key="${p.key}"]`
+                : `.sales-indiv-total-input[data-key="${p.key}"]`;
             const totalInp = container.querySelector(selector);
             const totalVal = totalInp ? (parseFloat(totalInp.value) || 0) : 0;
 
-            employees.forEach(emp => {
-                const empWorkInp = container.querySelector(`.collab-work-pct-input[data-emp="${emp}"]`);
-                const empWorkPct = empWorkInp ? (parseFloat(empWorkInp.value) || 0) : 100;
-                const calcVal = currentTotalWork > 0 ? Math.round(totalVal * (empWorkPct / currentTotalWork)) : 0;
+            if (p.mode === 'team') {
+                // Aggiorna solo il display centrale
+                const display = container.querySelector(`.team-total-display[data-key="${p.key}"]`);
+                if (display) display.textContent = formatVal(totalVal, p.isCHF);
+            } else {
+                // Ricalcola e aggiorna i display dei singoli
+                employees.forEach(emp => {
+                    const empWorkInp = container.querySelector(`.collab-work-pct-input[data-emp="${emp}"]`);
+                    const empWorkPct = empWorkInp ? (parseFloat(empWorkInp.value) || 0) : 100;
+                    const calcVal = currentTotalWork > 0 ? Math.round(totalVal * (empWorkPct / currentTotalWork)) : 0;
 
-                const collabTargetInp = container.querySelector(`.sales-target-input[data-emp="${emp}"][data-key="${p.key}"]`);
-                if (collabTargetInp) {
-                    collabTargetInp.value = calcVal || '';
-                }
-            });
+                    const display = container.querySelector(`.indiv-calc-display[data-emp="${emp}"][data-key="${p.key}"]`);
+                    if (display) display.textContent = calcVal || '—';
+                });
+            }
         });
     };
 
