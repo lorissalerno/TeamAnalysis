@@ -538,12 +538,50 @@ async function openStatModal(editingStat = null) {
     const showGoalToggle = modal.querySelector('#preview-show-team-goal');
     const viewAllBtn = modal.querySelector('#preview-view-all-btn');
     const viewAvgBtn = modal.querySelector('#preview-view-avg-btn');
+    const modeTeamBtn = modal.querySelector('#preview-mode-team-btn');
+    const modeIndBtn = modal.querySelector('#preview-mode-ind-btn');
+    const teamTabs = modal.querySelector('#preview-team-tabs');
+    const indSelectContainer = modal.querySelector('#preview-individual-select-container');
+    const indSelect = modal.querySelector('#preview-individual-select');
 
     if (showAvgToggle) showAvgToggle.checked = true;
     if (showGoalToggle) showGoalToggle.checked = true;
     if (viewAllBtn && viewAvgBtn) {
         viewAllBtn.classList.add('active');
         viewAvgBtn.classList.remove('active');
+    }
+
+    if (indSelect) {
+        const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
+        indSelect.innerHTML = `<option value="">${placeholder}</option>`;
+        const names = Object.keys(window.appState.anonymousMap || {}).sort();
+        names.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            indSelect.appendChild(opt);
+        });
+        const mainIndSelect = document.getElementById('individual-select');
+        if (mainIndSelect && mainIndSelect.value) {
+            indSelect.value = mainIndSelect.value;
+        } else if (names.length > 0) {
+            indSelect.value = names[0];
+        }
+    }
+
+    const mainIndTabActive = document.querySelector('.tab-btn[data-target="stat-individual"]')?.classList.contains('active');
+    if (modeTeamBtn && modeIndBtn) {
+        if (mainIndTabActive) {
+            modeIndBtn.classList.add('active');
+            modeTeamBtn.classList.remove('active');
+            if (teamTabs) teamTabs.style.display = 'none';
+            if (indSelectContainer) indSelectContainer.style.display = 'inline-flex';
+        } else {
+            modeTeamBtn.classList.add('active');
+            modeIndBtn.classList.remove('active');
+            if (teamTabs) teamTabs.style.display = 'inline-flex';
+            if (indSelectContainer) indSelectContainer.style.display = 'none';
+        }
     }
 
     const allMetrics = Array.from(metrics).sort();
@@ -712,9 +750,12 @@ async function openStatModal(editingStat = null) {
         const customYMax = parseFloat(document.getElementById('stat-y-max')?.value);
         const customY2Max = parseFloat(document.getElementById('stat-y2-max')?.value);
 
+        const isIndividualView = document.getElementById('preview-mode-ind-btn')?.classList.contains('active') || false;
+        const selectedEmployee = isIndividualView ? (document.getElementById('preview-individual-select')?.value || '') : '';
+
         const showTeamAvg = document.getElementById('preview-show-team-avg')?.checked || false;
         const showTeamGoal = document.getElementById('preview-show-team-goal')?.checked || false;
-        const teamAvgOnly = document.getElementById('preview-view-avg-btn')?.classList.contains('active') || false;
+        const teamAvgOnly = !isIndividualView && (document.getElementById('preview-view-avg-btn')?.classList.contains('active') || false);
 
         const yr = window.appState.activeYear || new Date().getFullYear().toString();
         const pData = await appDb.getAll('performance', 'year', yr);
@@ -740,7 +781,7 @@ async function openStatModal(editingStat = null) {
         });
 
         container.innerHTML = '';
-        const cardNode = buildStatCard(tempStatConfig, pData, sData, gData, false, '', teamAvgOnly, showTeamAvg, showTeamGoal, true);
+        const cardNode = buildStatCard(tempStatConfig, pData, sData, gData, isIndividualView, selectedEmployee, teamAvgOnly, showTeamAvg, showTeamGoal, true);
         container.appendChild(cardNode);
 
         const canvas = cardNode.querySelector('canvas');
@@ -791,7 +832,7 @@ async function openStatModal(editingStat = null) {
     if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
     if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
 
-    // Listener toggle anteprima (media team, obiettivo, tutti/solo media)
+    // Listener toggle anteprima (media team, obiettivo, tutti/solo media, vista team/singolo)
 
     if (showAvgToggle) showAvgToggle.addEventListener('change', () => schedulePreview());
     if (showGoalToggle) showGoalToggle.addEventListener('change', () => schedulePreview());
@@ -807,6 +848,23 @@ async function openStatModal(editingStat = null) {
             schedulePreview();
         });
     }
+    if (modeTeamBtn && modeIndBtn) {
+        modeTeamBtn.addEventListener('click', () => {
+            modeTeamBtn.classList.add('active');
+            modeIndBtn.classList.remove('active');
+            if (teamTabs) teamTabs.style.display = 'inline-flex';
+            if (indSelectContainer) indSelectContainer.style.display = 'none';
+            schedulePreview();
+        });
+        modeIndBtn.addEventListener('click', () => {
+            modeIndBtn.classList.add('active');
+            modeTeamBtn.classList.remove('active');
+            if (teamTabs) teamTabs.style.display = 'none';
+            if (indSelectContainer) indSelectContainer.style.display = 'inline-flex';
+            schedulePreview();
+        });
+    }
+    if (indSelect) indSelect.addEventListener('change', () => schedulePreview());
 
     // Chiudi: distruggi chart preview
     const closeBtn = modal.querySelector('.close-modal');
@@ -868,7 +926,12 @@ function createStatModalHTML() {
             <div class="stat-modal-preview" style="display:flex; flex-direction:column; height:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border);">
                     <div class="stat-modal-preview-title" style="margin-bottom:0;">Anteprima in tempo reale</div>
-                    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <div id="preview-individual-select-container" style="display:none; align-items:center;">
+                            <select id="preview-individual-select" style="padding:4px 8px; height:28px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.78rem; max-width:180px;">
+                                <option value="">Seleziona Collaboratore...</option>
+                            </select>
+                        </div>
                         <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.8rem;">
                             <input type="checkbox" id="preview-show-team-avg">
                             <span class="slider"></span>
@@ -879,14 +942,19 @@ function createStatModalHTML() {
                             <span class="slider"></span>
                             <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra Obiettivo Team</span>
                         </label>
+                        <div class="tabs" id="preview-team-tabs" style="display:inline-flex;">
+                            <button type="button" class="tab-btn active" id="preview-view-all-btn" style="padding:4px 10px; font-size:0.75rem;">Tutti</button>
+                            <button type="button" class="tab-btn" id="preview-view-avg-btn" style="padding:4px 10px; font-size:0.75rem;">Solo Media</button>
+                        </div>
+
+                        <div style="width:1px; height:20px; background:var(--border); margin:0 2px;"></div>
+
                         <div class="tabs" style="display:inline-flex;">
-                            <button type="button" class="tab-btn active" id="preview-view-all-btn" style="padding:4px 10px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;" title="Vista Team">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                Tutti
+                            <button type="button" class="tab-btn active" id="preview-mode-team-btn" title="Vista Team" style="padding:4px 8px; display:inline-flex; align-items:center; justify-content:center;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             </button>
-                            <button type="button" class="tab-btn" id="preview-view-avg-btn" style="padding:4px 10px; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;" title="Solo Media">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                Solo Media
+                            <button type="button" class="tab-btn" id="preview-mode-ind-btn" title="Vista Singolo Collaboratore" style="padding:4px 8px; display:inline-flex; align-items:center; justify-content:center;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </button>
                         </div>
                     </div>
