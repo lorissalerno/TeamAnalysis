@@ -223,11 +223,11 @@ async function renderSalesGoalsTable() {
     container.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                ${tablesList.map(t => `
+                ${tablesList.length > 1 ? tablesList.map(t => `
                     <button class="table-tab-btn ${t.id === activeSalesTableId ? 'active' : ''}" data-id="${t.id}" style="padding:6px 14px; border-radius:8px; border:1px solid ${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--border)'}; background:${t.id === activeSalesTableId ? 'rgba(99,102,241,0.15)' : 'var(--bg-surface)'}; color:${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--text-main)'}; font-weight:700; font-size:0.85rem; cursor:pointer;">
                         ${t.name}
                     </button>
-                `).join('')}
+                `).join('') : ''}
                 <button class="btn primary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Aggiungi Tabella Obiettivi
@@ -316,12 +316,14 @@ async function renderSalesGoalsTable() {
         };
     });
 
-    const createTabBtn = container.querySelector('#create-new-table-btn') || container.querySelector('#empty-add-table-btn');
-    if (createTabBtn) {
-        createTabBtn.onclick = () => {
-            openCreateNewTableModal(year, configuredSkills, tablesList);
-        };
-    }
+    ['#create-new-table-btn', '#empty-add-table-btn'].forEach(selector => {
+        const btn = container.querySelector(selector);
+        if (btn) {
+            btn.onclick = () => {
+                openCreateNewTableModal(year, configuredSkills, tablesList);
+            };
+        }
+    });
 
     const deleteTabBtn = container.querySelector('#delete-current-table-btn');
     if (deleteTabBtn) {
