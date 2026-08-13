@@ -266,9 +266,15 @@ async function updateCollabCountBadge() {
 }
 
 async function populatePerformanceStatsDropdowns() {
-    const s1 = document.getElementById('assoc-stat-1');
-    const s2 = document.getElementById('assoc-stat-2');
-    if (!s1 || !s2) return;
+    const s1Search = document.getElementById('assoc-stat-1-search');
+    const s1Hidden = document.getElementById('assoc-stat-1');
+    const s1Dropdown = document.getElementById('assoc-stat-1-dropdown');
+
+    const s2Search = document.getElementById('assoc-stat-2-search');
+    const s2Hidden = document.getElementById('assoc-stat-2');
+    const s2Dropdown = document.getElementById('assoc-stat-2-dropdown');
+
+    if (!s1Search || !s2Search) return;
 
     const perfRecords = await appDb.getAll('performance', 'year', window.appState.activeYear);
     const metricsSet = new Set();
@@ -282,31 +288,57 @@ async function populatePerformanceStatsDropdowns() {
 
     const sortedMetrics = Array.from(metricsSet).sort();
 
-    s1.innerHTML = '';
-    s2.innerHTML = '';
+    function setupSearchableInput(searchInput, hiddenInput, dropdownContainer, defaultIndex = 0) {
+        let selectedMetric = sortedMetrics.length > defaultIndex ? sortedMetrics[defaultIndex] : '';
+        hiddenInput.value = selectedMetric;
+        searchInput.value = selectedMetric;
 
-    if (sortedMetrics.length === 0) {
-        const opt = '<option value="">Nessuna statistica di performance trovata</option>';
-        s1.innerHTML = opt;
-        s2.innerHTML = opt;
-        return;
+        function renderDropdown(filterText = '') {
+            dropdownContainer.innerHTML = '';
+            const query = filterText.toLowerCase().trim();
+            const filtered = sortedMetrics.filter(m => !query || m.toLowerCase().includes(query));
+            if (filtered.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
+                empty.textContent = 'Nessun risultato';
+                dropdownContainer.appendChild(empty);
+                return;
+            }
+            filtered.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'searchable-dropdown-item' + (m === selectedMetric ? ' selected' : '');
+                item.textContent = m;
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    selectedMetric = m;
+                    hiddenInput.value = m;
+                    searchInput.value = m;
+                    dropdownContainer.classList.remove('open');
+                    renderDropdown(m);
+                });
+                dropdownContainer.appendChild(item);
+            });
+        }
+
+        renderDropdown('');
+
+        searchInput.onfocus = () => {
+            searchInput.select();
+            renderDropdown(searchInput.value === selectedMetric ? '' : searchInput.value);
+            dropdownContainer.classList.add('open');
+        };
+        searchInput.oninput = (e) => {
+            renderDropdown(e.target.value);
+            dropdownContainer.classList.add('open');
+        };
+        searchInput.onblur = () => {
+            dropdownContainer.classList.remove('open');
+            if (selectedMetric) searchInput.value = selectedMetric;
+        };
     }
 
-    sortedMetrics.forEach(m => {
-        const opt1 = document.createElement('option');
-        opt1.value = m;
-        opt1.textContent = m;
-        s1.appendChild(opt1);
-
-        const opt2 = document.createElement('option');
-        opt2.value = m;
-        opt2.textContent = m;
-        s2.appendChild(opt2);
-    });
-
-    if (sortedMetrics.length > 1) {
-        s2.selectedIndex = 1;
-    }
+    setupSearchableInput(s1Search, s1Hidden, s1Dropdown, 0);
+    setupSearchableInput(s2Search, s2Hidden, s2Dropdown, sortedMetrics.length > 1 ? 1 : 0);
 }
 
 async function renderStatAssociationsList() {
