@@ -173,16 +173,8 @@ async function renderSalesGoalsTable() {
     const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
 
     let products = await appDb.getSetting(`sales_table_products_${activeSalesTableId}`, null);
-    if (!products || !Array.isArray(products) || products.length === 0) {
-        products = [
-            { key: 'AOIT', label: 'AOIT', mappedMetric: 'AOIT gew', isCHF: true, mode: 'individual' },
-            { key: 'My Service', label: 'My Service', mappedMetric: 'My Service', isCHF: false, mode: 'individual' },
-            { key: 'My Security M+L', label: 'My Security M+L', mappedMetric: 'My Security M+L', isCHF: false, mode: 'individual' },
-            { key: 'RET', label: 'RET', mappedMetric: 'Retention', isCHF: false, mode: 'individual' },
-            { key: 'MOBILE', label: 'MOBILE', mappedMetric: 'Mobile', isCHF: false, mode: 'team' },
-            { key: 'INTERNET', label: 'INTERNET', mappedMetric: 'Internet', isCHF: false, mode: 'team' },
-            { key: 'TV', label: 'TV', mappedMetric: 'TV', isCHF: false, mode: 'individual' }
-        ];
+    if (!products || !Array.isArray(products)) {
+        products = [];
         await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
     }
 
@@ -294,8 +286,9 @@ async function renderSalesGoalsTable() {
                                     </div>
                                 </th>
                             `).join('')}
-                            <th style="padding:10px; text-align:center; width:90px; background:rgba(255,255,255,0.02);">
-                                <button class="btn secondary btn-sm" id="add-table-col-header-btn" style="padding:4px 8px; font-size:0.75rem; white-space:nowrap;">
+                            <th style="padding:10px 14px; text-align:center; min-width:140px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
+                                <button class="btn primary btn-sm" id="add-table-col-header-btn" style="padding:8px 14px; font-weight:700; font-size:0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; border-radius:8px; cursor:pointer;" title="Aggiungi nuova colonna / prodotto">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                     + Colonna
                                 </button>
                             </th>
@@ -1210,16 +1203,6 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
 
     const overlay = document.getElementById('modal-overlay');
 
-    const defaultProds = [
-        { key: 'AOIT', label: 'AOIT', mappedMetric: 'AOIT gew', isCHF: true, mode: 'individual' },
-        { key: 'My Service', label: 'My Service', mappedMetric: 'My Service', isCHF: false, mode: 'individual' },
-        { key: 'My Security M+L', label: 'My Security M+L', mappedMetric: 'My Security M+L', isCHF: false, mode: 'individual' },
-        { key: 'RET', label: 'RET', mappedMetric: 'Retention', isCHF: false, mode: 'individual' },
-        { key: 'MOBILE', label: 'MOBILE', mappedMetric: 'Mobile', isCHF: false, mode: 'team' },
-        { key: 'INTERNET', label: 'INTERNET', mappedMetric: 'Internet', isCHF: false, mode: 'team' },
-        { key: 'TV', label: 'TV', mappedMetric: 'TV', isCHF: false, mode: 'individual' }
-    ];
-
     modal.innerHTML = `
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
             <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Crea Nuova Tabella Obiettivi Sales</h2>
@@ -1266,7 +1249,7 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
         tablesList.push({ id: newId, name: name, skill: skill });
 
         await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-        await appDb.setSetting(`sales_table_products_${newId}`, defaultProds);
+        await appDb.setSetting(`sales_table_products_${newId}`, []);
 
         activeSalesTableId = newId;
         closeModal();
