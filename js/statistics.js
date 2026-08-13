@@ -524,6 +524,11 @@ async function openStatModal(editingStat = null) {
         });
     });
     
+    const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+    (tablesList || []).forEach(t => {
+        metrics.add(`Tabella Obiettivi: ${t.name}`);
+    });
+    
     // Gather unique skills from performance
     const skills = new Set();
     perfData.forEach(d => { if (d.skill) skills.add(d.skill); });
@@ -662,6 +667,21 @@ async function openStatModal(editingStat = null) {
                     searchInput.value = m;
                     dropdown.classList.remove('open');
                     renderDropdown(m);
+
+                    if (m.startsWith('Tabella Obiettivi: ')) {
+                        const tableName = m.replace('Tabella Obiettivi: ', '');
+                        const foundTable = (tablesList || []).find(tbl => tbl.name === tableName);
+                        const typeSel = document.getElementById('stat-type');
+                        const goalsTableSel = document.getElementById('stat-goals-table-id');
+                        if (typeSel) {
+                            typeSel.value = 'goals_table';
+                            typeSel.dispatchEvent(new Event('change'));
+                        }
+                        if (goalsTableSel && foundTable) {
+                            goalsTableSel.value = foundTable.id;
+                        }
+                    }
+
                     schedulePreview();
                 });
                 dropdown.appendChild(item);
@@ -937,19 +957,7 @@ function createStatModalHTML() {
         </div>
         <div class="stat-modal-layout">
             <div class="stat-modal-form">
-                <div id="stat-metrics-container">
-                    <!-- I campi per le metriche verranno inseriti dinamicamente -->
-                </div>
-                
-                <button type="button" id="add-metric-btn" class="btn secondary" style="width:100%; margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:6px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Aggiungi dati
-                </button>
-
-                <label>Filtro Skill Performance (opzionale):</label>
-                <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
-
-                <label>Tipo Visualizzazione:</label>
+                <label style="font-weight:700;">Tipo Visualizzazione:</label>
                 <select id="stat-type" style="width:100%; padding:8px; margin-bottom:16px;">
                     <option value="bar">Grafico a Barre</option>
                     <option value="line">Grafico a Linee</option>
@@ -959,8 +967,22 @@ function createStatModalHTML() {
                 </select>
 
                 <div id="goals-table-selector-group" style="display:none; margin-bottom:16px;">
-                    <label>Seleziona Tabella Obiettivi:</label>
+                    <label style="font-weight:700;">Seleziona Tabella Obiettivi:</label>
                     <select id="stat-goals-table-id" style="width:100%; padding:8px;"><option value="">Caricamento...</option></select>
+                </div>
+
+                <div id="stat-metrics-container">
+                    <!-- I campi per le metriche verranno inseriti dinamicamente -->
+                </div>
+                
+                <button type="button" id="add-metric-btn" class="btn secondary" style="width:100%; margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Aggiungi dati
+                </button>
+
+                <div id="stat-skill-group">
+                    <label>Filtro Skill Performance (opzionale):</label>
+                    <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
                 </div>
 
                 <div id="y-scale-custom-group" style="display:flex; gap:12px; margin-bottom:16px;">
@@ -977,7 +999,11 @@ function createStatModalHTML() {
             <div class="stat-modal-preview" style="display:flex; flex-direction:column; height:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border);">
                     <div class="stat-modal-preview-title" style="margin-bottom:0;">Anteprima in tempo reale</div>
-                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modalEl = document.getElementById('stat-config-modal');
+    return modalEl;
+}
                         <div id="preview-individual-select-container" style="display:none; align-items:center;">
                             <select id="preview-individual-select" style="padding:4px 8px; height:28px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.78rem; max-width:180px;">
                                 <option value="">Seleziona Collaboratore...</option>
