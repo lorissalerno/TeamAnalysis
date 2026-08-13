@@ -517,7 +517,7 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
 
     let totalWorkPctSum = 0;
 
-    employees.forEach(emp => {
+    employees.forEach((emp, empIdx) => {
         const empWorkPct = collabWorkPcts[emp] ?? 100;
         totalWorkPctSum += empWorkPct;
         const displayName = window.getDisplayName(emp);
@@ -536,11 +536,17 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
 
         products.forEach(p => {
             if (p.mode === 'team') {
-                rowHtml += `
-                    <td style="padding:6px; text-align:center; border-right:1px solid var(--border); color:var(--text-muted); opacity:0.35;">
-                        —
-                    </td>
-                `;
+                if (empIdx === 0) {
+                    const teamVal = savedTargets['TEAM_' + p.key] ?? 0;
+                    rowHtml += `
+                        <td rowspan="${employees.length}" style="padding:16px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.03);">
+                            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;">
+                                <span style="font-size:0.7rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em;">Obiettivo Team</span>
+                                <input type="number" step="any" class="sales-team-target-input" data-key="${p.key}" value="${teamVal || ''}" placeholder="0" style="width:100px; text-align:center; padding:8px 10px; border-radius:8px; border:2px solid var(--primary, #6366f1); background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:1.05rem;">
+                            </div>
+                        </td>
+                    `;
+                }
             } else {
                 const targetVal = savedTargets[emp + '_' + p.key] ?? 0;
                 productTargetTotals[p.key] += targetVal;
@@ -567,19 +573,20 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     `;
 
     products.forEach(p => {
+        const formatVal = (v) => {
+            if (p.isCHF) return Math.round(v).toLocaleString('de-CH') + '.-';
+            return Number.isInteger(v) ? v.toString() : v.toFixed(1);
+        };
+
         if (p.mode === 'team') {
             const teamVal = savedTargets['TEAM_' + p.key] ?? 0;
             teamHtml += `
-                <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                    <input type="number" step="any" class="sales-team-target-input" data-key="${p.key}" value="${teamVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--primary, #6366f1); background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:0.95rem;">
+                <td style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.95rem; color:var(--primary);">
+                    ${formatVal(teamVal)}
                 </td>
             `;
         } else {
             const tgtTot = productTargetTotals[p.key];
-            const formatVal = (v) => {
-                if (p.isCHF) return Math.round(v).toLocaleString('de-CH') + '.-';
-                return Number.isInteger(v) ? v.toString() : v.toFixed(1);
-            };
 
             teamHtml += `
                 <td style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.95rem; color:var(--text-main);">
