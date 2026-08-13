@@ -811,8 +811,10 @@ async function openStatModal(editingStat = null) {
         });
 
         container.innerHTML = '';
-        const cardNode = buildStatCard(tempStatConfig, pData, sData, gData, isIndividualView, selectedEmployee, teamAvgOnly, showTeamAvg, showTeamGoal, true);
-        container.appendChild(cardNode);
+        const cardNode = await buildStatCard(tempStatConfig, pData, sData, gData, isIndividualView, selectedEmployee, teamAvgOnly, showTeamAvg, showTeamGoal, true);
+        if (cardNode) {
+            container.appendChild(cardNode);
+        }
 
         const canvas = cardNode.querySelector('canvas');
         if (canvas) {
