@@ -534,6 +534,23 @@ async function openStatModal(editingStat = null) {
         if (saveBtn) saveBtn.textContent = 'Salva Statistica';
     }
 
+    const showAvgToggle = modal.querySelector('#preview-show-team-avg');
+    const showGoalToggle = modal.querySelector('#preview-show-team-goal');
+    const viewAllBtn = modal.querySelector('#preview-view-all-btn');
+    const viewAvgBtn = modal.querySelector('#preview-view-avg-btn');
+
+    if (showAvgToggle) showAvgToggle.checked = showTeamAvgInTeam;
+    if (showGoalToggle) showGoalToggle.checked = showTeamGoalInTeam;
+    if (viewAllBtn && viewAvgBtn) {
+        if (teamViewMode === 'avg') {
+            viewAvgBtn.classList.add('active');
+            viewAllBtn.classList.remove('active');
+        } else {
+            viewAllBtn.classList.add('active');
+            viewAvgBtn.classList.remove('active');
+        }
+    }
+
     const allMetrics = Array.from(metrics).sort();
     const metricsContainer = document.getElementById('stat-metrics-container');
     const addMetricBtn = document.getElementById('add-metric-btn');
@@ -700,183 +717,36 @@ async function openStatModal(editingStat = null) {
         const customYMax = parseFloat(document.getElementById('stat-y-max')?.value);
         const customY2Max = parseFloat(document.getElementById('stat-y2-max')?.value);
 
-        if (type === 'table') {
-            const activeYr = window.appState.activeYear || new Date().getFullYear().toString();
-            const datesSet = new Set();
-            for (let m = 1; m <= 12; m++) datesSet.add(`${activeYr}-${String(m).padStart(2, '0')}-01`);
-
-            const metricRows = selectedMetricsList.map(m => {
-                const isP = m.startsWith('Performance: ');
-                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
-                const sData = isP ? perfData : salesData;
-                const agg = {};
-                sData.forEach(row => {
-                    if (isP && skill && skill !== 'ALL' && row.skill !== skill) return;
-                    const val = parseMetricValue(row.data[rKey]);
-                    datesSet.add(row.date);
-                    agg[row.date] = (agg[row.date] || 0) + val;
-                });
-                return { name: rKey, data: agg };
-            });
-
-            const labels = Array.from(datesSet).sort();
-            const displayLabels = labels.map(formatDateLabel);
-
-            let tableHtml = '<div style="width:100%; height:100%; overflow:auto; padding:12px;"><table class="data-table"><thead><tr><th>Dato / Metrica</th>';
-            displayLabels.forEach(l => {
-                tableHtml += `<th style="text-align:center;">${l}</th>`;
-            });
-            tableHtml += '</tr></thead><tbody>';
-
-            metricRows.forEach(mr => {
-                tableHtml += `<tr><td style="font-weight:600;">${mr.name}</td>`;
-                labels.forEach(d => {
-                    const v = mr.data[d] !== undefined ? mr.data[d] : 0;
-                    tableHtml += `<td style="text-align:center;">${v}</td>`;
-                });
-                tableHtml += '</tr>';
-            });
-            tableHtml += '</tbody></table></div>';
-            container.innerHTML = tableHtml;
-            return;
-        }
-
-        container.innerHTML = '<canvas id="stat-preview-canvas" style="max-width:100%; max-height:100%;"></canvas>';
-        const canvas = document.getElementById('stat-preview-canvas');
-        if (!canvas) return;
+        const showTeamAvg = document.getElementById('preview-show-team-avg')?.checked || false;
+        const showTeamGoal = document.getElementById('preview-show-team-goal')?.checked || false;
+        const teamAvgOnly = document.getElementById('preview-view-avg-btn')?.classList.contains('active') || false;
 
         const yr = window.appState.activeYear || new Date().getFullYear().toString();
+        const pData = await appDb.getAll('performance', 'year', yr);
+        const sData = await appDb.getAll('sales', 'year', yr);
+        const gData = await appDb.getAll('goals', 'year', yr);
 
-        if (type === 'pie') {
-            // Se multi-metrica, la torta mostra la somma complessiva delle metriche
-            const metricTotals = {};
-            selectedMetricsList.forEach(m => {
-                const isP = m.startsWith('Performance: ');
-                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
-                const sData = isP ? perfData : salesData;
-                let tot = 0;
-                sData.forEach(row => {
-                    if (isP && skill && skill !== 'ALL' && row.skill !== skill) return;
-                    tot += parseMetricValue(row.data[rKey]);
-                });
-                metricTotals[rKey] = tot;
-            });
-            const pieEntries = Object.entries(metricTotals);
-            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
-            const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#1e2130';
-            previewChart = new Chart(canvas, {
-                type: 'doughnut',
-                data: {
-                    labels: pieEntries.map(([k]) => k),
-                    datasets: [{
-                        data: pieEntries.map(([,v]) => v),
-                        backgroundColor: pieEntries.map((_,i) => selectedColorsList[i % selectedColorsList.length]),
-                        borderWidth: 2,
-                        borderColor: surfaceColor
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: { legend: { position: 'right', labels: { color: textColor, font: { size: 11 }, padding: 10, boxWidth: 12 } } }
-                }
-            });
-            return;
-        }
-
-        // Multi-line / Multi-bar preview
-        const datesSet = new Set();
-        const datesWithData = new Set();
-        for (let m = 1; m <= 12; m++) datesSet.add(`${yr}-${String(m).padStart(2,'0')}-01`);
-
-        const datasets = selectedMetricsList.map((m, idx) => {
-            const isP = m.startsWith('Performance: ');
-            const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
-            const sData = isP ? perfData : salesData;
-            const dateAgg = {};
-            sData.forEach(row => {
-                if (isP && skill && skill !== 'ALL' && row.skill !== skill) return;
-                const val = parseMetricValue(row.data[rKey]);
-                datesSet.add(row.date);
-                datesWithData.add(row.date);
-                dateAgg[row.date] = (dateAgg[row.date] || 0) + val;
-            });
-
-            const color = selectedColorsList[idx % selectedColorsList.length];
-            const labelsArr = Array.from(datesSet).sort();
-            const pts = labelsArr.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
-
-            const yAxisID = (isMulti && idx > 0) ? 'y2' : 'y';
-
-            return {
-                label: rKey,
-                data: pts,
-                yAxisID: yAxisID,
-                backgroundColor: type === 'bar' ? hexToRgba(color, 0.85) : hexToRgba(color, 0.15),
-                borderColor: color,
-                borderWidth: type === 'bar' ? 1 : 1.8,
-                borderRadius: type === 'bar' ? 4 : 0,
-                pointRadius: 0,
-                tension: 0.35,
-                fill: type !== 'bar'
-            };
-        });
-
-        const labels = Array.from(datesSet).sort();
-        const displayLabels = labels.map(formatDateLabel);
-
-        // Calcolo scale: se valore manuale usa esattamente quello inserito, altrimenti il margine automatico viene usato dal calcolo di default
-        const yScaleConfig = {};
-        if (!isNaN(customYMax) && customYMax > 0) {
-            yScaleConfig.max = customYMax;
-        }
-
-        const y2ScaleConfig = {};
-        if (!isNaN(customY2Max) && customY2Max > 0) {
-            y2ScaleConfig.max = customY2Max;
-        }
-
-        const scalesConfig = {
-            x: { grid: { color: 'rgba(128,128,128,0.12)' } },
-            y: { beginAtZero: true, ...yScaleConfig, grid: { color: 'rgba(128,128,128,0.15)' } }
+        const tempStatConfig = {
+            id: currentEditingStatId || 'preview_temp',
+            metric: selectedMetricsList[0],
+            metrics: selectedMetricsList,
+            colors: selectedColorsList,
+            skill: skill,
+            type: type,
+            title: selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', ''),
+            yMax: customYMax,
+            y2Max: customY2Max
         };
 
-        if (isMulti) {
-            scalesConfig.y2 = {
-                position: 'right',
-                beginAtZero: true,
-                ...y2ScaleConfig,
-                grid: { drawOnChartArea: false }
-            };
-        }
-
-        if (previewChart) { previewChart.destroy(); previewChart = null; }
-        previewChart = new Chart(canvas, {
-            type: type === 'bar' ? 'bar' : 'line',
-            data: {
-                labels: displayLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: isMulti,
-                        position: 'top',
-                        align: 'start',
-                        labels: {
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
-                            font: { size: 11 },
-                            padding: 10,
-                            boxWidth: 12
-                        }
-                    }
-                },
-                scales: scalesConfig
-            }
+        const existingCanvases = container.querySelectorAll('canvas');
+        existingCanvases.forEach(c => {
+            const chart = Chart.getChart(c);
+            if (chart) chart.destroy();
         });
+
+        container.innerHTML = '';
+        const cardNode = buildStatCard(tempStatConfig, pData, sData, gData, false, '', teamAvgOnly, showTeamAvg, showTeamGoal, true);
+        container.appendChild(cardNode);
     }
 
     function schedulePreview() {
@@ -968,9 +838,27 @@ function createStatModalHTML() {
                     </div>
                 </div>
             </div>
-            <div class="stat-modal-preview">
-                <div class="stat-modal-preview-title">Anteprima in tempo reale</div>
-                <div class="stat-modal-preview-inner" id="stat-preview-container">
+            <div class="stat-modal-preview" style="display:flex; flex-direction:column; height:100%;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border);">
+                    <div class="stat-modal-preview-title" style="margin-bottom:0;">Anteprima in tempo reale</div>
+                    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.8rem;">
+                            <input type="checkbox" id="preview-show-team-avg">
+                            <span class="slider"></span>
+                            <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra Media Team</span>
+                        </label>
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.8rem;">
+                            <input type="checkbox" id="preview-show-team-goal">
+                            <span class="slider"></span>
+                            <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra Obiettivo Team</span>
+                        </label>
+                        <div class="tabs" style="display:inline-flex;">
+                            <button type="button" class="tab-btn active" id="preview-view-all-btn" style="padding:4px 10px; font-size:0.75rem;">Tutti</button>
+                            <button type="button" class="tab-btn" id="preview-view-avg-btn" style="padding:4px 10px; font-size:0.75rem;">Solo Media</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-modal-preview-inner" id="stat-preview-container" style="flex:1; min-height:340px;">
                     <span style="color:var(--text-muted); font-size:0.85rem;">Seleziona una metrica per vedere l'anteprima</span>
                 </div>
             </div>
@@ -981,7 +869,29 @@ function createStatModalHTML() {
     </div>
     `;
     document.body.insertAdjacentHTML('beforeend', html);
-    return document.getElementById('stat-config-modal');
+    const modalEl = document.getElementById('stat-config-modal');
+
+    const showAvgToggle = modalEl.querySelector('#preview-show-team-avg');
+    const showGoalToggle = modalEl.querySelector('#preview-show-team-goal');
+    const viewAllBtn = modalEl.querySelector('#preview-view-all-btn');
+    const viewAvgBtn = modalEl.querySelector('#preview-view-avg-btn');
+
+    if (showAvgToggle) showAvgToggle.addEventListener('change', () => updateStatPreview());
+    if (showGoalToggle) showGoalToggle.addEventListener('change', () => updateStatPreview());
+    if (viewAllBtn && viewAvgBtn) {
+        viewAllBtn.addEventListener('click', () => {
+            viewAllBtn.classList.add('active');
+            viewAvgBtn.classList.remove('active');
+            updateStatPreview();
+        });
+        viewAvgBtn.addEventListener('click', () => {
+            viewAvgBtn.classList.add('active');
+            viewAllBtn.classList.remove('active');
+            updateStatPreview();
+        });
+    }
+
+    return modalEl;
 }
 
 async function saveNewStat() {
@@ -1158,7 +1068,7 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false) {
+function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false, isPreview = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
     card.style.position = 'relative';
@@ -1213,42 +1123,58 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     // Search text for filtering
     card.setAttribute('data-search-text', `${title.textContent} ${infoText}`);
 
-    // Action buttons
-    const actionsDiv = document.createElement('div');
-    actionsDiv.style.cssText = 'position:absolute; top:16px; right:16px; display:flex; gap:6px;';
-    
-    // Pulsante modifica (matita)
-    const editBtn = document.createElement('button');
-    editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-    editBtn.className = 'btn secondary';
-    editBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
-    editBtn.title = 'Modifica statistica';
-    editBtn.onclick = async () => {
-        await openStatModal(statConfig);
-    };
-    actionsDiv.appendChild(editBtn);
+    if (!isPreview) {
+        // Action buttons
+        const actionsDiv = document.createElement('div');
+        actionsDiv.style.cssText = 'position:absolute; top:16px; right:16px; display:flex; gap:6px;';
+        
+        // Pulsante modifica (matita)
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+        editBtn.className = 'btn secondary';
+        editBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+        editBtn.title = 'Modifica statistica';
+        editBtn.onclick = async () => {
+            await openStatModal(statConfig);
+        };
+        actionsDiv.appendChild(editBtn);
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-    deleteBtn.className = 'btn secondary';
-    deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
-    deleteBtn.title = 'Elimina statistica';
-    deleteBtn.onclick = async () => {
-        if (!confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
-        await appDb.deleteRecord('custom_stats', statConfig.id);
-        renderTeamStats();
-    };
-    actionsDiv.appendChild(deleteBtn);
-    card.appendChild(actionsDiv);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+        deleteBtn.className = 'btn secondary';
+        deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+        deleteBtn.title = 'Elimina statistica';
+        deleteBtn.onclick = async () => {
+            if (!confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
+            await appDb.deleteRecord('custom_stats', statConfig.id);
+            renderTeamStats();
+        };
+        actionsDiv.appendChild(deleteBtn);
+        card.appendChild(actionsDiv);
+    } else {
+        card.style.background = 'transparent';
+        card.style.border = 'none';
+        card.style.padding = '0';
+        card.style.boxShadow = 'none';
+        card.style.margin = '0';
+        card.style.width = '100%';
+        card.style.height = '100%';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        title.style.display = 'none';
+        if (info) info.style.display = 'none';
+    }
     
     const canvasContainer = document.createElement('div');
     canvasContainer.style.width = '100%';
-    canvasContainer.style.marginTop = '12px';
+    canvasContainer.style.marginTop = isPreview ? '0' : '12px';
     if (statConfig.type === 'table') {
         canvasContainer.style.height = 'auto';
         canvasContainer.style.overflowX = 'auto';
     } else {
-        canvasContainer.style.height = '360px';
+        canvasContainer.style.height = isPreview ? '100%' : '360px';
+        canvasContainer.style.minHeight = isPreview ? '300px' : '0';
+        if (isPreview) canvasContainer.style.flex = '1';
     }
     card.appendChild(canvasContainer);
     
