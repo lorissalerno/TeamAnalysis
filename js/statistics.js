@@ -1866,7 +1866,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     legend: {
                         display: isMultiMetrics,
                         position: 'bottom',
-                        align: 'center',
+                        align: 'start',
                         labels: {
                             color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
                             font: { size: 11 },
