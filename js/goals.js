@@ -307,9 +307,9 @@ async function renderSalesGoalsTable() {
                                 </th>
                             `).join('')}
                             <th style="padding:10px 14px; text-align:center; width:150px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
-                                <button class="btn primary btn-sm" id="add-table-col-header-btn" style="padding:8px 14px; font-weight:700; font-size:0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; border-radius:8px; cursor:pointer;" title="Aggiungi nuova colonna / prodotto">
+                                <button class="btn primary btn-sm" id="add-table-col-header-btn" style="padding:8px 14px; font-weight:700; font-size:0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; border-radius:8px; cursor:pointer;" title="Aggiungi nuova colonna / obiettivo">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                    + Colonna
+                                    Obiettivo
                                 </button>
                             </th>
                         </tr>
