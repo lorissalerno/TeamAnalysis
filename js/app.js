@@ -314,7 +314,11 @@ async function updateCollabCountBadge() {
 window.getDisplayName = function(realName) {
     if (!window.appState.isAnonymous) return realName;
     const id = window.appState.anonymousMap[realName];
-    return id ? `${id}` : realName;
+    if (id !== undefined && id !== null && id !== '') {
+        const idStr = String(id);
+        return idStr.startsWith('Collab.') ? idStr : `Collab. ${idStr}`;
+    }
+    return realName;
 };
 
 // --- IMPORT CSV ---
