@@ -1192,7 +1192,7 @@ async function renderTeamStats() {
     const cards = [];
     for (const stat of stats) {
         const card = await buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly, showTeamAvgInTeam, showTeamGoalInTeam);
-        cards.push(card);
+        if (card) cards.push(card);
     }
 
     container.innerHTML = '';
@@ -1313,7 +1313,7 @@ async function renderIndividualStats() {
     } else {
         for (const stat of stats) {
             const card = await buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
-            statsGrid.appendChild(card);
+            if (card) statsGrid.appendChild(card);
         }
     }
     container.appendChild(statsGrid);
@@ -1640,6 +1640,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
     
     // Gestione tipo speciale: Tabella Obiettivi Vendita
     if (statConfig.type === 'goals_table') {
+        if ((isIndividual || Boolean(employeeName)) && !isPreview) {
+            return null;
+        }
         const title = document.createElement('h3');
         title.textContent = statConfig.title || 'Tabella Obiettivi Vendita';
         title.style.marginBottom = '12px';
