@@ -316,10 +316,29 @@ async function renderSalesGoalsTable() {
                                                 ${p.isCHF ? 'CHF' : 'Qtà'}
                                             </span>
                                         </div>
-                                        <select class="col-metric-select" data-idx="${idx}" style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); font-size:0.68rem; border-radius:4px; padding:2px 4px; width:100%; margin-top:3px; font-weight:600; cursor:pointer;" title="Collega a Prodotto DB Sales">
-                                            <option value="">-- Prodotto DB --</option>
-                                            ${availableSalesMetrics.map(m => `<option value="${m}" ${(p.mappedMetric === m || p.key === m) ? 'selected' : ''}>${m}</option>`).join('')}
-                                        </select>
+                                        <div class="col-metrics-picker" data-idx="${idx}" style="position:relative; width:100%; margin-top:3px;">
+                                            <button type="button" class="col-metrics-btn" data-idx="${idx}" style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); font-size:0.68rem; border-radius:4px; padding:3px 6px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
+                                                <span class="col-metrics-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:center;">
+                                                    ${(() => {
+                                                        const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key ? [p.key] : []));
+                                                        return sel.length === 0 ? '-- Prodotti DB --' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
+                                                    })()}
+                                                </span>
+                                                <span style="font-size:0.55rem; opacity:0.7; margin-left:2px;">▼</span>
+                                            </button>
+                                            <div class="col-metrics-dropdown" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; box-shadow:0 8px 16px rgba(0,0,0,0.4); padding:6px; max-height:180px; overflow-y:auto; text-align:left;">
+                                                ${availableSalesMetrics.map(m => {
+                                                    const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key === m ? [m] : []));
+                                                    const isChecked = sel.includes(m);
+                                                    return `
+                                                        <label style="display:flex; align-items:center; gap:6px; font-size:0.72rem; padding:4px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
+                                                            <input type="checkbox" class="metric-cb" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
+                                                            <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
+                                                        </label>
+                                                    `;
+                                                }).join('')}
+                                            </div>
+                                        </div>
                                     </div>
                                 </th>
                             `).join('')}
@@ -437,17 +456,42 @@ async function renderSalesGoalsTable() {
         };
     });
 
-    container.querySelectorAll('.col-metric-select').forEach(sel => {
-        sel.onchange = async (e) => {
-            const idx = parseInt(e.target.dataset.idx, 10);
-            if (products[idx]) {
-                const val = e.target.value;
-                products[idx].mappedMetric = val;
-                if ((products[idx].label === 'Nuovo Obiettivo' || !products[idx].label) && val) {
-                    products[idx].label = val;
+    // Header Multi-Metric Select Listeners
+    container.querySelectorAll('.col-metrics-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const idx = btn.dataset.idx;
+            container.querySelectorAll('.col-metrics-dropdown').forEach(dd => {
+                if (dd.dataset.idx === idx) {
+                    dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+                } else {
+                    dd.style.display = 'none';
                 }
+            });
+        };
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.col-metrics-picker')) {
+            container.querySelectorAll('.col-metrics-dropdown').forEach(dd => {
+                dd.style.display = 'none';
+            });
+        }
+    });
+
+    container.querySelectorAll('.metric-cb').forEach(cb => {
+        cb.onchange = async () => {
+            const idx = parseInt(cb.dataset.idx, 10);
+            if (products[idx]) {
+                const checked = Array.from(container.querySelectorAll(`.metric-cb[data-idx="${idx}"]:checked`)).map(c => c.dataset.metric);
+                products[idx].mappedMetrics = checked;
+                products[idx].mappedMetric = checked.join(', ');
                 await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                renderSalesGoalsTable();
+
+                const labelEl = container.querySelector(`.col-metrics-btn[data-idx="${idx}"] .col-metrics-label`);
+                if (labelEl) {
+                    labelEl.textContent = checked.length === 0 ? '-- Prodotti DB --' : (checked.length === 1 ? checked[0] : `${checked.length} Prodotti DB`);
+                }
             }
         };
     });
@@ -905,16 +949,21 @@ async function openManageProductsModal(currentProducts) {
         const listDiv = modal.querySelector('#manage-prods-list');
         listDiv.innerHTML = '';
         activeProds.forEach((p, idx) => {
-            const mappedMetric = p.mappedMetric || p.key;
+            const selMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : []);
             const mode = p.mode || 'individual';
             const div = document.createElement('div');
             div.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; flex-wrap:wrap;';
             div.innerHTML = `
-                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:220px;">
+                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:240px;">
                     <input type="text" class="prod-label-input" data-idx="${idx}" value="${p.label}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; font-size:0.88rem; width:130px;">
-                    <select class="prod-metric-select" data-idx="${idx}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.8rem; flex:1;">
-                        ${availableMetrics.map(m => `<option value="${m}" ${m === mappedMetric ? 'selected' : ''}>${m}</option>`).join('')}
-                    </select>
+                    <div style="flex:1; max-height:80px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:4px; background:var(--bg-surface);">
+                        ${availableMetrics.map(m => `
+                            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text-main); cursor:pointer;">
+                                <input type="checkbox" class="modal-metric-cb" data-idx="${idx}" data-metric="${m}" ${selMetrics.includes(m) ? 'checked' : ''}>
+                                <span>${m}</span>
+                            </label>
+                        `).join('')}
+                    </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <select class="prod-mode-select" data-idx="${idx}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.8rem;">
@@ -953,6 +1002,7 @@ async function openManageProductsModal(currentProducts) {
         activeProds.push({
             key: name,
             label: name,
+            mappedMetrics: mappedMetric ? [mappedMetric] : [],
             mappedMetric: mappedMetric || name,
             isCHF: isCHF,
             mode: mode
@@ -974,9 +1024,10 @@ async function openManageProductsModal(currentProducts) {
             const idx = parseInt(inp.dataset.idx, 10);
             if (activeProds[idx]) activeProds[idx].label = inp.value.trim() || activeProds[idx].key;
         });
-        modal.querySelectorAll('.prod-metric-select').forEach(sel => {
-            const idx = parseInt(sel.dataset.idx, 10);
-            if (activeProds[idx]) activeProds[idx].mappedMetric = sel.value;
+        activeProds.forEach((p, idx) => {
+            const checked = Array.from(modal.querySelectorAll(`.modal-metric-cb[data-idx="${idx}"]:checked`)).map(c => c.dataset.metric);
+            p.mappedMetrics = checked;
+            p.mappedMetric = checked.join(', ');
         });
         modal.querySelectorAll('.prod-mode-select').forEach(sel => {
             const idx = parseInt(sel.dataset.idx, 10);
