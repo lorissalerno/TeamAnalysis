@@ -791,6 +791,27 @@ async function openStatModal(editingStat = null) {
     if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
     if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
 
+    // Listener toggle anteprima (media team, obiettivo, tutti/solo media)
+    const showAvgToggle = modal.querySelector('#preview-show-team-avg');
+    const showGoalToggle = modal.querySelector('#preview-show-team-goal');
+    const viewAllBtn = modal.querySelector('#preview-view-all-btn');
+    const viewAvgBtn = modal.querySelector('#preview-view-avg-btn');
+
+    if (showAvgToggle) showAvgToggle.addEventListener('change', () => schedulePreview());
+    if (showGoalToggle) showGoalToggle.addEventListener('change', () => schedulePreview());
+    if (viewAllBtn && viewAvgBtn) {
+        viewAllBtn.addEventListener('click', () => {
+            viewAllBtn.classList.add('active');
+            viewAvgBtn.classList.remove('active');
+            schedulePreview();
+        });
+        viewAvgBtn.addEventListener('click', () => {
+            viewAvgBtn.classList.add('active');
+            viewAllBtn.classList.remove('active');
+            schedulePreview();
+        });
+    }
+
     // Chiudi: distruggi chart preview
     const closeBtn = modal.querySelector('.close-modal');
     const overlay = document.getElementById('modal-overlay');
@@ -881,25 +902,7 @@ function createStatModalHTML() {
     document.body.insertAdjacentHTML('beforeend', html);
     const modalEl = document.getElementById('stat-config-modal');
 
-    const showAvgToggle = modalEl.querySelector('#preview-show-team-avg');
-    const showGoalToggle = modalEl.querySelector('#preview-show-team-goal');
-    const viewAllBtn = modalEl.querySelector('#preview-view-all-btn');
-    const viewAvgBtn = modalEl.querySelector('#preview-view-avg-btn');
 
-    if (showAvgToggle) showAvgToggle.addEventListener('change', () => schedulePreview());
-    if (showGoalToggle) showGoalToggle.addEventListener('change', () => schedulePreview());
-    if (viewAllBtn && viewAvgBtn) {
-        viewAllBtn.addEventListener('click', () => {
-            viewAllBtn.classList.add('active');
-            viewAvgBtn.classList.remove('active');
-            schedulePreview();
-        });
-        viewAvgBtn.addEventListener('click', () => {
-            viewAvgBtn.classList.add('active');
-            viewAllBtn.classList.remove('active');
-            schedulePreview();
-        });
-    }
 
     return modalEl;
 }
