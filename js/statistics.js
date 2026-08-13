@@ -2659,7 +2659,7 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
     const thead = document.createElement('thead');
     let headHtml = `<tr style="background:var(--bg-base); border-bottom:1px solid var(--border);">
         <th rowspan="2" style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
-        <th rowspan="2" style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:90px; min-width:80px; font-weight:700;">% Lavoro</th>`;
+        <th rowspan="2" style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>`;
 
     products.forEach(p => {
         headHtml += `<th colspan="2" style="padding:8px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05);">

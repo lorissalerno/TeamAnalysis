@@ -309,7 +309,7 @@ async function renderSalesGoalsTable() {
                         <thead>
                             <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
                                 <th style="padding:12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
-                                <th style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:90px; min-width:80px; font-weight:700;">% Lavoro</th>
+                                <th style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>
                                 ${products.map((p, idx) => `
                                     <th style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px; position:relative;">
                                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
@@ -875,12 +875,12 @@ async function openCalcByWorkPctModal(products, employees, year, skillFilter) {
 
     modal.innerHTML = `
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
-            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Calcola Obiettivi da % Lavoro</h2>
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Calcola Obiettivi da Occupazione</h2>
             <button class="close-modal" id="close-calc-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <div class="modal-body" style="padding:20px; max-height:65vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
             <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">
-                Inserisci il target base per un collaboratore a tempo pieno (100%). Gli obiettivi di ciascun collaboratore verranno calcolati proporzionalmente alla loro % di lavoro.
+                Inserisci il target base per un collaboratore a tempo pieno (100%). Gli obiettivi di ciascun collaboratore verranno calcolati proporzionalmente alla loro occupazione.
             </p>
             <div id="calc-products-form" style="display:flex; flex-direction:column; gap:10px;"></div>
         </div>
