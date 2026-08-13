@@ -116,6 +116,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         await appDb.setSetting('theme', next);
+        if (window.renderStatistics) {
+            window.renderStatistics();
+        }
     });
 
     // Sidebar Toggle
