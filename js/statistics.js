@@ -752,20 +752,6 @@ async function openStatModal() {
         previewDebounce = setTimeout(updateStatPreview, 150);
     }
 
-    metricSearchInput.onfocus = () => {
-        metricSearchInput.select();
-        renderStatDropdown(metricSearchInput.value === statSelectedMetric ? '' : metricSearchInput.value);
-        metricDropdown.classList.add('open');
-    };
-    metricSearchInput.oninput = (e) => {
-        renderStatDropdown(e.target.value);
-        metricDropdown.classList.add('open');
-    };
-    metricSearchInput.onblur = () => {
-        metricDropdown.classList.remove('open');
-        if (statSelectedMetric) metricSearchInput.value = statSelectedMetric;
-    };
-
 
 
     const skillSelect = document.getElementById('stat-skill');
