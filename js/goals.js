@@ -329,6 +329,8 @@ async function openGoalModal(goalId = null) {
     }
 
     modal.classList.add('open');
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay) overlay.classList.add('open');
 }
 
 function createGoalModalHTML() {
@@ -336,7 +338,7 @@ function createGoalModalHTML() {
     <div id="goal-config-modal" class="modal">
         <div class="modal-header">
             <h2>Nuovo Obiettivo</h2>
-            <button class="close-modal" onclick="document.getElementById('goal-config-modal').classList.remove('open')">&times;</button>
+            <button class="close-modal" onclick="document.getElementById('goal-config-modal').classList.remove('open'); const ov = document.getElementById('modal-overlay'); if (ov) ov.classList.remove('open');">&times;</button>
         </div>
         <div class="modal-body">
             <label>Dato / Metrica:</label>
@@ -432,6 +434,8 @@ async function saveNewGoal() {
     
     await appDb.addMultiple('goals', [newGoal]);
     document.getElementById('goal-config-modal').classList.remove('open');
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay) overlay.classList.remove('open');
     editingGoalId = null;
     renderGoals();
     

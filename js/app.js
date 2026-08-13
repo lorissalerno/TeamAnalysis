@@ -65,7 +65,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         window.location.hash = sectionId;
-        await appDb.setSetting('last_active_section', sectionId);
+        // Chiudi eventuali modal o popup aperti prima di cambiare sezione
+        document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay) overlay.classList.remove('open');
 
         // Trigger specific section render if needed
         if (sectionId === 'statistics' && window.renderStatistics) renderStatistics();

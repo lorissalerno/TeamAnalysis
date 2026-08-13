@@ -770,15 +770,17 @@ async function openStatModal() {
 
     // Chiudi: distruggi chart preview
     const closeBtn = modal.querySelector('.close-modal');
+    const overlay = document.getElementById('modal-overlay');
     if (closeBtn) {
-        const origClose = closeBtn.onclick;
         closeBtn.onclick = () => {
             if (previewChart) { previewChart.destroy(); previewChart = null; }
             modal.classList.remove('open');
+            if (overlay) overlay.classList.remove('open');
         };
     }
 
     modal.classList.add('open');
+    if (overlay) overlay.classList.add('open');
     // Prima anteprima
     schedulePreview();
 }
@@ -868,6 +870,8 @@ async function saveNewStat() {
     
     await appDb.addMultiple('custom_stats', [newStat]);
     document.getElementById('stat-config-modal').classList.remove('open');
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay) overlay.classList.remove('open');
     renderTeamStats();
 }
 
