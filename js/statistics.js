@@ -492,7 +492,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 });
 
-async function openStatModal() {
+let currentEditingStatId = null;
+
+async function openStatModal(editingStat = null) {
+    currentEditingStatId = editingStat ? editingStat.id : null;
     // 1. Gather all unique metrics from current year DB
     const year = window.appState.activeYear;
     const perfData = await appDb.getAll('performance', 'year', year);
@@ -514,6 +517,16 @@ async function openStatModal() {
     let modal = document.getElementById('stat-config-modal');
     if (!modal) {
         modal = createStatModalHTML();
+    }
+
+    const modalTitle = modal.querySelector('.modal-header h2');
+    const saveBtn = modal.querySelector('.modal-footer .btn.primary');
+    if (editingStat) {
+        if (modalTitle) modalTitle.textContent = 'Modifica Statistica';
+        if (saveBtn) saveBtn.textContent = 'Salva Modifiche';
+    } else {
+        if (modalTitle) modalTitle.textContent = 'Nuova Statistica';
+        if (saveBtn) saveBtn.textContent = 'Salva Statistica';
     }
 
     const allMetrics = Array.from(metrics).sort();
@@ -553,7 +566,12 @@ async function openStatModal() {
         function renderDropdown(filterText = '') {
             dropdown.innerHTML = '';
             const query = filterText.toLowerCase().trim();
-            const filtered = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
+            const selectedInOtherRows = new Set(
+                Array.from(metricsContainer.querySelectorAll('.stat-metric-value'))
+                    .filter(inp => inp !== hiddenInput && inp.value)
+                    .map(inp => inp.value)
+            );
+            const filtered = allMetrics.filter(m => (!query || m.toLowerCase().includes(query)) && (!selectedInOtherRows.has(m) || m === selectedMetric));
             if (filtered.length === 0) {
                 const empty = document.createElement('div');
                 empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
@@ -613,7 +631,12 @@ async function openStatModal() {
         }
     }
 
-    createMetricRow();
+    if (editingStat) {
+        const editMetrics = editingStat.metrics && editingStat.metrics.length > 0 ? editingStat.metrics : [editingStat.metric];
+        editMetrics.forEach(m => createMetricRow(m));
+    } else {
+        createMetricRow();
+    }
 
     addMetricBtn.onclick = () => {
         createMetricRow();
@@ -845,6 +868,13 @@ async function openStatModal() {
     const yMaxInput = document.getElementById('stat-y-max');
     const y2MaxInput = document.getElementById('stat-y2-max');
 
+    if (editingStat) {
+        if (editingStat.skill) skillSelect.value = editingStat.skill;
+        if (editingStat.type) typeSelect.value = editingStat.type;
+        if (yMaxInput) yMaxInput.value = editingStat.yMax || '';
+        if (y2MaxInput) y2MaxInput.value = editingStat.y2Max || '';
+    }
+
     skillSelect.addEventListener('change', schedulePreview);
     typeSelect.addEventListener('change', schedulePreview);
     if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
@@ -945,28 +975,46 @@ async function saveNewStat() {
     
     const activeTemplateId = await getActiveTemplateId();
 
-    const allStats = await appDb.getAll('custom_stats');
-    const templateStats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
-    const maxOrder = templateStats.reduce((max, s) => Math.max(max, s.order !== undefined && s.order !== null ? s.order : -1), -1);
-
     const yMaxVal = parseFloat(document.getElementById('stat-y-max')?.value);
     const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
 
-    const newStat = {
-        id: 'stat_' + Date.now(),
-        title, 
-        metric: primaryMetric,
-        metrics: selectedMetrics,
-        skill, type, product,
-        yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
-        y2Max: !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null,
-        groupId: groupId || null,
-        templateId: activeTemplateId,
-        year: window.appState.activeYear,
-        order: maxOrder + 1
-    };
-    
-    await appDb.addMultiple('custom_stats', [newStat]);
+    if (currentEditingStatId) {
+        const allStats = await appDb.getAll('custom_stats');
+        const existing = allStats.find(s => s.id === currentEditingStatId);
+        if (existing) {
+            existing.title = title;
+            existing.metric = primaryMetric;
+            existing.metrics = selectedMetrics;
+            existing.skill = skill;
+            existing.type = type;
+            existing.product = product;
+            existing.yMax = !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null;
+            existing.y2Max = !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null;
+            existing.groupId = groupId || null;
+            await appDb.addMultiple('custom_stats', [existing]);
+        }
+        currentEditingStatId = null;
+    } else {
+        const allStats = await appDb.getAll('custom_stats');
+        const templateStats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
+        const maxOrder = templateStats.reduce((max, s) => Math.max(max, s.order !== undefined && s.order !== null ? s.order : -1), -1);
+
+        const newStat = {
+            id: 'stat_' + Date.now(),
+            title, 
+            metric: primaryMetric,
+            metrics: selectedMetrics,
+            skill, type, product,
+            yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
+            y2Max: !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null,
+            groupId: groupId || null,
+            templateId: activeTemplateId,
+            year: window.appState.activeYear,
+            order: maxOrder + 1
+        };
+        
+        await appDb.addMultiple('custom_stats', [newStat]);
+    }
     document.getElementById('stat-config-modal').classList.remove('open');
     const overlay = document.getElementById('modal-overlay');
     if (overlay) overlay.classList.remove('open');
@@ -1125,10 +1173,22 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     const actionsDiv = document.createElement('div');
     actionsDiv.style.cssText = 'position:absolute; top:16px; right:16px; display:flex; gap:6px;';
     
+    // Pulsante modifica (matita)
+    const editBtn = document.createElement('button');
+    editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+    editBtn.className = 'btn secondary';
+    editBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+    editBtn.title = 'Modifica statistica';
+    editBtn.onclick = async () => {
+        await openStatModal(statConfig);
+    };
+    actionsDiv.appendChild(editBtn);
+
     const deleteBtn = document.createElement('button');
     deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
     deleteBtn.className = 'btn secondary';
     deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+    deleteBtn.title = 'Elimina statistica';
     deleteBtn.onclick = async () => {
         if (!confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
         await appDb.deleteRecord('custom_stats', statConfig.id);
