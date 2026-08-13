@@ -1545,10 +1545,12 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 });
                 const color = BLUE_PALETTE[idx % BLUE_PALETTE.length];
                 const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
+                const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
                 datasets.push({
                     label: rKey,
                     data: pts,
                     type: isBar ? 'bar' : 'line',
+                    yAxisID: yAxisID,
                     backgroundColor: isBar ? hexToRgba(color, 0.8) : hexToRgba(color, 0.12),
                     borderColor: color,
                     borderWidth: isBar ? 1 : 1.8,
@@ -1756,7 +1758,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         if (isMultiMetrics) {
             let y2ScalesConfig = { beginAtZero: true };
             if (statConfig.y2Max && !isNaN(statConfig.y2Max)) {
-                y2ScalesConfig.max = statConfig.y2Max * 1.1;
+                y2ScalesConfig.max = statConfig.y2Max;
             }
             scalesConfig.y2 = {
                 position: 'right',
