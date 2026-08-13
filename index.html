@@ -249,14 +249,29 @@
                     </p>
                     <button class="btn secondary" id="manage-mapping-btn">Gestisci Collaboratori</button>
                 </div>
-                <div class="card">
-                    <h2>Gruppi Statistiche</h2>
-                    <p>Crea gruppi per associare statistiche correlate (es. Sr Push Interactions + Sr Push Avg. Focus Time), utili per analisi comparative avanzate.</p>
-                    <div id="stat-groups-list" style="margin:12px 0; display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
-                    <div style="display:flex; gap:8px; margin-top:4px;">
-                        <input type="text" id="new-group-name-input" placeholder="Nome gruppo (es. Sr Push)..." style="flex:1; padding:7px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.85rem;">
-                        <button class="btn primary" id="add-stat-group-btn" style="white-space:nowrap;">Aggiungi</button>
+                <div class="card" style="grid-column: span 2;">
+                    <h2>Associazione Statistiche Correlate</h2>
+                    <p>Associa due statistiche di performance dal database (es. <em>Sr Push Interactions (#)</em> e <em>Sr Push Avg. Focus Time (s)</em>) per calcoli e comparazioni avanzate.</p>
+                    
+                    <div style="display:flex; flex-direction:column; gap:12px; margin:16px 0; background:var(--bg-base); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:240px;">
+                                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Statistica 1 (es. Quantità #):</label>
+                                <select id="assoc-stat-1" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:0.85rem;"></select>
+                            </div>
+                            <div style="flex:1; min-width:240px;">
+                                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Statistica 2 (es. Tempo medio s):</label>
+                                <select id="assoc-stat-2" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:0.85rem;"></select>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" id="assoc-group-name" placeholder="Nome Associazione / Gruppo (es. Sr Push)..." style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:0.85rem;">
+                            <button class="btn primary" id="save-assoc-btn" style="white-space:nowrap;">Salva Associazione</button>
+                        </div>
                     </div>
+
+                    <h3 style="font-size:0.95rem; margin-top:16px; margin-bottom:8px;">Associazioni Salvate</h3>
+                    <div id="stat-associations-list" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
                 </div>
                 <div class="card">
                     <h2>Backup Dati</h2>

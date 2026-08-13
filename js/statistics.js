@@ -576,18 +576,6 @@ async function openStatModal() {
         opt.textContent = s;
         skillSelect.appendChild(opt);
     });
-
-    const linkedSelect = document.getElementById('stat-linked-metric');
-    if (linkedSelect) {
-        linkedSelect.innerHTML = '<option value="">Nessuna statistica associata</option>';
-        allMetrics.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m;
-            opt.textContent = m;
-            linkedSelect.appendChild(opt);
-        });
-        linkedSelect.value = '';
-    }
     
     modal.classList.add('open');
 }
@@ -620,16 +608,6 @@ function createStatModalHTML() {
             
             <label>Filtro Prodotto (solo per Sales, opzionale):</label>
             <input type="text" id="stat-product" placeholder="es. Multiroom Max" style="width:100%; padding:8px; margin-bottom:16px;">
-
-            <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                Statistica Associata / Correlata (opzionale):
-            </label>
-            <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:6px;">
-                Associa una seconda statistica (es. se questa è <i>Sr Push Interactions (#)</i>, associa <i>Sr Push Avg. Focus Time (s)</i> per calcoli e paragoni futuri).
-            </p>
-            <select id="stat-linked-metric" style="width:100%; padding:8px; margin-bottom:16px;">
-                <option value="">Nessuna statistica associata</option>
-            </select>
         </div>
         <div class="modal-footer">
             <button class="btn primary" onclick="saveNewStat()">Salva Statistica</button>
@@ -647,7 +625,7 @@ async function saveNewStat() {
     const skill = document.getElementById('stat-skill').value;
     const type = document.getElementById('stat-type').value;
     const product = document.getElementById('stat-product').value;
-    const linkedMetric = document.getElementById('stat-linked-metric')?.value || null;
+    const groupId = (document.getElementById('stat-group')?.value || '') || null;
     
     const activeTemplateId = await getActiveTemplateId();
 
@@ -658,7 +636,7 @@ async function saveNewStat() {
     const newStat = {
         id: 'stat_' + Date.now(),
         title, metric, skill, type, product,
-        linkedMetric: linkedMetric || null,
+        groupId: groupId || null,
         templateId: activeTemplateId,
         year: window.appState.activeYear,
         order: maxOrder + 1
@@ -799,15 +777,20 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         card.appendChild(info);
     }
 
-    // Badge statistica associata/correlata (se presente)
-    if (statConfig.linkedMetric) {
-        const linkedBadge = document.createElement('div');
-        linkedBadge.style.cssText = 'display:inline-flex; align-items:center; gap:4px; margin-top:4px; padding:2px 8px; border-radius:20px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); font-size:0.72rem; color:#818cf8; max-width:fit-content;';
-        const cleanLinked = statConfig.linkedMetric.replace('Performance: ', '').replace('Sales: ', '');
-        linkedBadge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Associata: ${cleanLinked}`;
-        card.appendChild(linkedBadge);
+    // Badge gruppo (se presente)
+    if (statConfig.groupId) {
+        const groupBadge = document.createElement('div');
+        groupBadge.style.cssText = 'display:inline-flex; align-items:center; gap:4px; margin-top:4px; padding:2px 8px; border-radius:20px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); font-size:0.72rem; color:#818cf8; max-width:fit-content;';
+        groupBadge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="12" y1="12" x2="15.5" y2="7.5"/><line x1="12" y1="12" x2="15.5" y2="16.5"/></svg> <span id="group-badge-${statConfig.id}">Gruppo</span>`;
+        card.appendChild(groupBadge);
+        // Recupera nome gruppo in modo asincrono
+        appDb.getSetting('stat_groups', []).then(groups => {
+            const g = (groups || []).find(g => g.id === statConfig.groupId);
+            const span = document.getElementById(`group-badge-${statConfig.id}`);
+            if (span && g) span.textContent = g.name;
+            else if (span) span.textContent = 'Gruppo';
+        });
     }
-
 
     // Search text for filtering
     card.setAttribute('data-search-text', `${title.textContent} ${infoText}`);

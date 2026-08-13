@@ -72,7 +72,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (sectionId === 'dashboard' && window.renderDashboard) window.renderDashboard();
         if (sectionId === 'database') renderImportedData();
         if (sectionId === 'goals' && window.renderGoals) renderGoals();
-        if (sectionId === 'settings') updateCollabCountBadge();
+        if (sectionId === 'settings') {
+            updateCollabCountBadge();
+            populatePerformanceStatsDropdowns();
+            renderStatAssociationsList();
+        }
     }
 
     document.querySelectorAll('.nav-links a').forEach(link => {
@@ -261,69 +265,122 @@ async function updateCollabCountBadge() {
     badge.textContent = mappings.length;
 }
 
-async function renderStatGroupsList() {
-    const container = document.getElementById('stat-groups-list');
-    if (!container) return;
-    const groups = (await appDb.getSetting('stat_groups', [])) || [];
-    const allStats = await appDb.getAll('custom_stats');
-    container.innerHTML = '';
-    if (groups.length === 0) {
-        container.innerHTML = '<p style="font-size:0.82rem; color:var(--text-muted);">Nessun gruppo definito.</p>';
+async function populatePerformanceStatsDropdowns() {
+    const s1 = document.getElementById('assoc-stat-1');
+    const s2 = document.getElementById('assoc-stat-2');
+    if (!s1 || !s2) return;
+
+    const perfRecords = await appDb.getAll('performance', 'year', window.appState.activeYear);
+    const metricsSet = new Set();
+    perfRecords.forEach(r => {
+        if (r.data && typeof r.data === 'object') {
+            Object.keys(r.data).forEach(k => {
+                metricsSet.add(k);
+            });
+        }
+    });
+
+    const sortedMetrics = Array.from(metricsSet).sort();
+
+    s1.innerHTML = '';
+    s2.innerHTML = '';
+
+    if (sortedMetrics.length === 0) {
+        const opt = '<option value="">Nessuna statistica di performance trovata</option>';
+        s1.innerHTML = opt;
+        s2.innerHTML = opt;
         return;
     }
-    groups.forEach(g => {
-        const count = allStats.filter(s => s.groupId === g.id).length;
+
+    sortedMetrics.forEach(m => {
+        const opt1 = document.createElement('option');
+        opt1.value = m;
+        opt1.textContent = m;
+        s1.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = m;
+        opt2.textContent = m;
+        s2.appendChild(opt2);
+    });
+
+    if (sortedMetrics.length > 1) {
+        s2.selectedIndex = 1;
+    }
+}
+
+async function renderStatAssociationsList() {
+    const container = document.getElementById('stat-associations-list');
+    if (!container) return;
+    const associations = (await appDb.getSetting('stat_associations', [])) || [];
+    container.innerHTML = '';
+
+    if (associations.length === 0) {
+        container.innerHTML = '<p style="font-size:0.82rem; color:var(--text-muted);">Nessuna associazione salvata.</p>';
+        return;
+    }
+
+    associations.forEach((assoc, idx) => {
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg-card,var(--bg-base)); border:1px solid var(--border); border-radius:8px;';
+        row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--bg-card,var(--bg-base)); border:1px solid var(--border); border-radius:8px; flex-wrap:wrap;';
         row.innerHTML = `
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2.5" style="flex-shrink:0;"><circle cx="9" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="12" y1="12" x2="15.5" y2="7.5"/><line x1="12" y1="12" x2="15.5" y2="16.5"/></svg>
-            <span style="flex:1; font-size:0.88rem; font-weight:500;" id="grp-name-${g.id}">${g.name}</span>
-            <span style="font-size:0.75rem; color:var(--text-muted);">${count} stat${count !== 1 ? 'istiche' : 'istica'}</span>
-            <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem;" onclick="renameStatGroup('${g.id}')">Rinomina</button>
-            <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem; color:var(--danger,#ef4444);" onclick="deleteStatGroup('${g.id}')">Elimina</button>
+            <div style="flex:1; min-width:200px;">
+                <strong style="font-size:0.88rem; color:var(--primary);">${assoc.name || 'Associazione'}</strong>
+                <div style="font-size:0.8rem; color:var(--text-main); margin-top:2px;">
+                    <span style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">${assoc.stat1}</span>
+                    <span style="color:var(--text-muted); margin:0 4px;">&harr;</span>
+                    <span style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">${assoc.stat2}</span>
+                </div>
+            </div>
+            <button class="btn secondary" style="padding:4px 10px; font-size:0.75rem; color:var(--danger,#ef4444);" onclick="deleteStatAssociation(${idx})">Elimina</button>
         `;
         container.appendChild(row);
     });
 }
 
-async function addStatGroup() {
-    const input = document.getElementById('new-group-name-input');
-    const name = (input?.value || '').trim();
-    if (!name) return;
-    const groups = (await appDb.getSetting('stat_groups', [])) || [];
-    const id = 'grp_' + name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
-    groups.push({ id, name });
-    await appDb.setSetting('stat_groups', groups);
-    input.value = '';
-    await renderStatGroupsList();
-}
+async function saveStatAssociation() {
+    const stat1 = document.getElementById('assoc-stat-1')?.value;
+    const stat2 = document.getElementById('assoc-stat-2')?.value;
+    const nameInput = document.getElementById('assoc-group-name');
+    let name = (nameInput?.value || '').trim();
 
-async function renameStatGroup(groupId) {
-    const span = document.getElementById(`grp-name-${groupId}`);
-    const oldName = span ? span.textContent : '';
-    const newName = prompt('Nuovo nome per il gruppo:', oldName);
-    if (!newName || !newName.trim() || newName.trim() === oldName) return;
-    const groups = (await appDb.getSetting('stat_groups', [])) || [];
-    const g = groups.find(g => g.id === groupId);
-    if (g) {
-        g.name = newName.trim();
-        await appDb.setSetting('stat_groups', groups);
-        await renderStatGroupsList();
+    if (!stat1 || !stat2) {
+        alert('Seleziona entrambe le statistiche da associare.');
+        return;
     }
+    if (stat1 === stat2) {
+        alert('Seleziona due statistiche diverse.');
+        return;
+    }
+
+    if (!name) {
+        name = `${stat1} + ${stat2}`;
+    }
+
+    const associations = (await appDb.getSetting('stat_associations', [])) || [];
+    associations.push({
+        id: 'assoc_' + Date.now(),
+        name,
+        stat1,
+        stat2,
+        createdAt: new Date().toISOString()
+    });
+
+    await appDb.setSetting('stat_associations', associations);
+    if (nameInput) nameInput.value = '';
+    await renderStatAssociationsList();
 }
 
-async function deleteStatGroup(groupId) {
-    const allStats = await appDb.getAll('custom_stats');
-    const count = allStats.filter(s => s.groupId === groupId).length;
-    const msg = count > 0
-        ? `Eliminare il gruppo? Le ${count} statistiche associate rimarranno ma perderanno l'associazione.`
-        : 'Eliminare il gruppo?';
-    if (!confirm(msg)) return;
-    const groups = (await appDb.getSetting('stat_groups', [])) || [];
-    const updated = groups.filter(g => g.id !== groupId);
-    await appDb.setSetting('stat_groups', updated);
-    await renderStatGroupsList();
+async function deleteStatAssociation(index) {
+    if (!confirm('Eliminare questa associazione?')) return;
+    const associations = (await appDb.getSetting('stat_associations', [])) || [];
+    associations.splice(index, 1);
+    await appDb.setSetting('stat_associations', associations);
+    await renderStatAssociationsList();
 }
+
+
 
 window.getDisplayName = function(realName) {
     if (!window.appState.isAnonymous) return realName;
@@ -887,13 +944,12 @@ function setupSettings() {
     const bulkRemoveSkill = document.getElementById('collab-bulk-remove-skill');
     const bulkDelete = document.getElementById('collab-bulk-delete');
 
-    // Gruppi Statistiche
-    const addGroupBtn = document.getElementById('add-stat-group-btn');
-    const newGroupInput = document.getElementById('new-group-name-input');
-    if (addGroupBtn) addGroupBtn.addEventListener('click', addStatGroup);
-    if (newGroupInput) {
-        newGroupInput.addEventListener('keydown', e => { if (e.key === 'Enter') addStatGroup(); });
-    }
+    // Associazione Statistiche
+    const saveAssocBtn = document.getElementById('save-assoc-btn');
+    if (saveAssocBtn) saveAssocBtn.addEventListener('click', saveStatAssociation);
+
+    populatePerformanceStatsDropdowns();
+    renderStatAssociationsList();
 
     let deletedIds = [];
 
