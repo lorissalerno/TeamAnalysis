@@ -551,7 +551,7 @@ async function openStatModal(editingStat = null) {
     }
 
     const modalTitle = modal.querySelector('.modal-header h2');
-    const saveBtn = modal.querySelector('.modal-footer .btn.primary');
+    const saveBtn = modal.querySelector('.modal-header .btn.primary') || modal.querySelector('#modal-save-btn');
     if (editingStat) {
         if (modalTitle) modalTitle.textContent = 'Modifica Statistica';
         if (saveBtn) saveBtn.textContent = 'Salva Modifiche';
@@ -977,9 +977,12 @@ async function openStatModal(editingStat = null) {
 function createStatModalHTML() {
     const html = `
     <div id="stat-config-modal" class="modal">
-        <div class="modal-header">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
             <h2>Nuova Statistica</h2>
-            <button class="close-modal" onclick="document.getElementById('stat-config-modal').classList.remove('open')">&times;</button>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="btn primary" id="modal-save-btn" onclick="saveNewStat()" style="padding:6px 16px; font-size:0.85rem;">Salva Statistica</button>
+                <button class="close-modal" onclick="document.getElementById('stat-config-modal').classList.remove('open')">&times;</button>
+            </div>
         </div>
         <div class="stat-modal-layout">
             <div class="stat-modal-form">
@@ -1032,6 +1035,7 @@ function createStatModalHTML() {
                             </select>
                         </div>
                         <label class="toggle-switch" id="preview-show-team-avg-label" style="display:flex; align-items:center; cursor:pointer; font-size:0.8rem;">
+                            <input type="checkbox" id="preview-show-team-avg">
                             <span class="slider"></span>
                             <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra Media Team</span>
                         </label>
@@ -1061,9 +1065,6 @@ function createStatModalHTML() {
                     <span style="color:var(--text-muted); font-size:0.85rem;">Seleziona una metrica per vedere l'anteprima</span>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn primary" onclick="saveNewStat()">Salva Statistica</button>
         </div>
     </div>
     `;
