@@ -10,18 +10,18 @@ Niente build/lint/test. Aprire `index.html` direttamente nel browser (o `python3
 
 ## Architettura e convenzioni
 
-- Ordine di caricamento script in `index.html` (nella coda `</body>`) è obbligatorio: `db.js` → `csv-parser.js` → `statistics.js` → `goals.js` → `dashboard.js` → `app.js`. I moduli si scambiano API esclusivamente via `window.*`: `window.appDb` (db.js), `window.CSVParser` (csv-parser.js), `window.appState` (stato globale: `isAnonymous`, `activeYear`, `anonymousMap`), `window.renderStatistics`, `window.renderGoals`, `window.getDisplayName`. Nuovi file JS vanno inseriti PRIMA di `app.js`.
+- Ordine di caricamento script in `index.html` (nella coda `</body>`) è obbligatorio: `db.js` → `csv-parser.js` → `statistics.js` → `goals.js` → `dashboard.js` → `app.js`. I moduli si scambiano API esclusivamente via `window.*`: `window.appDb` (db.js), `window.CSVParser` (csv-parser.js), `window.appState` (stato globale: `isAnonymous`, `activeYear`, `anonymousMap`, `collaboratorSkills`), `window.renderStatistics`, `window.renderGoals`, `window.renderDashboard`, `window.getDisplayName`. Nuovi file JS vanno inseriti PRIMA di `app.js`.
 - `app.js` accede a volte direttamente a `appDb._db` (transazioni IndexedDB grezze) anziché agli helper — pattern esistente, da mantenere.
 - Tutto il codice deve contenere la firma autore (`window.getAuthorInfo` in app.js: Loris Salerno / taasalo3 / Loris.Salerno@swisscom.com).
-- Nessuna emoji: icone solo SVG (specifica). Attenzione: codice attuale contiene ancora qualche emoji (es. `⚙️` in index.html) — non replicare, sostituire con SVG.
-- Tema chiaro/scuro via attributo `data-theme` su `<html>` (default `dark`); variabili CSS in `css/style.css` (`--bg-base`, `--text-main`, `--primary`, ecc.) — usare sempre le variabili, mai colori hardcoded. Nel markup generato da JS è normale l'uso di style inline.
+- Nessuna emoji: icone solo SVG (specifica). Attenzione: codice attuale contiene ancora qualche emoji (es. `🔍` in js/goals.js) — non replicare, sostituire con SVG.
+- Tema chiaro/scuro via attributo `data-theme` su `<html>` (default `dark`); variabili CSS in `css/style.css` (`--bg-base`, `--text-main`, `--primary`, ecc.) — usare sempre le variabili, mai colori hardcoded. Il CSS è diviso in tre file caricati da `index.html`: `style.css` (variabili/tema), `layout.css`, `components.css` — seguire la ripartizione esistente. Nel markup generato da JS è normale l'uso di style inline.
 
-## Dati (IndexedDB `TeamAnalysisDB`, v2)
+## Dati (IndexedDB `TeamAnalysisDB`, v3)
 
-- Store: `settings`, `performance`, `sales`, `anonymous_map`, `dashboard_widgets`, `custom_stats`, `goals`.
+- Store: `settings`, `performance`, `sales`, `anonymous_map`, `dashboard_widgets`, `custom_stats`, `goals`, `import_logs` (log import con `appDb.addImportLog(msg, isError)`, letti con `getImportLogs()`, ripuliti con `cleanOldImportLogs(7)`).
 - Record performance/sales: `{ id, year, date, employee, data{...}, category, skill? }` con `date` come `YYYY-MM-DD`. I record sales hanno `data.Product` (distinguono AOIT da "Nuovi Abo").
 - Ogni anno è un sistema indipendente; tutto è filtrato per `year`/`activeYear`.
-- Aumentando `DB_VERSION` va aggiunta la migrazione in `onupgradeneeded` (esempio: indice `year` su `goals`, commit dda48b1).
+- Aumentando `DB_VERSION` va aggiunta la migrazione in `onupgradeneeded` (esempio: indice `year` su `goals` per `oldVersion < 2`).
 
 ## CSV (import)
 

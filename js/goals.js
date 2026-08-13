@@ -284,8 +284,13 @@ async function renderSalesGoalsTable() {
 
         tableCard.innerHTML = `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <h2 style="font-size:1.15rem; font-weight:800; color:var(--text-main); margin:0;">${t.name}</h2>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <h2 class="table-title-display" data-id="${t.id}" style="font-size:1.15rem; font-weight:800; color:var(--text-main); margin:0;">${t.name}</h2>
+                    ${isSalesTableEditMode ? `
+                        <button class="edit-table-title-btn" data-id="${t.id}" title="Rinomina tabella" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:2px; display:inline-flex; align-items:center; opacity:0.7;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>
+                    ` : ''}
                     <span style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700; letter-spacing:0.02em;">Skill: ${t.skill === 'ALL' ? 'Tutte' : t.skill}</span>
                 </div>
                 ${isSalesTableEditMode ? `
@@ -394,6 +399,33 @@ async function renderSalesGoalsTable() {
                 await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
 
                 renderSalesGoalsTable();
+            };
+        }
+
+        const editTitleBtn = tableCard.querySelector('.edit-table-title-btn');
+        if (editTitleBtn) {
+            editTitleBtn.onclick = () => {
+                const h2 = tableCard.querySelector(`.table-title-display[data-id="${t.id}"]`);
+                if (!h2 || h2.querySelector('input')) return; // già in editing
+                const currentName = h2.textContent.trim();
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.value = currentName;
+                inp.style.cssText = 'font-size:1.15rem; font-weight:800; color:var(--text-main); background:var(--bg-base); border:1px solid var(--primary); border-radius:6px; padding:2px 8px; width:220px; outline:none;';
+                h2.textContent = '';
+                h2.appendChild(inp);
+                inp.focus();
+                inp.select();
+
+                const save = async () => {
+                    const newName = inp.value.trim() || currentName;
+                    const tIdx = tablesList.findIndex(item => item.id === t.id);
+                    if (tIdx !== -1) tablesList[tIdx].name = newName;
+                    await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+                    h2.textContent = newName;
+                };
+                inp.onblur = save;
+                inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } };
             };
         }
 
