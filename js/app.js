@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (overlay) overlay.classList.remove('open');
 
         // Trigger specific section render if needed
-        if (sectionId === 'statistics' && window.renderStatistics) renderStatistics();
+        if (sectionId === 'statistics' && window.renderStatistics) window.renderStatistics();
         if (sectionId === 'dashboard' && window.renderDashboard) window.renderDashboard();
         if (sectionId === 'database') renderImportedData();
         if (sectionId === 'goals' && window.renderGoals) renderGoals();
@@ -160,10 +160,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('anon-toggle').addEventListener('change', async (e) => {
         window.appState.isAnonymous = e.target.checked;
         await appDb.setSetting('isAnonymous', e.target.checked);
-        // Refresh views
+        // Refresh views dynamically in-place without page reload
         if (window.renderDashboard) window.renderDashboard();
-        if (window.renderStatistics) renderStatistics();
+        if (window.renderStatistics) window.renderStatistics();
+        if (window.renderGoals) window.renderGoals();
         renderImportedData();
+        if (typeof renderManagementTable === 'function') renderManagementTable();
     });
 
     // Year Change
@@ -172,8 +174,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         await appDb.setSetting('activeYear', e.target.value);
         await loadAnonymousMap();
         if (window.renderDashboard) window.renderDashboard();
-        if (window.renderStatistics) renderStatistics();
+        if (window.renderStatistics) window.renderStatistics();
+        if (window.renderGoals) window.renderGoals();
         renderImportedData();
+        if (typeof renderManagementTable === 'function') renderManagementTable();
     });
 
     // 4. Database Imports & Skills
@@ -390,7 +394,7 @@ function setupImports() {
 
             await refreshYearsList();
             await renderImportedData();
-            if (window.renderStatistics) renderStatistics();
+            if (window.renderStatistics) window.renderStatistics();
         });
     }
 
@@ -510,7 +514,7 @@ function setupSkillsModal() {
 
             await saveSkills(newSkillsList);
             await renderImportedData();
-            if (window.renderStatistics) renderStatistics();
+            if (window.renderStatistics) window.renderStatistics();
             if (window.renderGoals) renderGoals();
             if (window.renderDashboard) renderDashboard();
             skillsModal.classList.remove('open');
@@ -797,7 +801,7 @@ async function renderImportedData() {
                 logImport(`Eliminata riga "${metricKey}".`);
                 await refreshYearsList();
                 await renderImportedData();
-                if (window.renderStatistics) renderStatistics();
+                if (window.renderStatistics) window.renderStatistics();
             }
         });
     });
@@ -1072,7 +1076,7 @@ function setupSettings() {
             await loadAnonymousMap();
             modal.classList.remove('open');
             if (window.renderDashboard) window.renderDashboard();
-            if (window.renderStatistics) renderStatistics();
+            if (window.renderStatistics) window.renderStatistics();
         };
     });
     
@@ -1105,27 +1109,7 @@ function setupSettings() {
     });
 }
 
-// --- RENDERING (Placeholders) ---
-
-function renderStatistics() {
-    // Populate individual select
-    const select = document.getElementById('individual-select');
-    const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
-    select.innerHTML = `<option value="">${placeholder}</option>`;
-    
-    const names = Object.keys(window.appState.anonymousMap).sort();
-    names.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = window.getDisplayName(name); // Don't use anon for individual as per specs?
-        // Wait, spec says: "eccetto la sotto-sezione "Individuale" di Statistiche"
-        // So in Individuale, we ALWAYS show real names? Or do we?
-        // "Modalità Nominativo / Anonimo ... Interruttore presente in tutte le sezioni, eccetto la sotto-sezione "Individuale" di Statistiche"
-        // This means Individual section doesn't have the toggle, or ignores it. We will always show real name there.
-        opt.textContent = name; 
-        select.appendChild(opt);
-    });
-}
+// --- RENDERING ---
 
 function setupCustomMonthSelects() {
     const currentMonthVal = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -1403,7 +1387,7 @@ async function saveManualData() {
     logImport(mode === 'edit' ? `Modificata riga metrica "${metric}".` : `Aggiunta nuova metrica "${metric}".`);
     await refreshYearsList();
     await renderImportedData();
-    if (window.renderStatistics) renderStatistics();
+    if (window.renderStatistics) window.renderStatistics();
 }
 
 function setupManualDataModalListeners() {
@@ -1824,7 +1808,7 @@ function setupImportWizard() {
 
                 await refreshYearsList();
                 await renderImportedData();
-                if (window.renderStatistics) renderStatistics();
+                if (window.renderStatistics) window.renderStatistics();
 
             } catch (err) {
                 logImport(`ERRORE DURANTE L'IMPORTAZIONE: ${err}`, true);

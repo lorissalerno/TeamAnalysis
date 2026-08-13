@@ -1136,7 +1136,7 @@ window.deleteGoal = async function(id) {
     store.delete(id);
     transaction.oncomplete = () => {
         renderGoals();
-        if (window.renderStatistics) renderStatistics();
+        if (window.renderStatistics) window.renderStatistics();
     };
 }
 
@@ -1458,7 +1458,7 @@ async function saveNewGoal() {
     
     // Re-render statistics to show the new goal line if it's open
     if (document.getElementById('statistics').classList.contains('active') && window.renderStatistics) {
-        renderStatistics();
+        window.renderStatistics();
     }
 }
 
