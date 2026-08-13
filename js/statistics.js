@@ -517,43 +517,106 @@ async function openStatModal() {
     }
 
     const allMetrics = Array.from(metrics).sort();
-    const metricSearchInput = document.getElementById('stat-metric-search');
-    const metricDropdown = document.getElementById('stat-metric-dropdown');
-    const metricHidden = document.getElementById('stat-metric');
+    const metricsContainer = document.getElementById('stat-metrics-container');
+    const addMetricBtn = document.getElementById('add-metric-btn');
+    metricsContainer.innerHTML = '';
 
-    let statSelectedMetric = allMetrics.length > 0 ? allMetrics[0] : '';
-    metricHidden.value = statSelectedMetric;
-    metricSearchInput.value = statSelectedMetric;
+    function createMetricRow(initialValue = '') {
+        const rowId = 'metric_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const row = document.createElement('div');
+        row.className = 'metric-input-row';
+        row.style.cssText = 'margin-bottom: 12px;';
+        
+        const isFirst = metricsContainer.children.length === 0;
+        let selectedMetric = initialValue || (allMetrics.length > 0 ? allMetrics[0] : '');
 
-    function renderStatDropdown(filterText = '') {
-        metricDropdown.innerHTML = '';
-        const query = filterText.toLowerCase().trim();
-        const filtered = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
-        if (filtered.length === 0) {
-            const empty = document.createElement('div');
-            empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
-            empty.textContent = 'Nessun risultato';
-            metricDropdown.appendChild(empty);
-            return;
-        }
-        filtered.forEach(m => {
-            const item = document.createElement('div');
-            item.className = 'searchable-dropdown-item' + (m === statSelectedMetric ? ' selected' : '');
-            item.textContent = m;
-            item.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                statSelectedMetric = m;
-                metricHidden.value = m;
-                metricSearchInput.value = m;
-                metricDropdown.classList.remove('open');
-                renderStatDropdown(m);
-                schedulePreview();
+        row.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label style="margin:0;">${isFirst ? 'Dato / Metrica principale:' : 'Dato / Metrica aggiuntiva:'}</label>
+                ${!isFirst ? `<button type="button" class="remove-metric-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.8rem; padding:2px 4px;">Rimuovi</button>` : ''}
+            </div>
+            <div style="position:relative;">
+                <input type="text" class="stat-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);" value="${selectedMetric}">
+                <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <input type="hidden" class="stat-metric-value" value="${selectedMetric}">
+                <div class="searchable-dropdown stat-metric-dropdown"></div>
+            </div>
+        `;
+
+        metricsContainer.appendChild(row);
+
+        const searchInput = row.querySelector('.stat-metric-search');
+        const hiddenInput = row.querySelector('.stat-metric-value');
+        const dropdown = row.querySelector('.stat-metric-dropdown');
+        const removeBtn = row.querySelector('.remove-metric-btn');
+
+        function renderDropdown(filterText = '') {
+            dropdown.innerHTML = '';
+            const query = filterText.toLowerCase().trim();
+            const filtered = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
+            if (filtered.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
+                empty.textContent = 'Nessun risultato';
+                dropdown.appendChild(empty);
+                return;
+            }
+            filtered.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'searchable-dropdown-item' + (m === selectedMetric ? ' selected' : '');
+                item.textContent = m;
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    selectedMetric = m;
+                    hiddenInput.value = m;
+                    searchInput.value = m;
+                    dropdown.classList.remove('open');
+                    renderDropdown(m);
+                    schedulePreview();
+                });
+                dropdown.appendChild(item);
             });
-            metricDropdown.appendChild(item);
-        });
+        }
+
+        renderDropdown('');
+
+        searchInput.onfocus = () => {
+            searchInput.select();
+            renderDropdown(searchInput.value === selectedMetric ? '' : searchInput.value);
+            dropdown.classList.add('open');
+        };
+        searchInput.oninput = (e) => {
+            renderDropdown(e.target.value);
+            dropdown.classList.add('open');
+        };
+        searchInput.onblur = () => {
+            dropdown.classList.remove('open');
+            if (selectedMetric) searchInput.value = selectedMetric;
+        };
+
+        if (removeBtn) {
+            removeBtn.onclick = () => {
+                row.remove();
+                schedulePreview();
+            };
+        }
     }
 
-    renderStatDropdown('');
+    createMetricRow();
+
+    addMetricBtn.onclick = () => {
+        createMetricRow();
+        schedulePreview();
+    };
+
+    function getSelectedMetrics() {
+        const hiddenInputs = metricsContainer.querySelectorAll('.stat-metric-value');
+        const list = [];
+        hiddenInputs.forEach(input => {
+            if (input.value) list.push(input.value);
+        });
+        return list;
+    }
 
     // --- Preview in tempo reale ---
     let previewChart = null;
@@ -563,76 +626,25 @@ async function openStatModal() {
         const container = document.getElementById('stat-preview-container');
         if (!container) return;
 
-        const metric = document.getElementById('stat-metric').value;
+        const selectedMetricsList = getSelectedMetrics();
         const skill = document.getElementById('stat-skill').value;
         const type = document.getElementById('stat-type').value;
-        const product = document.getElementById('stat-product').value;
 
-        if (!metric) {
-            container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Seleziona una metrica per vedere l\'anteprima</span>';
+        if (selectedMetricsList.length === 0) {
+            container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Seleziona almeno un dato/metrica per vedere l\'anteprima</span>';
             return;
         }
+
+        const isMulti = selectedMetricsList.length > 1;
 
         if (type === 'table') {
-            // Preview tabella semplificata
-            const isPerf = metric.startsWith('Performance: ');
-            const rawKey = metric.replace('Performance: ', '').replace('Sales: ', '');
-            const sourceData = isPerf ? perfData : salesData;
-            const empSet = new Set();
-            const empTotals = {};
-            sourceData.forEach(row => {
-                if (isPerf && skill && skill !== 'ALL' && row.skill !== skill) return;
-                if (!isPerf && product && row.data['Product'] !== product) return;
-                const emp = row.employee;
-                const val = parseMetricValue(row.data[rawKey]);
-                if (emp) {
-                    empSet.add(emp);
-                    empTotals[emp] = (empTotals[emp] || 0) + val;
-                }
-            });
-            const employees = Array.from(empSet).sort().slice(0, 6);
-            if (employees.length === 0) {
-                container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Nessun dato disponibile</span>';
-                return;
-            }
-            let tableHtml = '<div style="width:100%;overflow-x:auto;padding:16px;"><table class="data-table"><thead><tr><th>Collaboratore</th><th style="text-align:right;">Totale</th></tr></thead><tbody>';
-            employees.forEach(emp => {
-                tableHtml += `<tr><td>${window.getDisplayName(emp)}</td><td style="text-align:right;">${empTotals[emp]}</td></tr>`;
-            });
-            tableHtml += '</tbody></table></div>';
-            container.innerHTML = tableHtml;
+            container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Anteprima per ' + selectedMetricsList.length + ' metriche</span>';
             return;
         }
 
-        // Preview grafico (bar / line / pie)
         container.innerHTML = '<canvas id="stat-preview-canvas" style="max-width:100%; max-height:100%;"></canvas>';
         const canvas = document.getElementById('stat-preview-canvas');
         if (!canvas) return;
-
-        const isPerf = metric.startsWith('Performance: ');
-        const rawKey = metric.replace('Performance: ', '').replace('Sales: ', '');
-        const sourceData = isPerf ? perfData : salesData;
-
-        const empTotals = {};
-        const dateAgg = {};
-        const datesSet = new Set();
-        const datesWithData = new Set();
-
-        // Tutti i 12 mesi
-        const yr = window.appState.activeYear || new Date().getFullYear().toString();
-        for (let m = 1; m <= 12; m++) datesSet.add(`${yr}-${String(m).padStart(2,'0')}-01`);
-
-        sourceData.forEach(row => {
-            if (isPerf && skill && skill !== 'ALL' && row.skill !== skill) return;
-            if (!isPerf && product && row.data['Product'] !== product) return;
-            const emp = row.employee;
-            const val = parseMetricValue(row.data[rawKey]);
-            const date = row.date;
-            if (emp) empTotals[emp] = (empTotals[emp] || 0) + val;
-            datesSet.add(date);
-            datesWithData.add(date);
-            dateAgg[date] = (dateAgg[date] || 0) + val;
-        });
 
         const BLUE_PALETTE = [
             '#2563EB','#3B82F6','#1D4ED8','#0284C7',
@@ -640,23 +652,31 @@ async function openStatModal() {
             '#0D9488','#6366F1','#38BDF8','#4338CA'
         ];
 
+        const yr = window.appState.activeYear || new Date().getFullYear().toString();
+
         if (type === 'pie') {
-            const empEntries = Object.entries(empTotals)
-                .filter(([,v]) => v > 0)
-                .sort((a,b) => b[1]-a[1])
-                .slice(0, 12);
-            if (empEntries.length === 0) {
-                container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Nessun dato disponibile</span>';
-                return;
-            }
+            // Se multi-metrica, la torta mostra la somma complessiva delle metriche
+            const metricTotals = {};
+            selectedMetricsList.forEach(m => {
+                const isP = m.startsWith('Performance: ');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const sData = isP ? perfData : salesData;
+                let tot = 0;
+                sData.forEach(row => {
+                    if (isP && skill && skill !== 'ALL' && row.skill !== skill) return;
+                    tot += parseMetricValue(row.data[rKey]);
+                });
+                metricTotals[rKey] = tot;
+            });
+            const pieEntries = Object.entries(metricTotals);
             if (previewChart) { previewChart.destroy(); previewChart = null; }
             previewChart = new Chart(canvas, {
                 type: 'pie',
                 data: {
-                    labels: empEntries.map(([e]) => window.getDisplayName(e)),
+                    labels: pieEntries.map(([k]) => k),
                     datasets: [{
-                        data: empEntries.map(([,v]) => v),
-                        backgroundColor: empEntries.map((_,i) => BLUE_PALETTE[i % BLUE_PALETTE.length]),
+                        data: pieEntries.map(([,v]) => v),
+                        backgroundColor: pieEntries.map((_,i) => BLUE_PALETTE[i % BLUE_PALETTE.length]),
                         borderWidth: 2,
                         borderColor: 'var(--bg-surface)'
                     }]
@@ -670,32 +690,55 @@ async function openStatModal() {
             return;
         }
 
+        // Multi-line / Multi-bar preview
+        const datesSet = new Set();
+        const datesWithData = new Set();
+        for (let m = 1; m <= 12; m++) datesSet.add(`${yr}-${String(m).padStart(2,'0')}-01`);
+
+        const datasets = selectedMetricsList.map((m, idx) => {
+            const isP = m.startsWith('Performance: ');
+            const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+            const sData = isP ? perfData : salesData;
+            const dateAgg = {};
+            sData.forEach(row => {
+                if (isP && skill && skill !== 'ALL' && row.skill !== skill) return;
+                const val = parseMetricValue(row.data[rKey]);
+                datesSet.add(row.date);
+                datesWithData.add(row.date);
+                dateAgg[row.date] = (dateAgg[row.date] || 0) + val;
+            });
+
+            const color = BLUE_PALETTE[idx % BLUE_PALETTE.length];
+            const labelsArr = Array.from(datesSet).sort();
+            const pts = labelsArr.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
+
+            return {
+                label: rKey,
+                data: pts,
+                backgroundColor: type === 'bar' ? hexToRgba(color, 0.8) : hexToRgba(color, 0.15),
+                borderColor: color,
+                borderWidth: type === 'bar' ? 1 : 1.8,
+                borderRadius: type === 'bar' ? 4 : 0,
+                pointRadius: 0,
+                tension: 0.35,
+                fill: type !== 'bar'
+            };
+        });
+
         const labels = Array.from(datesSet).sort();
         const displayLabels = labels.map(formatDateLabel);
-        const dataPts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
 
         if (previewChart) { previewChart.destroy(); previewChart = null; }
-        const isBar = type === 'bar';
         previewChart = new Chart(canvas, {
-            type: isBar ? 'bar' : 'line',
+            type: type === 'bar' ? 'bar' : 'line',
             data: {
                 labels: displayLabels,
-                datasets: [{
-                    label: rawKey,
-                    data: dataPts,
-                    backgroundColor: isBar ? hexToRgba('#2563EB', 0.8) : 'rgba(37,99,235,0.15)',
-                    borderColor: '#2563EB',
-                    borderWidth: isBar ? 1 : 1.8,
-                    borderRadius: isBar ? 4 : 0,
-                    pointRadius: 0,
-                    tension: 0.35,
-                    fill: !isBar
-                }]
+                datasets: datasets
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { legend: { display: isMulti } },
                 scales: {
                     x: { grid: { color: 'rgba(128,128,128,0.12)' } },
                     y: { beginAtZero: false, grid: { color: 'rgba(128,128,128,0.15)' } }
@@ -735,11 +778,9 @@ async function openStatModal() {
     });
 
     const typeSelect = document.getElementById('stat-type');
-    const productInput = document.getElementById('stat-product');
 
     skillSelect.addEventListener('change', schedulePreview);
     typeSelect.addEventListener('change', schedulePreview);
-    productInput.addEventListener('input', schedulePreview);
 
     // Chiudi: distruggi chart preview
     const closeBtn = modal.querySelector('.close-modal');
@@ -765,13 +806,14 @@ function createStatModalHTML() {
         </div>
         <div class="stat-modal-layout">
             <div class="stat-modal-form">
-                <label>Dato / Metrica:</label>
-                <div style="position:relative; margin-bottom:16px;">
-                    <input type="text" id="stat-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
-                    <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    <input type="hidden" id="stat-metric">
-                    <div id="stat-metric-dropdown" class="searchable-dropdown"></div>
+                <div id="stat-metrics-container">
+                    <!-- I campi per le metriche verranno inseriti dinamicamente -->
                 </div>
+                
+                <button type="button" id="add-metric-btn" class="btn secondary" style="width:100%; margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Aggiungi dati
+                </button>
 
                 <label>Filtro Skill Performance (opzionale):</label>
                 <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
@@ -783,9 +825,6 @@ function createStatModalHTML() {
                     <option value="table">Tabella Dati</option>
                     <option value="pie">Grafico a Torta</option>
                 </select>
-
-                <label>Filtro Prodotto (solo per Sales, opzionale):</label>
-                <input type="text" id="stat-product" placeholder="es. Multiroom Max" style="width:100%; padding:8px; margin-bottom:16px;">
             </div>
             <div class="stat-modal-preview">
                 <div class="stat-modal-preview-title">Anteprima in tempo reale</div>
@@ -804,12 +843,23 @@ function createStatModalHTML() {
 }
 
 async function saveNewStat() {
-    const metric = document.getElementById('stat-metric').value;
-    const rawKey = metric.replace('Performance: ', '').replace('Sales: ', '');
-    const title = rawKey;
+    const hiddenInputs = document.querySelectorAll('#stat-metrics-container .stat-metric-value');
+    const selectedMetrics = [];
+    hiddenInputs.forEach(inp => {
+        if (inp.value) selectedMetrics.push(inp.value);
+    });
+
+    if (selectedMetrics.length === 0) {
+        alert('Seleziona almeno un dato/metrica');
+        return;
+    }
+
+    const primaryMetric = selectedMetrics[0];
+    const rawKeys = selectedMetrics.map(m => m.replace('Performance: ', '').replace('Sales: ', ''));
+    const title = rawKeys.join(' & ');
     const skill = document.getElementById('stat-skill').value;
     const type = document.getElementById('stat-type').value;
-    const product = document.getElementById('stat-product').value;
+    const product = '';
     const groupId = (document.getElementById('stat-group')?.value || '') || null;
     
     const activeTemplateId = await getActiveTemplateId();
@@ -820,7 +870,10 @@ async function saveNewStat() {
 
     const newStat = {
         id: 'stat_' + Date.now(),
-        title, metric, skill, type, product,
+        title, 
+        metric: primaryMetric,
+        metrics: selectedMetrics,
+        skill, type, product,
         groupId: groupId || null,
         templateId: activeTemplateId,
         year: window.appState.activeYear,
@@ -1220,19 +1273,38 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             '#0D9488', '#6366F1', '#38BDF8', '#4338CA'
         ];
 
-        // Totale per collaboratore (o per data se nessun dipendente)
-        const empTotals = {};
-        employees.forEach(emp => {
-            let total = 0;
-            labels.forEach(date => {
-                if (datesWithData.has(date) && empDateMap[emp] && empDateMap[emp][date] !== undefined) {
-                    total += empDateMap[emp][date];
-                }
-            });
-            if (total > 0) empTotals[emp] = total;
-        });
+        const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
+        let pieEntries = [];
 
-        const pieEntries = Object.entries(empTotals).sort((a,b) => b[1]-a[1]);
+        if (metricsList.length > 1) {
+            // Se multi-metrica, la torta confronta le metriche totali
+            const metricTotals = {};
+            metricsList.forEach(m => {
+                const isP = m.startsWith('Performance: ');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const sData = isP ? perfData : salesData;
+                let sum = 0;
+                sData.forEach(row => {
+                    if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                    sum += parseMetricValue(row.data[rKey]);
+                });
+                metricTotals[rKey] = sum;
+            });
+            pieEntries = Object.entries(metricTotals);
+        } else {
+            // Totale per collaboratore
+            const empTotals = {};
+            employees.forEach(emp => {
+                let total = 0;
+                labels.forEach(date => {
+                    if (datesWithData.has(date) && empDateMap[emp] && empDateMap[emp][date] !== undefined) {
+                        total += empDateMap[emp][date];
+                    }
+                });
+                if (total > 0) empTotals[emp] = total;
+            });
+            pieEntries = Object.entries(empTotals).map(([e, v]) => [window.getDisplayName(e), v]).sort((a,b) => b[1]-a[1]);
+        }
 
         if (pieEntries.length === 0) {
             canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
@@ -1240,7 +1312,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             new Chart(canvas, {
                 type: 'pie',
                 data: {
-                    labels: pieEntries.map(([e]) => window.getDisplayName(e)),
+                    labels: pieEntries.map(([label]) => label),
                     datasets: [{
                         data: pieEntries.map(([,v]) => v),
                         backgroundColor: pieEntries.map((_, i) => BLUE_PALETTE[i % BLUE_PALETTE.length]),
@@ -1269,7 +1341,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
         let datasets = [];
-        // Palette di tonalità di blu diverse e armoniose per i vari collaboratori
         const BLUE_PALETTE = [
             '#2563EB', '#3B82F6', '#1D4ED8', '#0284C7', 
             '#4F46E5', '#0369A1', '#60A5FA', '#1E40AF', 
@@ -1277,8 +1348,40 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         ];
 
         const isBar = statConfig.type === 'bar';
+        const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
 
-        if (isIndividual) {
+        if (metricsList.length > 1 && !isIndividual && !teamAvgOnly) {
+            // Se multi-metrica, ogni dataset rappresenta una metrica aggregata
+            metricsList.forEach((m, idx) => {
+                const isP = m.startsWith('Performance: ');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const sData = isP ? perfData : salesData;
+                const dateAgg = {};
+                sData.forEach(row => {
+                    if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                    const val = parseMetricValue(row.data[rKey]);
+                    if (!dateAgg[row.date]) dateAgg[row.date] = 0;
+                    dateAgg[row.date] += val;
+                });
+                const color = BLUE_PALETTE[idx % BLUE_PALETTE.length];
+                const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
+                datasets.push({
+                    label: rKey,
+                    data: pts,
+                    type: isBar ? 'bar' : 'line',
+                    backgroundColor: isBar ? hexToRgba(color, 0.8) : hexToRgba(color, 0.12),
+                    borderColor: color,
+                    borderWidth: isBar ? 1 : 1.8,
+                    borderRadius: isBar ? 4 : 0,
+                    minBarLength: isBar ? 4 : 0,
+                    pointRadius: 0,
+                    pointHoverRadius: isBar ? 0 : 5,
+                    pointBackgroundColor: color,
+                    tension: 0.35,
+                    order: 2
+                });
+            });
+        } else if (isIndividual) {
             datasets.push({
                 label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
                 data: dataPts,
