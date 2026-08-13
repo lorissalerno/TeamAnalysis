@@ -762,22 +762,24 @@ async function openStatModal(editingStat = null) {
                 metricTotals[rKey] = tot;
             });
             const pieEntries = Object.entries(metricTotals);
-            if (previewChart) { previewChart.destroy(); previewChart = null; }
+            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
+            const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#1e2130';
             previewChart = new Chart(canvas, {
-                type: 'pie',
+                type: 'doughnut',
                 data: {
                     labels: pieEntries.map(([k]) => k),
                     datasets: [{
                         data: pieEntries.map(([,v]) => v),
                         backgroundColor: pieEntries.map((_,i) => selectedColorsList[i % selectedColorsList.length]),
                         borderWidth: 2,
-                        borderColor: 'var(--bg-surface)'
+                        borderColor: surfaceColor
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right', labels: { color: 'var(--text-main)', font: { size: 11 }, padding: 10, boxWidth: 12 } } }
+                    cutout: '60%',
+                    plugins: { legend: { position: 'right', labels: { color: textColor, font: { size: 11 }, padding: 10, boxWidth: 12 } } }
                 }
             });
             return;
@@ -1510,25 +1512,28 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         if (pieEntries.length === 0) {
             canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
         } else {
+            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
+            const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#1e2130';
             new Chart(canvas, {
-                type: 'pie',
+                type: 'doughnut',
                 data: {
                     labels: pieEntries.map(([label]) => label),
                     datasets: [{
                         data: pieEntries.map(([,v]) => v),
                         backgroundColor: pieEntries.map((_, i) => colorsList[i % colorsList.length]),
                         borderWidth: 2,
-                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-surface') || '#1e2130'
+                        borderColor: surfaceColor
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '60%',
                     plugins: {
                         legend: {
                             position: 'right',
                             labels: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-main') || '#e2e8f0',
+                                color: textColor,
                                 font: { size: 12 },
                                 padding: 12,
                                 boxWidth: 14
