@@ -298,7 +298,7 @@
 .stat-card .stat-info {
     font-size: 0.75rem;
     color: var(--text-muted);
-    margin-bottom: 8px;
+    margin-bottom: 2px;
     font-weight: 400;
     letter-spacing: 0;
 }

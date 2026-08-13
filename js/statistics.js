@@ -1250,7 +1250,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     const canvasContainer = document.createElement('div');
     canvasContainer.style.width = '100%';
-    canvasContainer.style.marginTop = isPreview ? '0' : '12px';
+    canvasContainer.style.marginTop = isPreview ? '0' : '4px';
     if (statConfig.type === 'table') {
         canvasContainer.style.height = 'auto';
         canvasContainer.style.overflowX = 'auto';
@@ -1847,6 +1847,11 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 0
+                    }
+                },
                 plugins: {
                     legend: {
                         display: isMultiMetrics,
@@ -1855,7 +1860,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                         labels: {
                             color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
                             font: { size: 11 },
-                            padding: 10,
+                            padding: 24,
                             boxWidth: 12
                         }
                     },
