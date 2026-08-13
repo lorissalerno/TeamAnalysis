@@ -2549,11 +2549,45 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                         display: isMultiMetrics,
                         position: 'bottom',
                         align: 'start',
+                        onClick: function(e, legendItem, legend) {
+                            if (isMultiMetrics && !isIndividual && !teamAvgOnly && legendItem.metricIndex !== undefined) {
+                                const idx = legendItem.metricIndex;
+                                const chart = legend.chart;
+                                const startDs = idx * employees.length;
+                                const endDs = (idx + 1) * employees.length;
+                                const isVisible = chart.isDatasetVisible(startDs);
+                                for (let i = startDs; i < endDs; i++) {
+                                    chart.setDatasetVisibility(i, !isVisible);
+                                }
+                                chart.update();
+                            } else {
+                                Chart.defaults.plugins.legend.onClick.call(this, e, legendItem, legend);
+                            }
+                        },
                         labels: {
                             color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
                             font: { size: 11 },
                             padding: 12,
-                            boxWidth: 12
+                            boxWidth: 12,
+                            generateLabels: function(chart) {
+                                if (isMultiMetrics && !isIndividual && !teamAvgOnly) {
+                                    return metricsList.map((m, idx) => {
+                                        const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                                        const color = colorsList[idx % colorsList.length];
+                                        const firstDsIndex = idx * employees.length;
+                                        const isHidden = !chart.isDatasetVisible(firstDsIndex);
+                                        return {
+                                            text: rKey,
+                                            fillStyle: color,
+                                            strokeStyle: color,
+                                            hidden: isHidden,
+                                            datasetIndex: firstDsIndex,
+                                            metricIndex: idx
+                                        };
+                                    });
+                                }
+                                return Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            }
                         }
                     },
                     fullWidthGoal: relevantGoal ? {
