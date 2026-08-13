@@ -646,6 +646,8 @@ async function openStatModal() {
             return;
         }
 
+        const isMulti = selectedMetricsList.length > 1;
+
         const y2Container = document.getElementById('y2-scale-container');
         if (y2Container) y2Container.style.display = isMulti ? 'block' : 'none';
 
