@@ -221,19 +221,19 @@ async function renderSalesGoalsTable() {
     `;
 
     container.innerHTML = `
-        <div class="card" style="padding:14px 18px; margin-bottom:16px; border-radius:var(--radius); background:var(--bg-surface); border:1px solid var(--border);">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <button class="btn primary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        + Nuova Tabella Obiettivi
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                ${tablesList.map(t => `
+                    <button class="table-tab-btn ${t.id === activeSalesTableId ? 'active' : ''}" data-id="${t.id}" style="padding:6px 14px; border-radius:8px; border:1px solid ${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--border)'}; background:${t.id === activeSalesTableId ? 'rgba(99,102,241,0.15)' : 'var(--bg-surface)'}; color:${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--text-main)'}; font-weight:700; font-size:0.85rem; cursor:pointer;">
+                        ${t.name}
                     </button>
-                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                        <select id="sales-table-selector" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:700; font-size:0.88rem;">
-                            ${tableSelectOpts}
-                        </select>
-                    </label>
-                </div>
+                `).join('')}
+                <button class="btn primary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    + Aggiungi Tabella Obiettivi
+                </button>
+            </div>
+            ${employees.length > 0 ? `
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <button class="btn secondary btn-sm" id="add-collab-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -249,15 +249,18 @@ async function renderSalesGoalsTable() {
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                 </div>
-            </div>
+            ` : ''}
         </div>
 
         <div style="overflow-x:auto; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px;">
             ${employees.length === 0 ? `
-                <div style="padding:32px 20px; text-align:center; color:var(--text-muted);">
-                    <p style="font-size:0.9rem; font-weight:600; color:var(--text-main); margin-bottom:12px;">Tabella Vuota</p>
-                    <button class="btn primary btn-sm" id="empty-add-collab-btn" style="display:inline-flex; align-items:center; gap:6px;">
-                        + Aggiungi Collaboratore
+                <div style="padding:48px 20px; text-align:center; color:var(--text-muted);">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:12px; opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-bottom:6px;">Nessuna Tabella Obiettivi</h3>
+                    <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi sales configurando collaboratori, prodotti e target.</p>
+                    <button class="btn primary" id="empty-add-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:8px 18px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        + Aggiungi Tabella Obiettivi
                     </button>
                 </div>
             ` : `
@@ -305,16 +308,15 @@ async function renderSalesGoalsTable() {
         </div>
     `;
 
-    // Event handlers for Table selector & management
-    const tableSel = container.querySelector('#sales-table-selector');
-    if (tableSel) {
-        tableSel.onchange = (e) => {
-            activeSalesTableId = e.target.value;
+    // Event handlers for Table tabs
+    container.querySelectorAll('.table-tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            activeSalesTableId = btn.dataset.id;
             renderSalesGoalsTable();
         };
-    }
+    });
 
-    const createTabBtn = container.querySelector('#create-new-table-btn');
+    const createTabBtn = container.querySelector('#create-new-table-btn') || container.querySelector('#empty-add-table-btn');
     if (createTabBtn) {
         createTabBtn.onclick = () => {
             openCreateNewTableModal(year, configuredSkills, tablesList);
@@ -1200,26 +1202,51 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
         modal = document.createElement('div');
         modal.id = 'create-table-modal';
         modal.className = 'modal';
-        modal.style.cssText = 'max-width: 480px; width: 92%; border-radius: 12px;';
+        modal.style.cssText = 'max-width: 540px; width: 92%; border-radius: 12px;';
         document.body.appendChild(modal);
     }
 
     const overlay = document.getElementById('modal-overlay');
+
+    const defaultProds = [
+        { key: 'AOIT', label: 'AOIT', mappedMetric: 'AOIT gew', isCHF: true, mode: 'individual' },
+        { key: 'My Service', label: 'My Service', mappedMetric: 'My Service', isCHF: false, mode: 'individual' },
+        { key: 'My Security M+L', label: 'My Security M+L', mappedMetric: 'My Security M+L', isCHF: false, mode: 'individual' },
+        { key: 'RET', label: 'RET', mappedMetric: 'Retention', isCHF: false, mode: 'individual' },
+        { key: 'MOBILE', label: 'MOBILE', mappedMetric: 'Mobile', isCHF: false, mode: 'team' },
+        { key: 'INTERNET', label: 'INTERNET', mappedMetric: 'Internet', isCHF: false, mode: 'team' },
+        { key: 'TV', label: 'TV', mappedMetric: 'TV', isCHF: false, mode: 'individual' }
+    ];
 
     modal.innerHTML = `
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
             <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Crea Nuova Tabella Obiettivi Sales</h2>
             <button class="close-modal" id="close-create-tab-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
-        <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:14px;">
-            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">Nome Tabella:</label>
-            <input type="text" id="new-table-name-input" placeholder="es. Obiettivi Sales 2026 Wireline" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600; font-size:0.88rem;">
-            
-            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">Skill Associata:</label>
-            <select id="new-table-skill-select" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.88rem;">
-                <option value="ALL">Tutte le Skill</option>
-                ${configuredSkills.map(s => `<option value="${s}">${s}</option>`).join('')}
-            </select>
+        <div class="modal-body" style="padding:20px; max-height:68vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
+            <div>
+                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Nome Tabella:</label>
+                <input type="text" id="new-table-name-input" placeholder="es. Obiettivi Sales 2026 Wireline" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600; font-size:0.88rem;">
+            </div>
+
+            <div>
+                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Skill Associata:</label>
+                <select id="new-table-skill-select" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.88rem;">
+                    <option value="ALL">Tutte le Skill</option>
+                    ${configuredSkills.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+            </div>
+
+            <div>
+                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Prodotti / Colonne Iniziali:</label>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; background:var(--bg-base); padding:10px; border-radius:6px; border:1px solid var(--border);">
+                    ${defaultProds.map(p => `
+                        <label style="font-size:0.8rem; display:flex; align-items:center; gap:5px; background:var(--bg-surface); padding:4px 8px; border-radius:4px; border:1px solid var(--border); color:var(--text-main); cursor:pointer;">
+                            <input type="checkbox" class="init-prod-cb" value="${p.key}" checked> ${p.label}
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
         </div>
         <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
             <button class="btn secondary" id="cancel-create-tab-btn">Annulla</button>
@@ -1244,9 +1271,15 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
             return;
         }
 
+        const selectedKeys = Array.from(modal.querySelectorAll('.init-prod-cb:checked')).map(cb => cb.value);
+        const selectedProds = defaultProds.filter(p => selectedKeys.includes(p.key));
+
         const newId = 'table_' + Date.now();
         tablesList.push({ id: newId, name: name, skill: skill });
+
         await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+        await appDb.setSetting(`sales_table_products_${newId}`, selectedProds);
+
         activeSalesTableId = newId;
         closeModal();
         renderSalesGoalsTable();
