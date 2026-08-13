@@ -162,8 +162,8 @@ input:checked + .slider:before {
 }
 
 .stat-modal-form {
-    flex: 0 0 340px;
-    min-width: 280px;
+    flex: 0 0 460px;
+    min-width: 400px;
     padding: 24px;
     overflow-y: auto;
     border-right: 1px solid var(--border);
