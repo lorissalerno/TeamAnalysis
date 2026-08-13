@@ -492,6 +492,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 });
 
+const DISTINCT_COLORS = [
+    '#2563EB', '#10B981', '#8B5CF6', '#F97316', 
+    '#EC4899', '#06B6D4', '#F59E0B', '#EF4444', '#64748B'
+];
+
 let currentEditingStatId = null;
 
 async function openStatModal(editingStat = null) {
@@ -534,13 +539,14 @@ async function openStatModal(editingStat = null) {
     const addMetricBtn = document.getElementById('add-metric-btn');
     metricsContainer.innerHTML = '';
 
-    function createMetricRow(initialValue = '') {
-        const rowId = 'metric_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    function createMetricRow(initialValue = '', initialColor = '') {
+        const rowIndex = metricsContainer.children.length;
+        const defaultColor = initialColor || DISTINCT_COLORS[rowIndex % DISTINCT_COLORS.length];
         const row = document.createElement('div');
         row.className = 'metric-input-row';
         row.style.cssText = 'margin-bottom: 12px;';
         
-        const isFirst = metricsContainer.children.length === 0;
+        const isFirst = rowIndex === 0;
         let selectedMetric = initialValue || '';
 
         row.innerHTML = `
@@ -548,11 +554,14 @@ async function openStatModal(editingStat = null) {
                 <label style="margin:0;">${isFirst ? 'Dato / Metrica principale:' : 'Dato / Metrica aggiuntiva:'}</label>
                 ${!isFirst ? `<button type="button" class="remove-metric-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.8rem; padding:2px 4px;">Rimuovi</button>` : ''}
             </div>
-            <div style="position:relative;">
-                <input type="text" class="stat-metric-search" placeholder="Cerca metrica" autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);" value="${selectedMetric}">
-                <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                <input type="hidden" class="stat-metric-value" value="${selectedMetric}">
-                <div class="searchable-dropdown stat-metric-dropdown"></div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <div style="position:relative; flex:1;">
+                    <input type="text" class="stat-metric-search" placeholder="Cerca metrica" autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);" value="${selectedMetric}">
+                    <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    <input type="hidden" class="stat-metric-value" value="${selectedMetric}">
+                    <div class="searchable-dropdown stat-metric-dropdown"></div>
+                </div>
+                <input type="color" class="stat-metric-color" value="${defaultColor}" title="Colore metrica" style="width:38px; height:36px; padding:2px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); cursor:pointer;">
             </div>
         `;
 
@@ -560,8 +569,11 @@ async function openStatModal(editingStat = null) {
 
         const searchInput = row.querySelector('.stat-metric-search');
         const hiddenInput = row.querySelector('.stat-metric-value');
+        const colorInput = row.querySelector('.stat-metric-color');
         const dropdown = row.querySelector('.stat-metric-dropdown');
         const removeBtn = row.querySelector('.remove-metric-btn');
+
+        colorInput.addEventListener('input', schedulePreview);
 
         function renderDropdown(filterText = '') {
             dropdown.innerHTML = '';
@@ -633,7 +645,8 @@ async function openStatModal(editingStat = null) {
 
     if (editingStat) {
         const editMetrics = editingStat.metrics && editingStat.metrics.length > 0 ? editingStat.metrics : [editingStat.metric];
-        editMetrics.forEach(m => createMetricRow(m));
+        const editColors = editingStat.colors && editingStat.colors.length > 0 ? editingStat.colors : [];
+        editMetrics.forEach((m, idx) => createMetricRow(m, editColors[idx]));
     } else {
         createMetricRow();
     }
@@ -652,6 +665,15 @@ async function openStatModal(editingStat = null) {
         return list;
     }
 
+    function getSelectedColors() {
+        const colorInputs = metricsContainer.querySelectorAll('.stat-metric-color');
+        const list = [];
+        colorInputs.forEach((input, idx) => {
+            list.push(input.value || DISTINCT_COLORS[idx % DISTINCT_COLORS.length]);
+        });
+        return list;
+    }
+
     // --- Preview in tempo reale ---
     let previewChart = null;
     let previewDebounce = null;
@@ -661,6 +683,7 @@ async function openStatModal(editingStat = null) {
         if (!container) return;
 
         const selectedMetricsList = getSelectedMetrics();
+        const selectedColorsList = getSelectedColors();
         const skill = document.getElementById('stat-skill').value;
         const type = document.getElementById('stat-type').value;
 
@@ -722,12 +745,6 @@ async function openStatModal(editingStat = null) {
         const canvas = document.getElementById('stat-preview-canvas');
         if (!canvas) return;
 
-        const BLUE_PALETTE = [
-            '#2563EB','#3B82F6','#1D4ED8','#0284C7',
-            '#4F46E5','#0369A1','#60A5FA','#1E40AF',
-            '#0D9488','#6366F1','#38BDF8','#4338CA'
-        ];
-
         const yr = window.appState.activeYear || new Date().getFullYear().toString();
 
         if (type === 'pie') {
@@ -752,7 +769,7 @@ async function openStatModal(editingStat = null) {
                     labels: pieEntries.map(([k]) => k),
                     datasets: [{
                         data: pieEntries.map(([,v]) => v),
-                        backgroundColor: pieEntries.map((_,i) => BLUE_PALETTE[i % BLUE_PALETTE.length]),
+                        backgroundColor: pieEntries.map((_,i) => selectedColorsList[i % selectedColorsList.length]),
                         borderWidth: 2,
                         borderColor: 'var(--bg-surface)'
                     }]
@@ -784,7 +801,7 @@ async function openStatModal(editingStat = null) {
                 dateAgg[row.date] = (dateAgg[row.date] || 0) + val;
             });
 
-            const color = BLUE_PALETTE[idx % BLUE_PALETTE.length];
+            const color = selectedColorsList[idx % selectedColorsList.length];
             const labelsArr = Array.from(datesSet).sort();
             const pts = labelsArr.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
 
@@ -794,7 +811,7 @@ async function openStatModal(editingStat = null) {
                 label: rKey,
                 data: pts,
                 yAxisID: yAxisID,
-                backgroundColor: type === 'bar' ? hexToRgba(color, 0.8) : hexToRgba(color, 0.15),
+                backgroundColor: type === 'bar' ? hexToRgba(color, 0.85) : hexToRgba(color, 0.15),
                 borderColor: color,
                 borderWidth: type === 'bar' ? 1 : 1.8,
                 borderRadius: type === 'bar' ? 4 : 0,
@@ -928,11 +945,11 @@ function createStatModalHTML() {
 
                 <div id="y-scale-custom-group" style="display:flex; gap:12px; margin-bottom:16px;">
                     <div style="flex:1;">
-                        <label style="font-size:0.78rem;">Max Asse Y (Sn, opz.):</label>
+                        <label style="font-size:0.78rem;">Max Asse Y (Sinistra, opz.):</label>
                         <input type="number" id="stat-y-max" placeholder="es. 7000" style="width:100%; padding:6px; font-size:0.85rem;">
                     </div>
                     <div id="y2-scale-container" style="flex:1; display:none;">
-                        <label style="font-size:0.78rem;">Max Asse Y (Ds, opz.):</label>
+                        <label style="font-size:0.78rem;">Max Asse Y (Destra, opz.):</label>
                         <input type="number" id="stat-y2-max" placeholder="es. 500" style="width:100%; padding:6px; font-size:0.85rem;">
                     </div>
                 </div>
@@ -955,9 +972,15 @@ function createStatModalHTML() {
 
 async function saveNewStat() {
     const hiddenInputs = document.querySelectorAll('#stat-metrics-container .stat-metric-value');
+    const colorInputs = document.querySelectorAll('#stat-metrics-container .stat-metric-color');
     const selectedMetrics = [];
-    hiddenInputs.forEach(inp => {
-        if (inp.value) selectedMetrics.push(inp.value);
+    const selectedColors = [];
+    hiddenInputs.forEach((inp, idx) => {
+        if (inp.value) {
+            selectedMetrics.push(inp.value);
+            const colorVal = colorInputs[idx]?.value || DISTINCT_COLORS[idx % DISTINCT_COLORS.length];
+            selectedColors.push(colorVal);
+        }
     });
 
     if (selectedMetrics.length === 0) {
@@ -985,6 +1008,7 @@ async function saveNewStat() {
             existing.title = title;
             existing.metric = primaryMetric;
             existing.metrics = selectedMetrics;
+            existing.colors = selectedColors;
             existing.skill = skill;
             existing.type = type;
             existing.product = product;
@@ -1004,6 +1028,7 @@ async function saveNewStat() {
             title, 
             metric: primaryMetric,
             metrics: selectedMetrics,
+            colors: selectedColors,
             skill, type, product,
             yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
             y2Max: !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null,
@@ -1447,12 +1472,6 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         canvasContainer.style.height = '360px';
         canvasContainer.appendChild(canvas);
 
-        const BLUE_PALETTE = [
-            '#2563EB', '#3B82F6', '#1D4ED8', '#0284C7',
-            '#4F46E5', '#0369A1', '#60A5FA', '#1E40AF',
-            '#0D9488', '#6366F1', '#38BDF8', '#4338CA'
-        ];
-
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
         let pieEntries = [];
 
@@ -1486,6 +1505,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             pieEntries = Object.entries(empTotals).map(([e, v]) => [window.getDisplayName(e), v]).sort((a,b) => b[1]-a[1]);
         }
 
+        const colorsList = (statConfig.colors && statConfig.colors.length > 0) ? statConfig.colors : DISTINCT_COLORS;
+
         if (pieEntries.length === 0) {
             canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
         } else {
@@ -1495,7 +1516,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     labels: pieEntries.map(([label]) => label),
                     datasets: [{
                         data: pieEntries.map(([,v]) => v),
-                        backgroundColor: pieEntries.map((_, i) => BLUE_PALETTE[i % BLUE_PALETTE.length]),
+                        backgroundColor: pieEntries.map((_, i) => colorsList[i % colorsList.length]),
                         borderWidth: 2,
                         borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-surface') || '#1e2130'
                     }]
@@ -1521,11 +1542,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
         let datasets = [];
-        const BLUE_PALETTE = [
-            '#2563EB', '#3B82F6', '#1D4ED8', '#0284C7', 
-            '#4F46E5', '#0369A1', '#60A5FA', '#1E40AF', 
-            '#0D9488', '#6366F1', '#38BDF8', '#4338CA'
-        ];
+        const colorsList = (statConfig.colors && statConfig.colors.length > 0) ? statConfig.colors : DISTINCT_COLORS;
 
         const isBar = statConfig.type === 'bar';
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
@@ -1543,7 +1560,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     if (!dateAgg[row.date]) dateAgg[row.date] = 0;
                     dateAgg[row.date] += val;
                 });
-                const color = BLUE_PALETTE[idx % BLUE_PALETTE.length];
+                const color = colorsList[idx % colorsList.length];
                 const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
                 const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
                 datasets.push({
@@ -1551,7 +1568,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     data: pts,
                     type: isBar ? 'bar' : 'line',
                     yAxisID: yAxisID,
-                    backgroundColor: isBar ? hexToRgba(color, 0.8) : hexToRgba(color, 0.12),
+                    backgroundColor: isBar ? hexToRgba(color, 0.85) : hexToRgba(color, 0.15),
                     borderColor: color,
                     borderWidth: isBar ? 1 : 1.8,
                     borderRadius: isBar ? 4 : 0,
@@ -1620,7 +1637,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             });
         } else {
             employees.forEach((emp, idx) => {
-                const color = BLUE_PALETTE[idx % BLUE_PALETTE.length];
+                const color = DISTINCT_COLORS[idx % DISTINCT_COLORS.length];
                 const empPts = labels.map(date => {
                     if (!datesWithData.has(date)) return null;
                     return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
