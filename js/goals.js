@@ -155,34 +155,39 @@ async function renderSalesGoalsTable() {
     let products = await appDb.getSetting('sales_table_products', null);
     if (!products || !Array.isArray(products) || products.length === 0) {
         products = [
-            { key: 'AOIT', label: 'AOIT', isCHF: true },
-            { key: 'My Service', label: 'My Service', isCHF: false },
-            { key: 'My Security M+L', label: 'My Security M+L', isCHF: false },
-            { key: 'RET', label: 'RET', isCHF: false },
-            { key: 'MOBILE', label: 'MOBILE', isCHF: false },
-            { key: 'INTERNET', label: 'INTERNET', isCHF: false },
-            { key: 'TV', label: 'TV', isCHF: false }
+            { key: 'AOIT', label: 'AOIT', mappedMetric: 'AOIT gew', isCHF: true, mode: 'individual' },
+            { key: 'My Service', label: 'My Service', mappedMetric: 'My Service', isCHF: false, mode: 'individual' },
+            { key: 'My Security M+L', label: 'My Security M+L', mappedMetric: 'My Security M+L', isCHF: false, mode: 'individual' },
+            { key: 'RET', label: 'RET', mappedMetric: 'Retention', isCHF: false, mode: 'individual' },
+            { key: 'MOBILE', label: 'MOBILE', mappedMetric: 'Mobile', isCHF: false, mode: 'team' },
+            { key: 'INTERNET', label: 'INTERNET', mappedMetric: 'Internet', isCHF: false, mode: 'team' },
+            { key: 'TV', label: 'TV', mappedMetric: 'TV', isCHF: false, mode: 'individual' }
         ];
         await appDb.setSetting('sales_table_products', products);
     }
 
     const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${activeSalesSkillFilter}`, {})) || {};
+    const manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${activeSalesSkillFilter}`, null)) || null;
 
     // Collaboratori attivi per l'anno e skill selezionata
     const empSet = new Set();
-    perfData.forEach(d => {
-        if (d.employee && (activeSalesSkillFilter === 'ALL' || d.skill === activeSalesSkillFilter)) {
-            empSet.add(d.employee);
-        }
-    });
-    salesData.forEach(d => {
-        if (d.employee && (activeSalesSkillFilter === 'ALL' || d.skill === activeSalesSkillFilter)) {
-            empSet.add(d.employee);
-        }
-    });
+    if (manualCollabs && Array.isArray(manualCollabs)) {
+        manualCollabs.forEach(n => empSet.add(n));
+    } else {
+        perfData.forEach(d => {
+            if (d.employee && (activeSalesSkillFilter === 'ALL' || d.skill === activeSalesSkillFilter)) {
+                empSet.add(d.employee);
+            }
+        });
+        salesData.forEach(d => {
+            if (d.employee && (activeSalesSkillFilter === 'ALL' || d.skill === activeSalesSkillFilter)) {
+                empSet.add(d.employee);
+            }
+        });
 
-    if (empSet.size === 0) {
-        Object.keys(window.appState.anonymousMap || {}).forEach(n => empSet.add(n));
+        if (empSet.size === 0) {
+            Object.keys(window.appState.anonymousMap || {}).forEach(n => empSet.add(n));
+        }
     }
 
     const employees = Array.from(empSet).sort();
@@ -196,9 +201,9 @@ async function renderSalesGoalsTable() {
         <div class="card" style="padding:16px 20px; margin-bottom:16px; border-radius:var(--radius); background:var(--bg-surface); border:1px solid var(--border);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
                 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <h2 style="font-size:1.15rem; font-weight:700; color:var(--text-main); margin:0;">AOIT – OBIETTIVI INDIVIDUALI FOCUS (${year})</h2>
+                    <h2 style="font-size:1.15rem; font-weight:700; color:var(--text-main); margin:0;">AOIT – OBIETTIVI INDIVIDUALI & TEAM (${year})</h2>
                     <span style="font-size:0.75rem; padding:2px 8px; border-radius:12px; background:var(--accent-muted); color:var(--primary); font-weight:600; border:1px solid rgba(59,130,246,0.3);">
-                        Skill: ${activeSalesSkillFilter === 'ALL' ? 'Tutte' : activeSalesSkillFilter}
+                        Skill: ${activeSalesSkillFilter === 'ALL' ? 'Tutte le Skill' : activeSalesSkillFilter}
                     </span>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -208,13 +213,17 @@ async function renderSalesGoalsTable() {
                             ${skillOptsHtml}
                         </select>
                     </label>
+                    <button class="btn secondary btn-sm" id="add-collab-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        + Collaboratore
+                    </button>
                     <button class="btn secondary btn-sm" id="calc-work-pct-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                         Calcola da % Lavoro
                     </button>
                     <button class="btn secondary btn-sm" id="manage-products-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        Gestisci Prodotti
+                        Gestisci Colonne / Prodotti
                     </button>
                     <button class="btn primary btn-sm" id="save-sales-table-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -225,32 +234,51 @@ async function renderSalesGoalsTable() {
         </div>
 
         <div style="overflow-x:auto; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px;">
-            <table class="sales-goals-table" style="width:100%; border-collapse:collapse; font-size:0.83rem; color:var(--text-main);">
-                <thead>
-                    <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
-                        <th rowspan="2" style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); min-width:150px; font-weight:700;">Collaboratore</th>
-                        <th rowspan="2" style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); width:75px; font-weight:700;">% Lavoro</th>
-                        ${products.map(p => `<th colspan="2" style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.88rem; background:rgba(59,130,246,0.06);">${p.label}</th>`).join('')}
-                    </tr>
-                    <tr style="background:var(--bg-base); border-bottom:1px solid var(--border); font-size:0.72rem;">
-                        ${products.map(p => `
-                            <th style="padding:6px 8px; text-align:center; border-right:1px dashed var(--border); color:var(--text-muted); width:75px;">CURRENT</th>
-                            <th style="padding:6px 8px; text-align:center; border-right:1px solid var(--border); color:var(--text-muted); width:85px;">TARGET</th>
-                        `).join('')}
-                    </tr>
-                </thead>
-                <tbody id="sales-goals-tbody"></tbody>
-                <tfoot id="sales-goals-tfoot" style="border-top:2px solid var(--border); background:var(--bg-base);"></tfoot>
-            </table>
+            ${employees.length === 0 ? `
+                <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:10px; opacity:0.6;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin-bottom:6px;">Nessun Collaboratore per la Skill selezionata</h3>
+                    <p style="font-size:0.85rem; margin-bottom:16px;">Aggiungi dei collaboratori alla vista per impostare i loro % di lavoro e target.</p>
+                    <button class="btn primary btn-sm" id="empty-add-collab-btn" style="display:inline-flex; align-items:center; gap:6px;">
+                        + Aggiungi Collaboratore
+                    </button>
+                </div>
+            ` : `
+                <table class="sales-goals-table" style="width:100%; border-collapse:collapse; font-size:0.83rem; color:var(--text-main);">
+                    <thead>
+                        <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
+                            <th rowspan="2" style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); min-width:150px; font-weight:700;">Collaboratore</th>
+                            <th rowspan="2" style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); width:75px; font-weight:700;">% Lavoro</th>
+                            ${products.map(p => `
+                                <th colspan="2" style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.88rem; background:rgba(59,130,246,0.06);">
+                                    <div style="display:flex; align-items:center; justify-content:center; gap:6px;">
+                                        <span>${p.label}</span>
+                                        <span style="font-size:0.65rem; padding:1px 5px; border-radius:4px; font-weight:600; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.2); color:var(--primary);' : 'background:rgba(16,185,129,0.2); color:#10b981;'}">
+                                            ${p.mode === 'team' ? 'TEAM' : 'INDIV.'}
+                                        </span>
+                                    </div>
+                                </th>
+                            `).join('')}
+                        </tr>
+                        <tr style="background:var(--bg-base); border-bottom:1px solid var(--border); font-size:0.72rem;">
+                            ${products.map(p => `
+                                <th style="padding:6px 8px; text-align:center; border-right:1px dashed var(--border); color:var(--text-muted); width:75px;">CURRENT</th>
+                                <th style="padding:6px 8px; text-align:center; border-right:1px solid var(--border); color:var(--text-muted); width:85px;">TARGET</th>
+                            `).join('')}
+                        </tr>
+                    </thead>
+                    <tbody id="sales-goals-tbody"></tbody>
+                    <tfoot id="sales-goals-tfoot" style="border-top:2px solid var(--border); background:var(--bg-base);"></tfoot>
+                </table>
 
-            <!-- Legenda Stato -->
-            <div style="display:flex; align-items:center; justify-content:flex-end; gap:14px; margin-top:16px; font-size:0.78rem; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--border);">
-                <span style="font-weight:600; color:var(--text-muted);">Legenda Stato:</span>
-                <span style="padding:3px 10px; border-radius:12px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-weight:600;">Manca (&lt; 70%)</span>
-                <span style="padding:3px 10px; border-radius:12px; background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); font-weight:600;">Quasi raggiunto (70% - 99%)</span>
-                <span style="padding:3px 10px; border-radius:12px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-weight:600;">Raggiunto (100% - 110%)</span>
-                <span style="padding:3px 10px; border-radius:12px; background:rgba(168,85,247,0.2); color:#a855f7; border:1px solid rgba(168,85,247,0.3); font-weight:600;">Superato (&gt; 110%)</span>
-            </div>
+                <div style="display:flex; align-items:center; justify-content:flex-end; gap:14px; margin-top:16px; font-size:0.78rem; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--border);">
+                    <span style="font-weight:600; color:var(--text-muted);">Legenda Stato:</span>
+                    <span style="padding:3px 10px; border-radius:12px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); font-weight:600;">Manca (&lt; 70%)</span>
+                    <span style="padding:3px 10px; border-radius:12px; background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); font-weight:600;">Quasi raggiunto (70% - 99%)</span>
+                    <span style="padding:3px 10px; border-radius:12px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-weight:600;">Raggiunto (100% - 110%)</span>
+                    <span style="padding:3px 10px; border-radius:12px; background:rgba(168,85,247,0.2); color:#a855f7; border:1px solid rgba(168,85,247,0.3); font-weight:600;">Superato (&gt; 110%)</span>
+                </div>
+            `}
         </div>
     `;
 
@@ -260,6 +288,11 @@ async function renderSalesGoalsTable() {
             activeSalesSkillFilter = e.target.value;
             renderSalesGoalsTable();
         };
+    }
+
+    const addCollabBtn = container.querySelector('#add-collab-btn') || container.querySelector('#empty-add-collab-btn');
+    if (addCollabBtn) {
+        addCollabBtn.onclick = () => openAddCollaboratorModal(employees, year, activeSalesSkillFilter);
     }
 
     const calcBtn = container.querySelector('#calc-work-pct-btn');
@@ -282,7 +315,9 @@ async function renderSalesGoalsTable() {
         };
     }
 
-    buildTableBodyAndFoot(container, products, employees, salesData, perfData, savedTargets, collabWorkPcts, activeSalesSkillFilter);
+    if (employees.length > 0) {
+        buildTableBodyAndFoot(container, products, employees, salesData, perfData, savedTargets, collabWorkPcts, activeSalesSkillFilter);
+    }
 }
 
 function getCellStatusStyle(current, target) {
@@ -299,31 +334,57 @@ function getCellStatusStyle(current, target) {
     }
 }
 
-function getCollaboratorProductCurrent(emp, prodKey, salesData, perfData, skillFilter) {
+async function getAvailableDbMetrics(year) {
+    const perfData = await appDb.getAll('performance', 'year', year);
+    const salesData = await appDb.getAll('sales', 'year', year);
+    
+    const set = new Set();
+    ['AOIT gew', 'AOIT (CHF)', 'Retention', 'My Service', 'My Security M+L', 'Internet', 'TV', 'Mobile'].forEach(k => set.add(k));
+
+    salesData.forEach(d => {
+        if (d.data) {
+            Object.keys(d.data).forEach(k => {
+                if (k !== 'Product' && k !== 'Value') set.add(k);
+            });
+            if (d.data.Product) set.add(d.data.Product);
+        }
+    });
+
+    perfData.forEach(d => {
+        if (d.data) {
+            Object.keys(d.data).forEach(k => set.add(k));
+        }
+    });
+
+    return Array.from(set).sort();
+}
+
+function getCollaboratorProductCurrent(emp, prodConfig, salesData, perfData, skillFilter) {
     let total = 0;
-    const keyLower = prodKey.toLowerCase();
+    const mapped = (prodConfig.mappedMetric || prodConfig.key || '').toLowerCase();
+    const labelLower = (prodConfig.label || '').toLowerCase();
 
     salesData.forEach(r => {
         if (r.employee !== emp || !r.data) return;
         if (skillFilter && skillFilter !== 'ALL' && r.skill && r.skill !== skillFilter) return;
 
         let val = 0;
-        if (keyLower.includes('aoit')) {
+        if (mapped.includes('aoit') || labelLower.includes('aoit')) {
             val = parseMetricValue(r.data['AOIT gew'] ?? r.data['AOIT (CHF)'] ?? r.data['AOIT'] ?? (r.data.Product === 'AOIT gew' ? r.data.Value : 0));
-        } else if (keyLower.includes('my service')) {
+        } else if (mapped.includes('my service') || labelLower.includes('my service')) {
             val = parseMetricValue(r.data['My Service'] ?? (r.data.Product === 'My Service' ? r.data.Value : 0));
-        } else if (keyLower.includes('my security')) {
+        } else if (mapped.includes('my security') || labelLower.includes('my security')) {
             val = parseMetricValue(r.data['My Security M+L'] ?? r.data['My Security'] ?? (r.data.Product && r.data.Product.includes('Security') ? r.data.Value : 0));
-        } else if (keyLower.includes('ret')) {
+        } else if (mapped.includes('ret') || labelLower.includes('ret')) {
             val = parseMetricValue(r.data['Retention'] ?? r.data['RET'] ?? (r.data.Product === 'Retention' ? r.data.Value : 0));
-        } else if (keyLower.includes('mobile')) {
+        } else if (mapped.includes('mobile') || labelLower.includes('mobile')) {
             val = parseMetricValue(r.data['Mobile'] ?? r.data['MOBILE'] ?? (r.data.Product === 'Mobile' ? r.data.Value : 0));
-        } else if (keyLower.includes('internet')) {
+        } else if (mapped.includes('internet') || labelLower.includes('internet')) {
             val = parseMetricValue(r.data['Internet'] ?? r.data['INTERNET'] ?? (r.data.Product === 'Internet' ? r.data.Value : 0));
-        } else if (keyLower.includes('tv')) {
+        } else if (mapped.includes('tv') || labelLower.includes('tv')) {
             val = parseMetricValue(r.data['TV'] ?? (r.data.Product === 'TV' ? r.data.Value : 0));
         } else {
-            val = parseMetricValue(r.data[prodKey] ?? 0);
+            val = parseMetricValue(r.data[prodConfig.mappedMetric] ?? r.data[prodConfig.key] ?? 0);
         }
 
         if (val) total += val;
@@ -333,7 +394,7 @@ function getCollaboratorProductCurrent(emp, prodKey, salesData, perfData, skillF
         perfData.forEach(r => {
             if (r.employee !== emp || !r.data) return;
             if (skillFilter && skillFilter !== 'ALL' && r.skill && r.skill !== skillFilter) return;
-            const val = parseMetricValue(r.data[prodKey] ?? 0);
+            const val = parseMetricValue(r.data[prodConfig.mappedMetric] ?? r.data[prodConfig.key] ?? 0);
             if (val) total += val;
         });
     }
@@ -376,7 +437,7 @@ function buildTableBodyAndFoot(container, products, employees, salesData, perfDa
         `;
 
         products.forEach(p => {
-            const currentVal = getCollaboratorProductCurrent(emp, p.key, salesData, perfData, activeSkillFilter);
+            const currentVal = getCollaboratorProductCurrent(emp, p, salesData, perfData, activeSkillFilter);
             const targetVal = savedTargets[emp + '_' + p.key] ?? 0;
 
             productCurrentTotals[p.key] += currentVal;
@@ -474,7 +535,7 @@ async function saveSalesTableData(container, products, employees, year, activeSk
     await appDb.setSetting('collab_work_pcts', collabWorkPcts);
     await appDb.setSetting(`sales_table_targets_${year}_${activeSkillFilter}`, savedTargets);
 
-    // Sincronizza lo store 'goals' IndexedDB per aggiornare anche le altre schermate
+    // Sincronizza lo store 'goals' IndexedDB
     const goalsToSave = [];
     employees.forEach(emp => {
         products.forEach(p => {
@@ -495,6 +556,70 @@ async function saveSalesTableData(container, products, employees, year, activeSk
     if (goalsToSave.length > 0) {
         await appDb.addMultiple('goals', goalsToSave);
     }
+}
+
+async function openAddCollaboratorModal(existingEmployees, year, skillFilter) {
+    let modal = document.getElementById('add-collab-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'add-collab-modal';
+        modal.className = 'modal';
+        modal.style.cssText = 'max-width: 480px; width: 92%; border-radius: 12px;';
+        document.body.appendChild(modal);
+    }
+
+    const overlay = document.getElementById('modal-overlay');
+    const allNames = Object.keys(window.appState.anonymousMap || {}).sort();
+
+    modal.innerHTML = `
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Aggiungi Collaboratore alla Tabella</h2>
+            <button class="close-modal" id="close-add-collab-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">Seleziona dai Collaboratori Esistenti:</label>
+            <select id="select-existing-collab" style="padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                <option value="">Seleziona...</option>
+                ${allNames.map(n => `<option value="${n}">${window.getDisplayName(n)}</option>`).join('')}
+            </select>
+            <div style="text-align:center; font-weight:600; font-size:0.8rem; color:var(--text-muted);">OPPURE</div>
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">Inserisci un Nuovo Nome:</label>
+            <input type="text" id="input-new-collab" placeholder="Nome Cognome" style="padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
+            <button class="btn secondary" id="cancel-add-collab-btn">Annulla</button>
+            <button class="btn primary" id="confirm-add-collab-btn">Aggiungi</button>
+        </div>
+    `;
+
+    const closeModal = () => {
+        modal.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    };
+
+    modal.querySelector('#close-add-collab-modal').onclick = closeModal;
+    modal.querySelector('#cancel-add-collab-btn').onclick = closeModal;
+
+    modal.querySelector('#confirm-add-collab-btn').onclick = async () => {
+        const sel = modal.querySelector('#select-existing-collab').value;
+        const inp = modal.querySelector('#input-new-collab').value.trim();
+        const empName = sel || inp;
+
+        if (!empName) {
+            alert('Seleziona o inserisci un nome.');
+            return;
+        }
+
+        const currentList = new Set(existingEmployees);
+        currentList.add(empName);
+
+        await appDb.setSetting(`sales_table_collabs_${year}_${skillFilter}`, Array.from(currentList));
+        closeModal();
+        await renderSalesGoalsTable();
+    };
+
+    modal.classList.add('open');
+    if (overlay) overlay.classList.add('open');
 }
 
 async function openCalcByWorkPctModal(products, employees, year, skillFilter) {
@@ -583,25 +708,44 @@ async function openManageProductsModal(currentProducts) {
         modal = document.createElement('div');
         modal.id = 'manage-products-modal';
         modal.className = 'modal';
-        modal.style.cssText = 'max-width: 520px; width: 92%; border-radius: 12px;';
+        modal.style.cssText = 'max-width: 680px; width: 92%; border-radius: 12px;';
         document.body.appendChild(modal);
     }
 
     const overlay = document.getElementById('modal-overlay');
+    const year = window.appState.activeYear;
+    const availableMetrics = await getAvailableDbMetrics(year);
+
+    let activeProds = JSON.parse(JSON.stringify(currentProducts));
 
     modal.innerHTML = `
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
-            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Gestisci Colonne Prodotti Vendita</h2>
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Gestisci Colonne Prodotti & Metriche</h2>
             <button class="close-modal" id="close-prod-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
-        <div class="modal-body" style="padding:20px; max-height:65vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
-            <div id="manage-prods-list" style="display:flex; flex-direction:column; gap:8px;"></div>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-                <input type="text" id="new-prod-name" placeholder="Nome nuovo prodotto (es. Nuovi Abo)" style="flex:1; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.85rem;">
-                <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; color:var(--text-muted); cursor:pointer;">
-                    <input type="checkbox" id="new-prod-chf"> Valore in CHF
-                </label>
-                <button class="btn secondary" id="add-prod-item-btn" style="padding:6px 12px; font-size:0.8rem;">+ Aggiungi</button>
+        <div class="modal-body" style="padding:20px; max-height:65vh; overflow-y:auto; display:flex; flex-direction:column; gap:16px;">
+            <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">
+                Aggiungi o modifica le colonne della tabella, collega ciascuna colonna ad una metrica rilevata nel database e definisci se l'obiettivo è individuale o di team.
+            </p>
+            <div id="manage-prods-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+            
+            <div style="padding:14px; border-radius:8px; background:var(--bg-base); border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
+                <h4 style="font-size:0.9rem; font-weight:700; margin:0; color:var(--text-main);">+ Aggiungi Nuova Colonna</h4>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <input type="text" id="new-prod-name" placeholder="Titolo colonna (es. Nuovi Abo)" style="flex:1; min-width:140px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
+                    <select id="new-prod-metric" style="flex:1; min-width:140px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
+                        <option value="">Collega a metrica DB...</option>
+                        ${availableMetrics.map(m => `<option value="${m}">${m}</option>`).join('')}
+                    </select>
+                    <select id="new-prod-mode" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
+                        <option value="individual">Individuale</option>
+                        <option value="team">Di Team</option>
+                    </select>
+                    <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; color:var(--text-muted); cursor:pointer; white-space:nowrap;">
+                        <input type="checkbox" id="new-prod-chf"> Valore CHF
+                    </label>
+                    <button class="btn secondary" id="add-prod-item-btn" style="padding:6px 14px; font-size:0.8rem;">Aggiungi</button>
+                </div>
             </div>
         </div>
         <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
@@ -610,17 +754,31 @@ async function openManageProductsModal(currentProducts) {
         </div>
     `;
 
-    let activeProds = JSON.parse(JSON.stringify(currentProducts));
-
     const renderProdList = () => {
         const listDiv = modal.querySelector('#manage-prods-list');
         listDiv.innerHTML = '';
         activeProds.forEach((p, idx) => {
+            const mappedMetric = p.mappedMetric || p.key;
+            const mode = p.mode || 'individual';
             const div = document.createElement('div');
-            div.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--bg-base); border:1px solid var(--border); border-radius:6px;';
+            div.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; flex-wrap:wrap;';
             div.innerHTML = `
-                <span style="font-weight:600; font-size:0.88rem; color:var(--text-main);">${p.label} ${p.isCHF ? '(CHF)' : ''}</span>
-                <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="removeProductItem(${idx})">Rimuovi</button>
+                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:220px;">
+                    <input type="text" class="prod-label-input" data-idx="${idx}" value="${p.label}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; font-size:0.88rem; width:130px;">
+                    <select class="prod-metric-select" data-idx="${idx}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.8rem; flex:1;">
+                        ${availableMetrics.map(m => `<option value="${m}" ${m === mappedMetric ? 'selected' : ''}>${m}</option>`).join('')}
+                    </select>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <select class="prod-mode-select" data-idx="${idx}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.8rem;">
+                        <option value="individual" ${mode === 'individual' ? 'selected' : ''}>Individuale</option>
+                        <option value="team" ${mode === 'team' ? 'selected' : ''}>Di Team</option>
+                    </select>
+                    <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; color:var(--text-muted); cursor:pointer;">
+                        <input type="checkbox" class="prod-chf-cb" data-idx="${idx}" ${p.isCHF ? 'checked' : ''}> CHF
+                    </label>
+                    <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="removeProductItem(${idx})">Rimuovi</button>
+                </div>
             `;
             listDiv.appendChild(div);
         });
@@ -634,12 +792,25 @@ async function openManageProductsModal(currentProducts) {
     renderProdList();
 
     modal.querySelector('#add-prod-item-btn').onclick = () => {
-        const input = modal.querySelector('#new-prod-name');
-        const name = input ? input.value.trim() : '';
-        const isCHF = modal.querySelector('#new-prod-chf').checked;
+        const inputName = modal.querySelector('#new-prod-name');
+        const metricSelect = modal.querySelector('#new-prod-metric');
+        const modeSelect = modal.querySelector('#new-prod-mode');
+        const chfCb = modal.querySelector('#new-prod-chf');
+
+        const name = inputName ? inputName.value.trim() : '';
+        const mappedMetric = metricSelect ? metricSelect.value : name;
+        const mode = modeSelect ? modeSelect.value : 'individual';
+        const isCHF = chfCb ? chfCb.checked : false;
+
         if (!name) return;
-        activeProds.push({ key: name, label: name, isCHF });
-        input.value = '';
+        activeProds.push({
+            key: name,
+            label: name,
+            mappedMetric: mappedMetric || name,
+            isCHF: isCHF,
+            mode: mode
+        });
+        inputName.value = '';
         renderProdList();
     };
 
@@ -652,6 +823,23 @@ async function openManageProductsModal(currentProducts) {
     modal.querySelector('#cancel-prod-btn').onclick = closeModal;
 
     modal.querySelector('#save-prod-btn').onclick = async () => {
+        modal.querySelectorAll('.prod-label-input').forEach(inp => {
+            const idx = parseInt(inp.dataset.idx, 10);
+            if (activeProds[idx]) activeProds[idx].label = inp.value.trim() || activeProds[idx].key;
+        });
+        modal.querySelectorAll('.prod-metric-select').forEach(sel => {
+            const idx = parseInt(sel.dataset.idx, 10);
+            if (activeProds[idx]) activeProds[idx].mappedMetric = sel.value;
+        });
+        modal.querySelectorAll('.prod-mode-select').forEach(sel => {
+            const idx = parseInt(sel.dataset.idx, 10);
+            if (activeProds[idx]) activeProds[idx].mode = sel.value;
+        });
+        modal.querySelectorAll('.prod-chf-cb').forEach(cb => {
+            const idx = parseInt(cb.dataset.idx, 10);
+            if (activeProds[idx]) activeProds[idx].isCHF = cb.checked;
+        });
+
         await appDb.setSetting('sales_table_products', activeProds);
         closeModal();
         await renderSalesGoalsTable();
