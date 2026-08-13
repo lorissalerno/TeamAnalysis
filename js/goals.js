@@ -326,17 +326,22 @@ async function renderSalesGoalsTable() {
                                                 </span>
                                                 <span style="font-size:0.55rem; opacity:0.7; margin-left:2px;">▼</span>
                                             </button>
-                                            <div class="col-metrics-dropdown" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; box-shadow:0 8px 16px rgba(0,0,0,0.4); padding:6px; max-height:180px; overflow-y:auto; text-align:left;">
-                                                ${availableSalesMetrics.map(m => {
-                                                    const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key === m ? [m] : []));
-                                                    const isChecked = sel.includes(m);
-                                                    return `
-                                                        <label style="display:flex; align-items:center; gap:6px; font-size:0.72rem; padding:4px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
-                                                            <input type="checkbox" class="metric-cb" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
-                                                            <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
-                                                        </label>
-                                                    `;
-                                                }).join('')}
+                                            <div class="col-metrics-dropdown" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; box-shadow:0 8px 16px rgba(0,0,0,0.4); padding:6px; max-height:220px; overflow-y:auto; text-align:left;">
+                                                <div style="position:sticky; top:0; background:var(--bg-surface); padding-bottom:4px; margin-bottom:4px; border-bottom:1px solid var(--border); z-index:2;">
+                                                    <input type="text" class="metric-search-input" data-idx="${idx}" placeholder="🔍 Cerca prodotto..." style="width:100%; padding:4px 6px; font-size:0.7rem; border-radius:4px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
+                                                </div>
+                                                <div class="metric-items-list" data-idx="${idx}">
+                                                    ${availableSalesMetrics.map(m => {
+                                                        const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key === m ? [m] : []));
+                                                        const isChecked = sel.includes(m);
+                                                        return `
+                                                            <label class="metric-item-label" data-idx="${idx}" data-metric="${m}" style="display:flex; align-items:center; gap:6px; font-size:0.72rem; padding:4px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
+                                                                <input type="checkbox" class="metric-cb" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
+                                                                <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
+                                                            </label>
+                                                        `;
+                                                    }).join('')}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -456,17 +461,38 @@ async function renderSalesGoalsTable() {
         };
     });
 
-    // Header Multi-Metric Select Listeners
+    // Header Multi-Metric Select & Search Listeners
     container.querySelectorAll('.col-metrics-btn').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
             const idx = btn.dataset.idx;
             container.querySelectorAll('.col-metrics-dropdown').forEach(dd => {
                 if (dd.dataset.idx === idx) {
-                    dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+                    const willShow = dd.style.display !== 'block';
+                    dd.style.display = willShow ? 'block' : 'none';
+                    if (willShow) {
+                        const sInp = dd.querySelector('.metric-search-input');
+                        if (sInp) {
+                            sInp.value = '';
+                            sInp.focus();
+                            dd.querySelectorAll('.metric-item-label').forEach(lbl => lbl.style.display = 'flex');
+                        }
+                    }
                 } else {
                     dd.style.display = 'none';
                 }
+            });
+        };
+    });
+
+    container.querySelectorAll('.metric-search-input').forEach(inp => {
+        inp.onclick = (e) => e.stopPropagation();
+        inp.oninput = (e) => {
+            const q = e.target.value.toLowerCase().trim();
+            const idx = inp.dataset.idx;
+            container.querySelectorAll(`.metric-item-label[data-idx="${idx}"]`).forEach(lbl => {
+                const metricText = (lbl.dataset.metric || '').toLowerCase();
+                lbl.style.display = metricText.includes(q) ? 'flex' : 'none';
             });
         };
     });
@@ -954,11 +980,14 @@ async function openManageProductsModal(currentProducts) {
             const div = document.createElement('div');
             div.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; flex-wrap:wrap;';
             div.innerHTML = `
-                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:240px;">
-                    <input type="text" class="prod-label-input" data-idx="${idx}" value="${p.label}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; font-size:0.88rem; width:130px;">
-                    <div style="flex:1; max-height:80px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:4px; background:var(--bg-surface);">
+                <div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:240px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="text" class="prod-label-input" data-idx="${idx}" value="${p.label}" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; font-size:0.88rem; width:140px;">
+                        <input type="text" class="modal-metric-search" data-idx="${idx}" placeholder="🔍 Filtra prodotti DB..." style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.75rem; flex:1;">
+                    </div>
+                    <div class="modal-metrics-box" data-idx="${idx}" style="max-height:90px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:6px; background:var(--bg-surface);">
                         ${availableMetrics.map(m => `
-                            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text-main); cursor:pointer;">
+                            <label class="modal-metric-label" data-idx="${idx}" data-metric="${m}" style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text-main); cursor:pointer; padding:2px;">
                                 <input type="checkbox" class="modal-metric-cb" data-idx="${idx}" data-metric="${m}" ${selMetrics.includes(m) ? 'checked' : ''}>
                                 <span>${m}</span>
                             </label>
@@ -977,6 +1006,18 @@ async function openManageProductsModal(currentProducts) {
                 </div>
             `;
             listDiv.appendChild(div);
+        });
+
+        // Search listener for modal items
+        listDiv.querySelectorAll('.modal-metric-search').forEach(sInp => {
+            sInp.oninput = (e) => {
+                const q = e.target.value.toLowerCase().trim();
+                const idx = sInp.dataset.idx;
+                listDiv.querySelectorAll(`.modal-metric-label[data-idx="${idx}"]`).forEach(lbl => {
+                    const text = (lbl.dataset.metric || '').toLowerCase();
+                    lbl.style.display = text.includes(q) ? 'flex' : 'none';
+                });
+            };
         });
     };
 
