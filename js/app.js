@@ -156,17 +156,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Anon Toggle — aggiorna solo la sezione attiva per evitare reload visivo
+    // Anon Toggle — aggiorna solo la sezione attiva per evitare reload visivo mantenendo lo scroll
     document.getElementById('anon-toggle').addEventListener('change', async (e) => {
         window.appState.isAnonymous = e.target.checked;
         await appDb.setSetting('isAnonymous', e.target.checked);
+
+        const contentEl = document.querySelector('.content');
+        const savedScroll = contentEl ? contentEl.scrollTop : 0;
+        const savedWinScroll = window.scrollY;
+
         const activeSection = document.querySelector('.page-section.active');
         const sectionId = activeSection ? activeSection.id : 'dashboard';
-        if (sectionId === 'dashboard' && window.renderDashboard) window.renderDashboard();
-        else if (sectionId === 'statistics' && window.renderStatistics) window.renderStatistics();
-        else if (sectionId === 'goals' && window.renderGoals) window.renderGoals();
+        const targetSection = activeSection || document.getElementById(sectionId);
+
+        if (targetSection && targetSection.offsetHeight > 0) {
+            targetSection.style.minHeight = targetSection.offsetHeight + 'px';
+        }
+
+        if (sectionId === 'dashboard' && window.renderDashboard) await window.renderDashboard();
+        else if (sectionId === 'statistics' && window.renderStatistics) await window.renderStatistics();
+        else if (sectionId === 'goals' && window.renderGoals) await window.renderGoals();
         else if (sectionId === 'database') renderImportedData();
         else if (sectionId === 'settings' && typeof renderManagementTable === 'function') renderManagementTable();
+
+        if (targetSection) {
+            targetSection.style.minHeight = '';
+        }
+
+        if (contentEl) contentEl.scrollTop = savedScroll;
+        window.scrollTo(0, savedWinScroll);
     });
 
     // Year Change

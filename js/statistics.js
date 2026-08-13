@@ -1166,8 +1166,10 @@ async function saveNewStat() {
 async function renderTeamStats() {
     const container = document.getElementById('team-stats-container');
     if (!container) return;
-    container.innerHTML = '';
     
+    const prevHeight = container.offsetHeight;
+    if (prevHeight > 0) container.style.minHeight = prevHeight + 'px';
+
     const year = window.appState.activeYear;
     const activeTemplateId = await getActiveTemplateId();
 
@@ -1178,6 +1180,7 @@ async function renderTeamStats() {
     
     if (stats.length === 0) {
         container.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica presente in questo template. Usa il pulsante "Nuova Statistica".</p>';
+        container.style.minHeight = '';
         return;
     }
     
@@ -1186,11 +1189,15 @@ async function renderTeamStats() {
     const goals = await appDb.getAll('goals', 'year', year);
     
     const teamAvgOnly = (teamViewMode === 'avg');
-    
+    const cards = [];
     for (const stat of stats) {
         const card = await buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly, showTeamAvgInTeam, showTeamGoalInTeam);
-        container.appendChild(card);
+        cards.push(card);
     }
+
+    container.innerHTML = '';
+    cards.forEach(c => container.appendChild(c));
+    container.style.minHeight = '';
 }
 
 async function renderIndividualStats() {
@@ -1199,6 +1206,7 @@ async function renderIndividualStats() {
     const employee = document.getElementById('individual-select').value;
     
     if (!employee) {
+        container.style.minHeight = '';
         container.innerHTML = `
             <div class="card" style="padding: 40px 20px; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-top: 12px;">
                 <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-base); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); margin: 0 auto;">
@@ -1216,7 +1224,9 @@ async function renderIndividualStats() {
         return;
     }
     
-    container.innerHTML = 'Caricamento...';
+    const prevHeight = container.offsetHeight;
+    if (prevHeight > 0) container.style.minHeight = prevHeight + 'px';
+
     const year = window.appState.activeYear;
     const activeTemplateId = await getActiveTemplateId();
 
@@ -1307,6 +1317,7 @@ async function renderIndividualStats() {
         }
     }
     container.appendChild(statsGrid);
+    container.style.minHeight = '';
 }
 
 function buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig) {
