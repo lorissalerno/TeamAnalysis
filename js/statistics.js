@@ -1865,12 +1865,12 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 plugins: {
                     legend: {
                         display: isMultiMetrics,
-                        position: 'top',
-                        align: 'start',
+                        position: 'bottom',
+                        align: 'center',
                         labels: {
                             color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
                             font: { size: 11 },
-                            padding: 6,
+                            padding: 12,
                             boxWidth: 12
                         }
                     },
