@@ -149,7 +149,6 @@ async function getSalesTablesList(year) {
     if (!tables || !Array.isArray(tables)) {
         tables = [];
     }
-    // Rimuovi tabella di default non richiesta
     const filtered = tables.filter(t => t.name !== 'Tabella Principale Obiettivi' && t.name !== 'Tabella Principale');
     if (filtered.length !== tables.length) {
         tables = filtered;
@@ -195,7 +194,7 @@ async function renderSalesGoalsTable() {
                 <div style="padding:48px 20px; text-align:center; color:var(--text-muted);">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:12px; opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
                     <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-bottom:6px;">Nessuna Tabella Obiettivi</h3>
-                    <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi sales configurando collaboratori, prodotti e target.</p>
+                    <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi sales per skill.</p>
                     <button class="btn primary" id="empty-add-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:8px 18px;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Aggiungi Tabella Obiettivi
@@ -209,12 +208,6 @@ async function renderSalesGoalsTable() {
         }
         return;
     }
-
-    if (!tablesList.some(t => t.id === activeSalesTableId)) {
-        activeSalesTableId = tablesList[0].id;
-    }
-
-    const currentTableObj = tablesList.find(t => t.id === activeSalesTableId) || tablesList[0];
 
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
@@ -233,301 +226,314 @@ async function renderSalesGoalsTable() {
     });
     const availableSalesMetrics = Array.from(salesMetricsSet).sort();
 
-    let products = await appDb.getSetting(`sales_table_products_${activeSalesTableId}`, null);
-    if (!products || !Array.isArray(products)) {
-        products = [];
-        await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-    }
-
-    const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${activeSalesTableId}`, {})) || {};
-    const manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${activeSalesTableId}`, null)) || null;
-
-    const empSet = new Set();
-    if (manualCollabs && Array.isArray(manualCollabs)) {
-        manualCollabs.forEach(n => empSet.add(n));
-    } else {
-        const skillFilter = currentTableObj.skill || 'ALL';
-        perfData.forEach(d => {
-            if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
-                empSet.add(d.employee);
-            }
-        });
-        salesData.forEach(d => {
-            if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
-                empSet.add(d.employee);
-            }
-        });
-
-        if (empSet.size === 0) {
-            Object.keys(window.appState.anonymousMap || {}).forEach(n => empSet.add(n));
-        }
-    }
-
-    const employees = Array.from(empSet).sort();
-
+    // Rendi tutte le tabelle in fila una sotto l'altra
     container.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                ${tablesList.length > 0 ? tablesList.map(t => `
-                    <button class="table-tab-btn ${t.id === activeSalesTableId ? 'active' : ''}" data-id="${t.id}" style="padding:6px 14px; border-radius:8px; border:1px solid ${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--border)'}; background:${t.id === activeSalesTableId ? 'rgba(99,102,241,0.15)' : 'var(--bg-surface)'}; color:${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--text-main)'}; font-weight:700; font-size:0.85rem; cursor:pointer;">
-                        ${t.name}
-                    </button>
-                `).join('') : ''}
-                <button class="btn primary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Aggiungi Tabella Obiettivi
-                </button>
-            </div>
-            ${(employees.length > 0 && isSalesTableEditMode) ? `
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <button class="btn secondary btn-sm" id="delete-current-table-btn" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:6px 10px;">
+        <div style="display:flex; justify-content:flex-start; margin-bottom:16px;">
+            <button class="btn primary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px; padding:8px 16px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Aggiungi Tabella Obiettivi
+            </button>
+        </div>
+        <div id="sales-tables-stack" style="display:flex; flex-direction:column; gap:24px;"></div>
+    `;
+
+    const stackDiv = container.querySelector('#sales-tables-stack');
+
+    const addTableBtn = container.querySelector('#create-new-table-btn');
+    if (addTableBtn) {
+        addTableBtn.onclick = () => openCreateNewTableModal(year, configuredSkills, tablesList);
+    }
+
+    for (const t of tablesList) {
+        let products = await appDb.getSetting(`sales_table_products_${t.id}`, null);
+        if (!products || !Array.isArray(products)) {
+            products = [];
+            await appDb.setSetting(`sales_table_products_${t.id}`, products);
+        }
+
+        const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${t.id}`, {})) || {};
+        const manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.id}`, null)) || null;
+
+        const empSet = new Set();
+        if (manualCollabs && Array.isArray(manualCollabs)) {
+            manualCollabs.forEach(n => empSet.add(n));
+        } else {
+            const skillFilter = t.skill || 'ALL';
+            perfData.forEach(d => {
+                if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
+                    empSet.add(d.employee);
+                }
+            });
+            salesData.forEach(d => {
+                if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
+                    empSet.add(d.employee);
+                }
+            });
+
+            if (empSet.size === 0) {
+                Object.keys(window.appState.anonymousMap || {}).forEach(n => empSet.add(n));
+            }
+        }
+
+        const employees = Array.from(empSet).sort();
+
+        const tableCard = document.createElement('div');
+        tableCard.className = 'card sales-table-card';
+        tableCard.dataset.tableId = t.id;
+        tableCard.style.cssText = 'padding:18px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-surface);';
+
+        tableCard.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h2 style="font-size:1.15rem; font-weight:800; color:var(--text-main); margin:0;">${t.name}</h2>
+                    <span style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700; letter-spacing:0.02em;">Skill: ${t.skill === 'ALL' ? 'Tutte' : t.skill}</span>
+                </div>
+                ${isSalesTableEditMode ? `
+                    <button class="btn secondary btn-sm delete-table-btn" data-id="${t.id}" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:6px 12px;">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         Elimina Tabella
                     </button>
-                </div>
-            ` : ''}
-        </div>
+                ` : ''}
+            </div>
 
-        <div style="overflow-x:auto; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
-            ${employees.length === 0 ? `
-                <div style="padding:48px 20px; text-align:center; color:var(--text-muted);">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:12px; opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-                    <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-bottom:6px;">Nessuna Tabella Obiettivi</h3>
-                    <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi sales configurando collaboratori, prodotti e target.</p>
-                    <button class="btn primary" id="empty-add-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:8px 18px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Aggiungi Tabella Obiettivi
-                    </button>
-                </div>
-            ` : `
-                <table class="sales-goals-table" style="width:auto; border-collapse:collapse; font-size:0.88rem; color:var(--text-main);">
-                    <thead>
-                        <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
-                            <th style="padding:12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
-                            <th style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:90px; min-width:80px; font-weight:700;">% Lavoro</th>
-                            ${products.map((p, idx) => `
-                                <th style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px; position:relative;">
-                                    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
-                                        ${isSalesTableEditMode ? `
-                                            <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
-                                                <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:none; color:var(--text-main); font-weight:700; text-align:center; font-size:0.88rem; width:100%; outline:none;" placeholder="Titolo...">
-                                                <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
-                                                    <button class="edit-col-btn" data-idx="${idx}" title="Modifica Titolo" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                                    </button>
-                                                    <button class="delete-col-btn" data-idx="${idx}" title="Elimina Colonna" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.8;" onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.8';">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                                    </button>
+            <div style="overflow-x:auto;">
+                ${employees.length === 0 ? `
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin:12px 0;">Nessun collaboratore trovato per questa skill.</p>
+                ` : `
+                    <table class="sales-goals-table" data-table-id="${t.id}" style="width:auto; border-collapse:collapse; font-size:0.88rem; color:var(--text-main);">
+                        <thead>
+                            <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
+                                <th style="padding:12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
+                                <th style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:90px; min-width:80px; font-weight:700;">% Lavoro</th>
+                                ${products.map((p, idx) => `
+                                    <th style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px; position:relative;">
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                                            ${isSalesTableEditMode ? `
+                                                <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
+                                                    <input type="text" class="header-col-label-input" data-table-id="${t.id}" data-idx="${idx}" value="${p.label}" style="background:transparent; border:none; color:var(--text-main); font-weight:700; text-align:center; font-size:0.88rem; width:100%; outline:none;" placeholder="Titolo...">
+                                                    <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
+                                                        <button class="edit-col-btn" data-table-id="${t.id}" data-idx="${idx}" title="Modifica Titolo" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                                        </button>
+                                                        <button class="delete-col-btn" data-table-id="${t.id}" data-idx="${idx}" title="Elimina Colonna" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.8;" onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.8';">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%;">
-                                                <span class="toggle-mode-btn" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.2); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
-                                                    ${p.mode === 'team' ? 'TEAM' : 'INDIV.'}
-                                                </span>
-                                                <span class="toggle-chf-btn" data-idx="${idx}" title="Clicca per cambiare tipo di valore" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; background:var(--bg-surface); border:1px solid var(--border); color:var(--text-muted);">
-                                                    ${p.isCHF ? 'CHF' : 'Qtà'}
-                                                </span>
-                                            </div>
-                                            <div class="col-metrics-picker" data-idx="${idx}" style="position:relative; width:100%;">
-                                                <button type="button" class="col-metrics-btn" data-idx="${idx}" style="background:var(--bg-surface); border:1px solid var(--border); color:var(--text-main); font-size:0.72rem; border-radius:6px; padding:4px 8px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
-                                                    <span class="col-metrics-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:center;">
-                                                        ${(() => {
-                                                            const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key ? [p.key] : []));
-                                                            return sel.length === 0 ? '-- Prodotti DB --' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
-                                                        })()}
+                                                <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%;">
+                                                    <span class="toggle-mode-btn" data-table-id="${t.id}" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.2); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
+                                                        ${p.mode === 'team' ? 'TEAM' : 'INDIV.'}
                                                     </span>
-                                                    <span style="font-size:0.55rem; opacity:0.6; margin-left:3px;">▼</span>
-                                                </button>
-                                                <div class="col-metrics-dropdown" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.45); padding:8px; max-height:240px; overflow-y:auto; text-align:left;">
-                                                    <div style="position:sticky; top:0; background:var(--bg-surface); padding-bottom:6px; margin-bottom:6px; border-bottom:1px solid var(--border); z-index:2;">
-                                                        <input type="text" class="metric-search-input" data-idx="${idx}" placeholder="🔍 Cerca prodotto..." style="width:100%; padding:5px 8px; font-size:0.75rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
-                                                    </div>
-                                                    <div class="metric-items-list" data-idx="${idx}">
-                                                        ${availableSalesMetrics.map(m => {
-                                                            const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key === m ? [m] : []));
-                                                            const isChecked = sel.includes(m);
-                                                            return `
-                                                                <label class="metric-item-label" data-idx="${idx}" data-metric="${m}" style="display:flex; align-items:center; gap:6px; font-size:0.75rem; padding:4px 6px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
-                                                                    <input type="checkbox" class="metric-cb" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
-                                                                    <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
-                                                                </label>
-                                                            `;
-                                                        }).join('')}
+                                                    <span class="toggle-chf-btn" data-table-id="${t.id}" data-idx="${idx}" title="Clicca per cambiare tipo di valore" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; background:var(--bg-surface); border:1px solid var(--border); color:var(--text-muted);">
+                                                        ${p.isCHF ? 'CHF' : 'Qtà'}
+                                                    </span>
+                                                </div>
+                                                <div class="col-metrics-picker" data-table-id="${t.id}" data-idx="${idx}" style="position:relative; width:100%;">
+                                                    <button type="button" class="col-metrics-btn" data-table-id="${t.id}" data-idx="${idx}" style="background:var(--bg-surface); border:1px solid var(--border); color:var(--text-main); font-size:0.72rem; border-radius:6px; padding:4px 8px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
+                                                        <span class="col-metrics-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:center;">
+                                                            ${(() => {
+                                                                const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key ? [p.key] : []));
+                                                                return sel.length === 0 ? '-- Prodotti DB --' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
+                                                            })()}
+                                                        </span>
+                                                        <span style="font-size:0.55rem; opacity:0.6; margin-left:3px;">▼</span>
+                                                    </button>
+                                                    <div class="col-metrics-dropdown" data-table-id="${t.id}" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.45); padding:8px; max-height:240px; overflow-y:auto; text-align:left;">
+                                                        <div style="position:sticky; top:0; background:var(--bg-surface); padding-bottom:6px; margin-bottom:6px; border-bottom:1px solid var(--border); z-index:2;">
+                                                            <input type="text" class="metric-search-input" data-table-id="${t.id}" data-idx="${idx}" placeholder="🔍 Cerca prodotto..." style="width:100%; padding:5px 8px; font-size:0.75rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
+                                                        </div>
+                                                        <div class="metric-items-list" data-table-id="${t.id}" data-idx="${idx}">
+                                                            ${availableSalesMetrics.map(m => {
+                                                                const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key === m ? [m] : []));
+                                                                const isChecked = sel.includes(m);
+                                                                return `
+                                                                    <label class="metric-item-label" data-table-id="${t.id}" data-idx="${idx}" data-metric="${m}" style="display:flex; align-items:center; gap:6px; font-size:0.75rem; padding:4px 6px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
+                                                                        <input type="checkbox" class="metric-cb" data-table-id="${t.id}" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
+                                                                        <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
+                                                                    </label>
+                                                                `;
+                                                            }).join('')}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ` : `
-                                            <span style="font-weight:700; font-size:0.9rem; color:var(--text-main); line-height:1.2; word-break:break-word;">${p.label}</span>
-                                        `}
-                                    </div>
-                                </th>
-                            `).join('')}
-                            ${isSalesTableEditMode ? `
-                                <th style="padding:6px; text-align:center; width:50px; min-width:50px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
-                                    <button class="btn primary" id="add-table-col-header-btn" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; font-weight:700; cursor:pointer; margin:0 auto;" title="Aggiungi Obiettivo">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                    </button>
-                                </th>
-                            ` : ''}
-                        </tr>
-                    </thead>
-                    <tbody id="sales-goals-tbody"></tbody>
-                    <tfoot id="sales-goals-tfoot" style="border-top:2px solid var(--border); background:var(--bg-base);"></tfoot>
-                </table>
-            `}
-        </div>
-    `;
+                                            ` : `
+                                                <span style="font-weight:700; font-size:0.9rem; color:var(--text-main); line-height:1.2; word-break:break-word;">${p.label}</span>
+                                            `}
+                                        </div>
+                                    </th>
+                                `).join('')}
+                                ${isSalesTableEditMode ? `
+                                    <th style="padding:6px; text-align:center; width:50px; min-width:50px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
+                                        <button class="btn primary add-table-col-header-btn" data-table-id="${t.id}" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; font-weight:700; cursor:pointer; margin:0 auto;" title="Aggiungi Obiettivo">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                        </button>
+                                    </th>
+                                ` : ''}
+                            </tr>
+                        </thead>
+                        <tbody class="sales-goals-tbody" data-table-id="${t.id}"></tbody>
+                        <tfoot class="sales-goals-tfoot" data-table-id="${t.id}" style="border-top:2px solid var(--border); background:var(--bg-base);"></tfoot>
+                    </table>
+                `}
+            </div>
+        `;
 
-    // Event handler per lo switch Visualizza / Modifica
-    const toggleEditBtn = container.querySelector('#toggle-sales-table-edit-btn');
-    if (toggleEditBtn) {
-        toggleEditBtn.onclick = () => {
-            isSalesTableEditMode = !isSalesTableEditMode;
-            renderSalesGoalsTable();
-        };
-    }
+        stackDiv.appendChild(tableCard);
 
-    // Event handlers for Table tabs
-    container.querySelectorAll('.table-tab-btn').forEach(btn => {
-        btn.onclick = () => {
-            activeSalesTableId = btn.dataset.id;
-            renderSalesGoalsTable();
-        };
-    });
+        const deleteBtn = tableCard.querySelector('.delete-table-btn');
+        if (deleteBtn) {
+            deleteBtn.onclick = async () => {
+                if (!confirm(`Sei sicuro di voler eliminare la tabella "${t.name}"?`)) return;
 
-    ['#create-new-table-btn', '#empty-add-table-btn'].forEach(selector => {
-        const btn = container.querySelector(selector);
-        if (btn) {
-            btn.onclick = () => {
-                openCreateNewTableModal(year, configuredSkills, tablesList);
+                await appDb.setSetting(`sales_table_products_${t.id}`, []);
+                await appDb.setSetting(`sales_table_targets_${year}_${t.id}`, {});
+                await appDb.setSetting(`sales_table_collabs_${year}_${t.id}`, []);
+
+                const idx = tablesList.findIndex(item => item.id === t.id);
+                if (idx !== -1) tablesList.splice(idx, 1);
+                await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+
+                renderSalesGoalsTable();
             };
         }
-    });
 
-    const deleteTabBtn = container.querySelector('#delete-current-table-btn');
-    if (deleteTabBtn) {
-        deleteTabBtn.onclick = async () => {
-            if (!confirm(`Sei sicuro di voler eliminare la tabella "${currentTableObj.name}"?`)) return;
-
-            // Rimuovi impostazioni salvate per questa tabella
-            await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, []);
-            await appDb.setSetting(`sales_table_targets_${year}_${activeSalesTableId}`, {});
-            await appDb.setSetting(`sales_table_collabs_${year}_${activeSalesTableId}`, []);
-
-            const idx = tablesList.findIndex(t => t.id === activeSalesTableId);
-            if (idx !== -1) tablesList.splice(idx, 1);
-            await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-
-            if (tablesList.length > 0) {
-                activeSalesTableId = tablesList[0].id;
-            } else {
-                activeSalesTableId = null;
-            }
-
-            renderSalesGoalsTable();
-        };
-    }
-
-    const skillSelect = container.querySelector('#sales-skill-select');
-    if (skillSelect) {
-        skillSelect.onchange = async (e) => {
-            currentTableObj.skill = e.target.value;
-            await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-            renderSalesGoalsTable();
-        };
-    }
-
-    // Direct Header Editing Listeners: il click sulla matita attiva la modifica inline del titolo
-    container.querySelectorAll('.edit-col-btn').forEach(btn => {
-        btn.onclick = () => {
-            const idx = btn.dataset.idx;
-            const inp = container.querySelector(`.header-col-label-input[data-idx="${idx}"]`);
-            if (inp) {
-                inp.focus();
-                inp.select();
-            }
-        };
-    });
-
-    container.querySelectorAll('.header-col-label-input').forEach(inp => {
-        inp.onchange = async (e) => {
-            const idx = parseInt(e.target.dataset.idx, 10);
-            if (products[idx]) {
-                products[idx].label = e.target.value.trim() || products[idx].key;
-                await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                await saveSalesTableData(container, products, employees, year, activeSalesTableId);
-            }
-        };
-    });
-
-    container.querySelectorAll('.delete-col-btn').forEach(btn => {
-        btn.onclick = async () => {
-            const idx = parseInt(btn.dataset.idx, 10);
-            if (!isNaN(idx) && products[idx]) {
-                products.splice(idx, 1);
-                await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                await renderSalesGoalsTable();
-            }
-        };
-    });
-
-    container.querySelectorAll('.toggle-mode-btn').forEach(btn => {
-        btn.onclick = async () => {
-            const idx = parseInt(btn.dataset.idx, 10);
-            if (!isNaN(idx) && products[idx]) {
-                products[idx].mode = products[idx].mode === 'team' ? 'individual' : 'team';
-                await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                await renderSalesGoalsTable();
-            }
-        };
-    });
-
-    container.querySelectorAll('.toggle-chf-btn').forEach(btn => {
-        btn.onclick = async () => {
-            const idx = parseInt(btn.dataset.idx, 10);
-            if (!isNaN(idx) && products[idx]) {
-                products[idx].isCHF = !products[idx].isCHF;
-                await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                await renderSalesGoalsTable();
-            }
-        };
-    });
-
-    // Header Multi-Metric Select & Search Listeners
-    container.querySelectorAll('.col-metrics-btn').forEach(btn => {
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            const idx = btn.dataset.idx;
-            container.querySelectorAll('.col-metrics-dropdown').forEach(dd => {
-                if (dd.dataset.idx === idx) {
-                    const willShow = dd.style.display !== 'block';
-                    dd.style.display = willShow ? 'block' : 'none';
-                    if (willShow) {
-                        const sInp = dd.querySelector('.metric-search-input');
-                        if (sInp) {
-                            sInp.value = '';
-                            sInp.focus();
-                            dd.querySelectorAll('.metric-item-label').forEach(lbl => lbl.style.display = 'flex');
-                        }
-                    }
-                } else {
-                    dd.style.display = 'none';
+        // Direct Header Editing Listeners
+        tableCard.querySelectorAll('.edit-col-btn').forEach(btn => {
+            btn.onclick = () => {
+                const idx = btn.dataset.idx;
+                const inp = tableCard.querySelector(`.header-col-label-input[data-idx="${idx}"]`);
+                if (inp) {
+                    inp.focus();
+                    inp.select();
                 }
-            });
-        };
-    });
+            };
+        });
 
-    container.querySelectorAll('.metric-search-input').forEach(inp => {
-        inp.onclick = (e) => e.stopPropagation();
-        inp.oninput = (e) => {
-            const q = e.target.value.toLowerCase().trim();
-            const idx = inp.dataset.idx;
-            container.querySelectorAll(`.metric-item-label[data-idx="${idx}"]`).forEach(lbl => {
-                const metricText = (lbl.dataset.metric || '').toLowerCase();
-                lbl.style.display = metricText.includes(q) ? 'flex' : 'none';
-            });
-        };
-    });
+        tableCard.querySelectorAll('.header-col-label-input').forEach(inp => {
+            inp.onchange = async (e) => {
+                const idx = parseInt(e.target.dataset.idx, 10);
+                if (products[idx]) {
+                    products[idx].label = e.target.value.trim() || products[idx].key;
+                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
+                    await saveSalesTableData(tableCard, t.id, products, employees, year, t.skill);
+                }
+            };
+        });
+
+        tableCard.querySelectorAll('.delete-col-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                if (!isNaN(idx) && products[idx]) {
+                    products.splice(idx, 1);
+                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
+                    await renderSalesGoalsTable();
+                }
+            };
+        });
+
+        tableCard.querySelectorAll('.toggle-mode-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                if (!isNaN(idx) && products[idx]) {
+                    products[idx].mode = products[idx].mode === 'team' ? 'individual' : 'team';
+                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
+                    await renderSalesGoalsTable();
+                }
+            };
+        });
+
+        tableCard.querySelectorAll('.toggle-chf-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                if (!isNaN(idx) && products[idx]) {
+                    products[idx].isCHF = !products[idx].isCHF;
+                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
+                    await renderSalesGoalsTable();
+                }
+            };
+        });
+
+        tableCard.querySelectorAll('.col-metrics-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const idx = btn.dataset.idx;
+                tableCard.querySelectorAll('.col-metrics-dropdown').forEach(dd => {
+                    if (dd.dataset.idx === idx) {
+                        const willShow = dd.style.display !== 'block';
+                        dd.style.display = willShow ? 'block' : 'none';
+                        if (willShow) {
+                            const sInp = dd.querySelector('.metric-search-input');
+                            if (sInp) {
+                                sInp.value = '';
+                                sInp.focus();
+                                dd.querySelectorAll('.metric-item-label').forEach(lbl => lbl.style.display = 'flex');
+                            }
+                        }
+                    } else {
+                        dd.style.display = 'none';
+                    }
+                });
+            };
+        });
+
+        tableCard.querySelectorAll('.metric-search-input').forEach(inp => {
+            inp.onclick = (e) => e.stopPropagation();
+            inp.oninput = (e) => {
+                const q = e.target.value.toLowerCase().trim();
+                const idx = inp.dataset.idx;
+                tableCard.querySelectorAll(`.metric-item-label[data-idx="${idx}"]`).forEach(lbl => {
+                    const metricText = (lbl.dataset.metric || '').toLowerCase();
+                    lbl.style.display = metricText.includes(q) ? 'flex' : 'none';
+                });
+            };
+        });
+
+        tableCard.querySelectorAll('.metric-cb').forEach(cb => {
+            cb.onchange = async () => {
+                const idx = parseInt(cb.dataset.idx, 10);
+                if (products[idx]) {
+                    const checked = Array.from(tableCard.querySelectorAll(`.metric-cb[data-idx="${idx}"]:checked`)).map(c => c.dataset.metric);
+                    products[idx].mappedMetrics = checked;
+                    products[idx].mappedMetric = checked.join(', ');
+                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
+
+                    const labelEl = tableCard.querySelector(`.col-metrics-btn[data-idx="${idx}"] .col-metrics-label`);
+                    if (labelEl) {
+                        labelEl.textContent = checked.length === 0 ? '-- Prodotti DB --' : (checked.length === 1 ? checked[0] : `${checked.length} Prodotti DB`);
+                    }
+                }
+            };
+        });
+
+        const addColBtn = tableCard.querySelector('.add-table-col-header-btn');
+        if (addColBtn) {
+            addColBtn.onclick = async () => {
+                const newIdx = products.length;
+                const newKey = 'Obiettivo_' + Date.now();
+                products.push({
+                    key: newKey,
+                    label: 'Nuovo Obiettivo',
+                    mappedMetric: '',
+                    isCHF: false,
+                    mode: 'individual'
+                });
+                await appDb.setSetting(`sales_table_products_${t.id}`, products);
+                await renderSalesGoalsTable();
+
+                setTimeout(() => {
+                    const newInp = container.querySelector(`.header-col-label-input[data-table-id="${t.id}"][data-idx="${newIdx}"]`);
+                    if (newInp) {
+                        newInp.focus();
+                        newInp.select();
+                    }
+                }, 50);
+            };
+        }
+
+        if (employees.length > 0) {
+            buildTableBodyAndFoot(tableCard, t.id, products, employees, savedTargets, collabWorkPcts, t.skill);
+        }
+    }
 
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.col-metrics-picker')) {
@@ -536,77 +542,11 @@ async function renderSalesGoalsTable() {
             });
         }
     });
-
-    container.querySelectorAll('.metric-cb').forEach(cb => {
-        cb.onchange = async () => {
-            const idx = parseInt(cb.dataset.idx, 10);
-            if (products[idx]) {
-                const checked = Array.from(container.querySelectorAll(`.metric-cb[data-idx="${idx}"]:checked`)).map(c => c.dataset.metric);
-                products[idx].mappedMetrics = checked;
-                products[idx].mappedMetric = checked.join(', ');
-                await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-
-                const labelEl = container.querySelector(`.col-metrics-btn[data-idx="${idx}"] .col-metrics-label`);
-                if (labelEl) {
-                    labelEl.textContent = checked.length === 0 ? '-- Prodotti DB --' : (checked.length === 1 ? checked[0] : `${checked.length} Prodotti DB`);
-                }
-            }
-        };
-    });
-
-    const addColHeaderBtn = container.querySelector('#add-table-col-header-btn');
-    if (addColHeaderBtn) {
-        addColHeaderBtn.onclick = async () => {
-            const newIdx = products.length;
-            const newKey = 'Obiettivo_' + Date.now();
-            products.push({
-                key: newKey,
-                label: 'Nuovo Obiettivo',
-                mappedMetric: '',
-                isCHF: false,
-                mode: 'individual'
-            });
-            await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-            await renderSalesGoalsTable();
-
-            setTimeout(() => {
-                const newInp = container.querySelector(`.header-col-label-input[data-idx="${newIdx}"]`);
-                if (newInp) {
-                    newInp.focus();
-                    newInp.select();
-                }
-            }, 50);
-        };
-    }
-
-    const addCollabBtn = container.querySelector('#add-collab-btn') || container.querySelector('#empty-add-collab-btn');
-    if (addCollabBtn) {
-        addCollabBtn.onclick = () => openAddCollaboratorModal(employees, year, activeSalesTableId);
-    }
-
-    const calcBtn = container.querySelector('#calc-work-pct-btn');
-    if (calcBtn) {
-        calcBtn.onclick = () => openCalcByWorkPctModal(products, employees, year, activeSalesTableId);
-    }
-
-    const saveBtn = container.querySelector('#save-sales-table-btn');
-    if (saveBtn) {
-        saveBtn.onclick = async () => {
-            await saveSalesTableData(container, products, employees, year, activeSalesTableId);
-            alert('Obiettivi salvati con successo!');
-            await renderSalesGoalsTable();
-            if (window.renderStatistics) window.renderStatistics();
-        };
-    }
-
-    if (employees.length > 0) {
-        buildTableBodyAndFoot(container, products, employees, savedTargets, collabWorkPcts);
-    }
 }
 
-function buildTableBodyAndFoot(container, products, employees, savedTargets, collabWorkPcts) {
-    const tbody = container.querySelector('#sales-goals-tbody');
-    const tfoot = container.querySelector('#sales-goals-tfoot');
+function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTargets, collabWorkPcts, skillFilter) {
+    const tbody = tableCard.querySelector('.sales-goals-tbody');
+    const tfoot = tableCard.querySelector('.sales-goals-tfoot');
     if (!tbody || !tfoot) return;
 
     tbody.innerHTML = '';
@@ -649,7 +589,6 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
 
         products.forEach(p => {
             if (p.mode === 'team') {
-                // Cella TEAM: un solo riquadro centrato con rowspan, solo al primo collaboratore
                 if (empIdx === 0) {
                     const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
                     rowHtml += `
@@ -662,7 +601,6 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
                     `;
                 }
             } else {
-                // Cella INDIV.: valore calcolato in sola lettura
                 const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
                 const calcVal = totalWorkPctSum > 0 ? Math.round(indivTotal * (empWorkPct / totalWorkPctSum)) : 0;
 
@@ -688,7 +626,7 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     teamTr.style.cssText = 'background:var(--bg-base); font-weight:700; border-top:2px solid var(--border);';
     let teamHtml = `
         <td style="padding:12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-size:0.92rem;">TOTALI OBIETTIVI TEAM</td>
-        <td style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.92rem;" id="total-work-pct-sum">${totalWorkPctSum}%</td>
+        <td style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.92rem;" class="total-work-pct-sum-cell">${totalWorkPctSum}%</td>
     `;
 
     products.forEach(p => {
@@ -717,78 +655,70 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     teamTr.innerHTML = teamHtml;
     tfoot.appendChild(teamTr);
 
-    // Ricalcolo ed Auto-Save in tempo reale al cambio del totale o della % lavoro
     const handleDynamicRecalc = async () => {
         let currentTotalWork = 0;
-        container.querySelectorAll('.collab-work-pct-input').forEach(inp => {
+        tableCard.querySelectorAll('.collab-work-pct-input').forEach(inp => {
             currentTotalWork += (parseFloat(inp.value) || 0);
         });
 
-        const totalWorkEl = container.querySelector('#total-work-pct-sum');
+        const totalWorkEl = tableCard.querySelector('.total-work-pct-sum-cell');
         if (totalWorkEl) totalWorkEl.textContent = `${currentTotalWork}%`;
 
         products.forEach(p => {
             const selector = p.mode === 'team'
                 ? `.sales-team-target-input[data-key="${p.key}"]`
                 : `.sales-indiv-total-input[data-key="${p.key}"]`;
-            const totalInp = container.querySelector(selector);
+            const totalInp = tableCard.querySelector(selector);
             const totalVal = totalInp ? (parseFloat(totalInp.value) || 0) : (savedTargets[p.mode === 'team' ? 'TEAM_' + p.key : 'INDIV_TOTAL_' + p.key] || 0);
 
             if (p.mode === 'team') {
-                const display = container.querySelector(`.team-total-display[data-key="${p.key}"]`);
+                const display = tableCard.querySelector(`.team-total-display[data-key="${p.key}"]`);
                 if (display) display.textContent = formatVal(totalVal, p.isCHF);
             } else {
                 employees.forEach(emp => {
-                    const empWorkInp = container.querySelector(`.collab-work-pct-input[data-emp="${emp}"]`);
+                    const empWorkInp = tableCard.querySelector(`.collab-work-pct-input[data-emp="${emp}"]`);
                     const empWorkPct = empWorkInp ? (parseFloat(empWorkInp.value) || 0) : (collabWorkPcts[emp] ?? 100);
                     const calcVal = currentTotalWork > 0 ? Math.round(totalVal * (empWorkPct / currentTotalWork)) : 0;
 
-                    const display = container.querySelector(`.indiv-calc-display[data-emp="${emp}"][data-key="${p.key}"]`);
+                    const display = tableCard.querySelector(`.indiv-calc-display[data-emp="${emp}"][data-key="${p.key}"]`);
                     if (display) display.textContent = formatVal(calcVal, p.isCHF);
                 });
             }
         });
 
-        await saveSalesTableData(container, products, employees, year, activeSalesTableId);
+        await saveSalesTableData(tableCard, tableId, products, employees, year, skillFilter);
     };
 
-    container.querySelectorAll('.sales-team-target-input, .sales-indiv-total-input, .collab-work-pct-input').forEach(inp => {
+    tableCard.querySelectorAll('.sales-team-target-input, .sales-indiv-total-input, .collab-work-pct-input').forEach(inp => {
         inp.removeEventListener('input', handleDynamicRecalc);
         inp.addEventListener('input', handleDynamicRecalc);
     });
 }
 
-async function saveSalesTableData(container, products, employees, year, activeSkillFilter) {
+async function saveSalesTableData(tableCard, tableId, products, employees, year, activeSkillFilter) {
     const collabWorkPcts = {};
     const savedTargets = {};
 
-    container.querySelectorAll('.collab-work-pct-input').forEach(inp => {
+    tableCard.querySelectorAll('.collab-work-pct-input').forEach(inp => {
         const emp = inp.dataset.emp;
         const val = parseFloat(inp.value) || 100;
         collabWorkPcts[emp] = val;
     });
 
-    container.querySelectorAll('.sales-target-input').forEach(inp => {
-        const emp = inp.dataset.emp;
-        const key = inp.dataset.key;
-        const val = parseFloat(inp.value) || 0;
-        savedTargets[emp + '_' + key] = val;
-    });
-
-    container.querySelectorAll('.sales-team-target-input').forEach(inp => {
+    tableCard.querySelectorAll('.sales-team-target-input').forEach(inp => {
         const key = inp.dataset.key;
         const val = parseFloat(inp.value) || 0;
         savedTargets['TEAM_' + key] = val;
     });
 
-    container.querySelectorAll('.sales-indiv-total-input').forEach(inp => {
+    tableCard.querySelectorAll('.sales-indiv-total-input').forEach(inp => {
         const key = inp.dataset.key;
         const val = parseFloat(inp.value) || 0;
         savedTargets['INDIV_TOTAL_' + key] = val;
     });
 
     await appDb.setSetting('collab_work_pcts', collabWorkPcts);
-    await appDb.setSetting(`sales_table_targets_${year}_${activeSkillFilter}`, savedTargets);
+    await appDb.setSetting(`sales_table_targets_${year}_${tableId}`, savedTargets);
 
     // Sincronizza lo store 'goals' IndexedDB
     const goalsToSave = [];
@@ -797,20 +727,28 @@ async function saveSalesTableData(container, products, employees, year, activeSk
             const tgt = savedTargets['TEAM_' + p.key];
             if (tgt && tgt > 0) {
                 goalsToSave.push({
-                    id: `salestable_${year}_${activeSkillFilter}_TEAM_${p.key}`,
-                    metric: `Sales: ${p.key}`,
-                    skill: activeSkillFilter,
-                    employee: null,
+                    id: `salestable_${year}_${tableId}_TEAM_${p.key}`,
+                    year: year,
+                    metric: p.mappedMetric || p.label,
+                    mappedMetrics: p.mappedMetrics || [],
                     target: tgt,
-                    year: year
+                    skill: activeSkillFilter,
+                    employee: '',
+                    toleranceType: 'percentage',
+                    tolerancePlus: 0,
+                    toleranceMinus: 0
                 });
             }
         } else {
+            const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] || 0;
+            let totalWork = 0;
+            employees.forEach(e => totalWork += (collabWorkPcts[e] ?? 100));
+
             employees.forEach(emp => {
-                const tgt = savedTargets[emp + '_' + p.key];
-                if (tgt && tgt > 0) {
+                const workPct = collabWorkPcts[emp] ?? 100;
+                const calcVal = totalWork > 0 ? Math.round(indivTotal * (workPct / totalWork)) : 0;
+                if (calcVal > 0) {
                     goalsToSave.push({
-                        id: `salestable_${year}_${activeSkillFilter}_${emp}_${p.key}`,
                         metric: `Sales: ${p.key}`,
                         skill: activeSkillFilter,
                         employee: emp,
@@ -1506,26 +1444,22 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
 
     modal.innerHTML = `
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
-            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Crea Nuova Tabella Obiettivi Sales</h2>
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Aggiungi Tabella Obiettivi Sales</h2>
             <button class="close-modal" id="close-create-tab-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <div class="modal-body" style="padding:20px; max-height:68vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
             <div>
-                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Nome Tabella:</label>
-                <input type="text" id="new-table-name-input" placeholder="es. Obiettivi Sales 2026 Wireline" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600; font-size:0.88rem;">
-            </div>
-
-            <div>
-                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Skill Associata:</label>
+                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Skill:</label>
                 <select id="new-table-skill-select" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.88rem;">
                     <option value="ALL">Tutte le Skill</option>
                     ${configuredSkills.map(s => `<option value="${s}">${s}</option>`).join('')}
                 </select>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:6px;">Il nome della tabella corrisponderà allo skill selezionato.</p>
             </div>
         </div>
         <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
             <button class="btn secondary" id="cancel-create-tab-btn">Annulla</button>
-            <button class="btn primary" id="confirm-create-tab-btn">Crea Tabella</button>
+            <button class="btn primary" id="confirm-create-tab-btn">Aggiungi</button>
         </div>
     `;
 
@@ -1538,13 +1472,8 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
     modal.querySelector('#cancel-create-tab-btn').onclick = closeModal;
 
     modal.querySelector('#confirm-create-tab-btn').onclick = async () => {
-        const name = modal.querySelector('#new-table-name-input').value.trim();
         const skill = modal.querySelector('#new-table-skill-select').value;
-
-        if (!name) {
-            alert('Inserisci un nome per la tabella.');
-            return;
-        }
+        const name = skill === 'ALL' ? 'Tutte le Skill' : skill;
 
         const newId = 'table_' + Date.now();
         tablesList.push({ id: newId, name: name, skill: skill });
