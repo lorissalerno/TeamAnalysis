@@ -784,15 +784,15 @@ async function openStatModal() {
         const labels = Array.from(datesSet).sort();
         const displayLabels = labels.map(formatDateLabel);
 
-        // Calcolo scale con 10% di margine
+        // Calcolo scale: se valore manuale usa esattamente quello inserito, altrimenti il margine automatico viene usato dal calcolo di default
         const yScaleConfig = {};
         if (!isNaN(customYMax) && customYMax > 0) {
-            yScaleConfig.max = customYMax * 1.1;
+            yScaleConfig.max = customYMax;
         }
 
         const y2ScaleConfig = {};
         if (!isNaN(customY2Max) && customY2Max > 0) {
-            y2ScaleConfig.max = customY2Max * 1.1;
+            y2ScaleConfig.max = customY2Max;
         }
 
         const scalesConfig = {
@@ -1657,7 +1657,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
 
         let yScalesConfig = {};
         if (statConfig.yMax && !isNaN(statConfig.yMax)) {
-            yScalesConfig = { beginAtZero: true, max: statConfig.yMax * 1.1 };
+            yScalesConfig = { beginAtZero: true, max: statConfig.yMax };
         } else if (allVals.length > 0) {
             const minVal = Math.min(...allVals);
             const maxVal = Math.max(...allVals);
