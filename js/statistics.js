@@ -1,3 +1,13 @@
+// Plugin per aggiungere spaziatura sotto la legenda del grafico
+const legendMarginPlugin = {
+    id: 'legendMarginPlugin',
+    afterFit(legend) {
+        if (legend.options && legend.options.display) {
+            legend.height += 20;
+        }
+    }
+};
+
 // Plugin globale per estendere la linea dell'obiettivo viola da estremo a estremo (sinistra a destra)
 const fullWidthGoalPlugin = {
     id: 'fullWidthGoalPlugin',
@@ -1250,7 +1260,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     const canvasContainer = document.createElement('div');
     canvasContainer.style.width = '100%';
-    canvasContainer.style.marginTop = isPreview ? '0' : '4px';
+    canvasContainer.style.marginTop = '0px';
     if (statConfig.type === 'table') {
         canvasContainer.style.height = 'auto';
         canvasContainer.style.overflowX = 'auto';
@@ -1843,7 +1853,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 labels: displayLabels,
                 datasets: datasets
             },
-            plugins: [fullWidthGoalPlugin],
+            plugins: [fullWidthGoalPlugin, legendMarginPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1860,7 +1870,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                         labels: {
                             color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
                             font: { size: 11 },
-                            padding: 24,
+                            padding: 6,
                             boxWidth: 12
                         }
                     },
