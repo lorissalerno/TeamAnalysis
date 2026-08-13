@@ -2112,57 +2112,103 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
 
         if (metricsList.length > 1 && !teamAvgOnly) {
-            // Se multi-metrica, ogni dataset rappresenta una metrica aggregata
-            metricsList.forEach((m, idx) => {
-                const isP = m.startsWith('Performance: ');
-                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
-                const sData = isP ? perfData : salesData;
-                const dateAgg = {};
-                sData.forEach(row => {
-                    if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
-                    if (isIndividual && employeeName && row.employee !== employeeName) return;
-                    const val = parseMetricValue(row.data[rKey]);
-                    if (!dateAgg[row.date]) dateAgg[row.date] = 0;
-                    dateAgg[row.date] += val;
+            if (isIndividual) {
+                metricsList.forEach((m, idx) => {
+                    const isP = m.startsWith('Performance: ');
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                    const sData = isP ? perfData : salesData;
+                    const dateAgg = {};
+                    sData.forEach(row => {
+                        if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                        if (!isP && statConfig.product && row.data['Product'] !== statConfig.product) return;
+                        if (row.employee !== employeeName) return;
+                        const val = parseMetricValue(row.data[rKey]);
+                        if (!dateAgg[row.date]) dateAgg[row.date] = 0;
+                        dateAgg[row.date] += val;
+                    });
+                    const color = colorsList[idx % colorsList.length];
+                    const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] !== undefined ? dateAgg[l] : 0) : null);
+                    const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
+                    datasets.push({
+                        label: rKey,
+                        data: pts,
+                        type: isBar ? 'bar' : 'line',
+                        yAxisID: yAxisID,
+                        backgroundColor: isBar ? hexToRgba(color, 0.85) : hexToRgba(color, 0.15),
+                        borderColor: color,
+                        borderWidth: isBar ? 1 : 1.8,
+                        borderRadius: isBar ? 4 : 0,
+                        minBarLength: isBar ? 4 : 0,
+                        pointRadius: 0,
+                        pointHoverRadius: isBar ? 0 : 5,
+                        pointBackgroundColor: color,
+                        tension: 0.35,
+                        order: 2
+                    });
                 });
-                const color = colorsList[idx % colorsList.length];
-                const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] !== undefined ? dateAgg[l] : 0) : null);
-                const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
-                datasets.push({
-                    label: rKey,
-                    data: pts,
-                    type: isBar ? 'bar' : 'line',
-                    yAxisID: yAxisID,
-                    backgroundColor: isBar ? hexToRgba(color, 0.85) : hexToRgba(color, 0.15),
-                    borderColor: color,
-                    borderWidth: isBar ? 1 : 1.8,
-                    borderRadius: isBar ? 4 : 0,
-                    minBarLength: isBar ? 4 : 0,
-                    pointRadius: 0,
-                    pointHoverRadius: isBar ? 0 : 5,
-                    pointBackgroundColor: color,
-                    tension: 0.35,
-                    order: 2
-                });
-            });
 
-            if (isIndividual && showTeamAvg) {
-                datasets.push({
-                    label: 'Media Team',
-                    data: teamAvgPts,
-                    type: 'line',
-                    borderColor: '#F59E0B',
-                    backgroundColor: '#F59E0B',
-                    borderWidth: 3.5,
-                    borderDash: [6, 4],
-                    pointRadius: 0,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: '#F59E0B',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    fill: false,
-                    tension: 0.35,
-                    order: 1
+                if (showTeamAvg) {
+                    datasets.push({
+                        label: 'Media Team',
+                        data: teamAvgPts,
+                        type: 'line',
+                        borderColor: '#F59E0B',
+                        backgroundColor: '#F59E0B',
+                        borderWidth: 3.5,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#F59E0B',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        fill: false,
+                        tension: 0.35,
+                        order: 1
+                    });
+                }
+            } else {
+                metricsList.forEach((m, idx) => {
+                    const isP = m.startsWith('Performance: ');
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                    const sData = isP ? perfData : salesData;
+                    const empMap = {};
+                    sData.forEach(row => {
+                        if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                        if (!isP && statConfig.product && row.data['Product'] !== statConfig.product) return;
+                        const date = row.date;
+                        const emp = row.employee;
+                        if (!emp) return;
+                        const val = parseMetricValue(row.data[rKey]);
+                        if (!empMap[emp]) empMap[emp] = {};
+                        if (!empMap[emp][date]) empMap[emp][date] = 0;
+                        empMap[emp][date] += val;
+                    });
+
+                    const baseColor = colorsList[idx % colorsList.length];
+                    const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
+
+                    employees.forEach((emp) => {
+                        const pts = labels.map(l => datesWithData.has(l) ? ((empMap[emp] && empMap[emp][l] !== undefined) ? empMap[emp][l] : 0) : null);
+                        const empName = window.getDisplayName(emp);
+                        const labelText = `${empName} (${rKey})`;
+
+                        datasets.push({
+                            label: labelText,
+                            data: pts,
+                            type: isBar ? 'bar' : 'line',
+                            yAxisID: yAxisID,
+                            backgroundColor: isBar ? hexToRgba(baseColor, 0.85) : hexToRgba(baseColor, 0.15),
+                            borderColor: baseColor,
+                            borderWidth: isBar ? 1 : 1.8,
+                            borderRadius: isBar ? 4 : 0,
+                            minBarLength: isBar ? 4 : 0,
+                            pointRadius: 0,
+                            pointHoverRadius: isBar ? 0 : 5,
+                            pointBackgroundColor: baseColor,
+                            tension: 0.35,
+                            order: 2
+                        });
+                    });
                 });
             }
         } else if (isIndividual) {
@@ -2286,13 +2332,18 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             }
         }
         
-        // Calculate adaptive min and max for Y scale
+        // Calculate adaptive min and max for Y and Y2 scales
         let allVals = [];
+        let allY2Vals = [];
         datasets.forEach(ds => {
             if (ds.data && Array.isArray(ds.data)) {
                 ds.data.forEach(v => {
                     if (v !== null && v !== undefined && !isNaN(v)) {
-                        allVals.push(v);
+                        if (ds.yAxisID === 'y2') {
+                            allY2Vals.push(v);
+                        } else {
+                            allVals.push(v);
+                        }
                     }
                 });
             }
@@ -2358,9 +2409,26 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         };
 
         if (isMultiMetrics) {
-            let y2ScalesConfig = { beginAtZero: true };
+            let y2ScalesConfig = {};
             if (statConfig.y2Max && !isNaN(statConfig.y2Max)) {
-                y2ScalesConfig.max = statConfig.y2Max;
+                y2ScalesConfig = { beginAtZero: true, max: statConfig.y2Max };
+            } else if (allY2Vals.length > 0) {
+                const minVal = Math.min(...allY2Vals);
+                const maxVal = Math.max(...allY2Vals);
+                if (minVal === 0 && maxVal === 0) {
+                    y2ScalesConfig = { min: 0, max: 1 };
+                } else {
+                    const range = maxVal - minVal;
+                    const margin = (range > 0 ? range : Math.abs(maxVal) || 1) * 0.15;
+                    const calculatedMin = (minVal >= 0 && minVal <= maxVal * 0.3) ? 0 : Math.max(0, niceRoundDown(minVal - margin));
+                    const calculatedMax = niceRoundUp(maxVal + margin);
+                    y2ScalesConfig = {
+                        min: calculatedMin,
+                        max: calculatedMax || 1
+                    };
+                }
+            } else {
+                y2ScalesConfig = { beginAtZero: true };
             }
             scalesConfig.y2 = {
                 position: 'right',
