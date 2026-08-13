@@ -244,14 +244,31 @@
 
         <!-- Goals Section -->
         <section id="goals" class="page-section">
-            <div class="section-header">
-                <h1>Obiettivi</h1>
-                <button class="btn primary" id="add-goal-btn">Nuovo Obiettivo</button>
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                    <h1>Obiettivi</h1>
+                    <div class="tabs" style="display:inline-flex;">
+                        <button class="tab-btn active" id="goals-tab-sales-btn" style="padding:6px 12px; font-size:0.82rem; font-weight:600;">Tabella Obiettivi Vendita</button>
+                        <button class="tab-btn" id="goals-tab-list-btn" style="padding:6px 12px; font-size:0.82rem; font-weight:600;">Tutti gli Obiettivi</button>
+                    </div>
+                </div>
+                <div id="goals-top-actions" style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn primary" id="add-goal-btn" style="display:none;">Nuovo Obiettivo</button>
+                </div>
             </div>
-            <div style="margin-bottom: 16px;">
-                <input type="text" id="goals-search-input" placeholder="Cerca obiettivo per metrica, skill o dipendente..." style="width:100%; max-width:400px; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+
+            <!-- Vista Tabella Obiettivi Vendita (Stile Excel) -->
+            <div id="goals-sales-container" class="goals-tab-content">
+                <div id="goals-sales-table-container"></div>
             </div>
-            <div id="goals-list" class="goals-grid"></div>
+
+            <!-- Vista Elenco Obiettivi Generali -->
+            <div id="goals-list-container" class="goals-tab-content" style="display:none;">
+                <div style="margin-bottom: 16px;">
+                    <input type="text" id="goals-search-input" placeholder="Cerca obiettivo per metrica, skill o dipendente..." style="width:100%; max-width:400px; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                </div>
+                <div id="goals-list" class="goals-grid"></div>
+            </div>
         </section>
 
         <!-- Settings Section -->
