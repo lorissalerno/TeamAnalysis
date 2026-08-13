@@ -2638,7 +2638,7 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
         if (v === null || v === undefined || v === '') return '—';
         const num = parseFloat(v);
         if (isNaN(num)) return '—';
-        if (isCHF) return Math.round(num).toLocaleString('de-CH') + '.-';
+        if (isCHF) return Math.round(num).toLocaleString('de-CH');
         return Number.isInteger(num) ? num.toString() : num.toFixed(1);
     };
 
