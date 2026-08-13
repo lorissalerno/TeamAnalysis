@@ -342,15 +342,25 @@ async function renderSalesGoalsTable() {
     const deleteTabBtn = container.querySelector('#delete-current-table-btn');
     if (deleteTabBtn) {
         deleteTabBtn.onclick = async () => {
-            if (tablesList.length <= 1) {
-                alert('Non puoi eliminare l\'unica tabella rimasta.');
-                return;
-            }
             if (!confirm(`Sei sicuro di voler eliminare la tabella "${currentTableObj.name}"?`)) return;
-            const idx = tablesList.findIndex(t => t.id === activeSalesTableId);
-            if (idx !== -1) tablesList.splice(idx, 1);
-            await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-            activeSalesTableId = tablesList[0].id;
+
+            // Rimuovi impostazioni salvate per questa tabella
+            await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, []);
+            await appDb.setSetting(`sales_table_targets_${year}_${activeSalesTableId}`, {});
+            await appDb.setSetting(`sales_table_collabs_${year}_${activeSalesTableId}`, []);
+
+            if (tablesList.length > 1) {
+                const idx = tablesList.findIndex(t => t.id === activeSalesTableId);
+                if (idx !== -1) tablesList.splice(idx, 1);
+                await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+                activeSalesTableId = tablesList[0].id;
+            } else {
+                // Se è l'ultima, la reinizializziamo completamente vuota
+                tablesList[0] = { id: 'default', name: 'Tabella Principale Obiettivi', skill: 'ALL' };
+                await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+                activeSalesTableId = 'default';
+            }
+
             renderSalesGoalsTable();
         };
     }
