@@ -2721,8 +2721,8 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
 
     const tfoot = document.createElement('tfoot');
     let footHtml = `<tr style="background:var(--bg-base); font-weight:700; border-top:2px solid var(--border);">
-        <td style="padding:10px 12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary);">TOTALI OBIETTIVI TEAM</td>
-        <td style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800;">${totalWorkPctSum}%</td>`;
+        <td style="padding:10px 12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary);">TOTALI</td>
+        <td style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800;"></td>`;
 
     products.forEach(p => {
         const mappedMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics

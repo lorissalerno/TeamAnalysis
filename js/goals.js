@@ -657,8 +657,8 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
     const teamTr = document.createElement('tr');
     teamTr.style.cssText = 'background:var(--bg-base); font-weight:700; border-top:2px solid var(--border);';
     let teamHtml = `
-        <td style="padding:12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-size:0.92rem;">TOTALI OBIETTIVI TEAM</td>
-        <td style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.92rem;" class="total-work-pct-sum-cell">${totalWorkPctSum}%</td>
+        <td style="padding:12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-size:0.92rem;">TOTALI</td>
+        <td style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.92rem;" class="total-work-pct-sum-cell"></td>
     `;
 
     products.forEach(p => {
@@ -694,7 +694,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
         });
 
         const totalWorkEl = tableCard.querySelector('.total-work-pct-sum-cell');
-        if (totalWorkEl) totalWorkEl.textContent = `${currentTotalWork}%`;
+        if (totalWorkEl) totalWorkEl.textContent = '';
 
         products.forEach(p => {
             const selector = p.mode === 'team'
