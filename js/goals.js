@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.getElementById('goals-list');
         if (!list) return;
         
-        const year = window.appState.activeYear;
+        const year = window.appState?.activeYear || new Date().getFullYear();
         const goals = await appDb.getAll('goals', 'year', year);
         
         const searchInput = document.getElementById('goals-search-input');
@@ -159,7 +159,7 @@ async function renderSalesGoalsTable() {
     const container = document.getElementById('goals-sales-table-container');
     if (!container) return;
 
-    const year = window.appState.activeYear;
+    const year = window.appState?.activeYear || new Date().getFullYear();
     const tablesList = await getSalesTablesList(year);
     if (!tablesList.some(t => t.id === activeSalesTableId)) {
         activeSalesTableId = tablesList[0].id;
@@ -727,7 +727,7 @@ async function openManageProductsModal(currentProducts) {
     }
 
     const overlay = document.getElementById('modal-overlay');
-    const year = window.appState.activeYear;
+    const year = window.appState?.activeYear || new Date().getFullYear();
     const availableMetrics = await getAvailableDbMetrics(year);
 
     let activeProds = JSON.parse(JSON.stringify(currentProducts));
@@ -887,7 +887,7 @@ async function openGoalModal(goalId = null) {
     }
     
     // Populate metrics
-    const year = window.appState.activeYear;
+    const year = window.appState?.activeYear || new Date().getFullYear();
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
     
@@ -1180,7 +1180,7 @@ async function saveNewGoal() {
         toleranceMinus,
         skill,
         employee,
-        year: window.appState.activeYear
+        year: window.appState?.activeYear || new Date().getFullYear()
     };
     
     await appDb.addMultiple('goals', [newGoal]);
