@@ -539,16 +539,11 @@ async function openStatModal(editingStat = null) {
     const viewAllBtn = modal.querySelector('#preview-view-all-btn');
     const viewAvgBtn = modal.querySelector('#preview-view-avg-btn');
 
-    if (showAvgToggle) showAvgToggle.checked = showTeamAvgInTeam;
-    if (showGoalToggle) showGoalToggle.checked = showTeamGoalInTeam;
+    if (showAvgToggle) showAvgToggle.checked = true;
+    if (showGoalToggle) showGoalToggle.checked = true;
     if (viewAllBtn && viewAvgBtn) {
-        if (teamViewMode === 'avg') {
-            viewAvgBtn.classList.add('active');
-            viewAllBtn.classList.remove('active');
-        } else {
-            viewAllBtn.classList.add('active');
-            viewAvgBtn.classList.remove('active');
-        }
+        viewAllBtn.classList.add('active');
+        viewAvgBtn.classList.remove('active');
     }
 
     const allMetrics = Array.from(metrics).sort();
