@@ -576,20 +576,6 @@ async function openStatModal() {
         opt.textContent = s;
         skillSelect.appendChild(opt);
     });
-
-    // Popola select gruppo
-    const groupSelect = document.getElementById('stat-group');
-    if (groupSelect) {
-        groupSelect.innerHTML = '<option value="">Nessun gruppo (statistica indipendente)</option>';
-        const savedGroups = (await appDb.getSetting('stat_groups', [])) || [];
-        savedGroups.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = g.id;
-            opt.textContent = g.name;
-            groupSelect.appendChild(opt);
-        });
-        groupSelect.value = '';
-    }
     
     modal.classList.add('open');
 }
@@ -622,14 +608,6 @@ function createStatModalHTML() {
             
             <label>Filtro Prodotto (solo per Sales, opzionale):</label>
             <input type="text" id="stat-product" placeholder="es. Multiroom Max" style="width:100%; padding:8px; margin-bottom:16px;">
-
-            <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                Gruppo
-                <span style="font-size:0.78rem; color:var(--text-muted); font-weight:400;">(i gruppi si gestiscono in Impostazioni)</span>
-            </label>
-            <select id="stat-group" style="width:100%; padding:8px; margin-bottom:4px;">
-                <option value="">Nessun gruppo</option>
-            </select>
         </div>
         <div class="modal-footer">
             <button class="btn primary" onclick="saveNewStat()">Salva Statistica</button>
