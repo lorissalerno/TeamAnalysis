@@ -148,7 +148,7 @@ async function getSalesTablesList(year) {
     let tables = await appDb.getSetting(`sales_tables_list_${year}`, null);
     if (!tables || !Array.isArray(tables) || tables.length === 0) {
         tables = [
-            { id: 'default', name: 'Tabella Principale Obiettivi', skill: 'ALL' }
+            { id: 'default', name: 'Obiettivi Sales', skill: 'ALL' }
         ];
         await appDb.setSetting(`sales_tables_list_${year}`, tables);
     }
@@ -230,7 +230,7 @@ async function renderSalesGoalsTable() {
                 `).join('')}
                 <button class="btn primary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    + Aggiungi Tabella Obiettivi
+                    Aggiungi Tabella Obiettivi
                 </button>
             </div>
             ${employees.length > 0 ? `
@@ -260,7 +260,7 @@ async function renderSalesGoalsTable() {
                     <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi sales configurando collaboratori, prodotti e target.</p>
                     <button class="btn primary" id="empty-add-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:8px 18px;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        + Aggiungi Tabella Obiettivi
+                        Aggiungi Tabella Obiettivi
                     </button>
                 </div>
             ` : `
@@ -340,7 +340,7 @@ async function renderSalesGoalsTable() {
                 activeSalesTableId = tablesList[0].id;
             } else {
                 // Se è l'ultima, la reinizializziamo completamente vuota
-                tablesList[0] = { id: 'default', name: 'Tabella Principale Obiettivi', skill: 'ALL' };
+                tablesList[0] = { id: 'default', name: 'Obiettivi Sales', skill: 'ALL' };
                 await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
                 activeSalesTableId = 'default';
             }
