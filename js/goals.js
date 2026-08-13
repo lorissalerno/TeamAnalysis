@@ -190,7 +190,6 @@ async function renderSalesGoalsTable() {
 
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
-    const configuredSkills = (await appDb.getSetting('skills', [])) || [];
     const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
 
     let products = await appDb.getSetting(`sales_table_products_${activeSalesTableId}`, null);
