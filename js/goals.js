@@ -146,10 +146,8 @@ let activeSalesTableId = 'default';
 
 async function getSalesTablesList(year) {
     let tables = await appDb.getSetting(`sales_tables_list_${year}`, null);
-    if (!tables || !Array.isArray(tables) || tables.length === 0) {
-        tables = [
-            { id: 'default', name: 'Obiettivi Sales', skill: 'ALL' }
-        ];
+    if (!tables || !Array.isArray(tables)) {
+        tables = [];
         await appDb.setSetting(`sales_tables_list_${year}`, tables);
     }
     return tables;
@@ -161,6 +159,29 @@ async function renderSalesGoalsTable() {
 
     const year = window.appState?.activeYear || new Date().getFullYear();
     const tablesList = await getSalesTablesList(year);
+    const configuredSkills = (await appDb.getSetting('skills', [])) || [];
+
+    if (tablesList.length === 0) {
+        container.innerHTML = `
+            <div style="overflow-x:auto; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px;">
+                <div style="padding:48px 20px; text-align:center; color:var(--text-muted);">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:12px; opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-bottom:6px;">Nessuna Tabella Obiettivi</h3>
+                    <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi sales configurando collaboratori, prodotti e target.</p>
+                    <button class="btn primary" id="empty-add-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:8px 18px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Aggiungi Tabella Obiettivi
+                    </button>
+                </div>
+            </div>
+        `;
+        const emptyTabBtn = container.querySelector('#empty-add-table-btn');
+        if (emptyTabBtn) {
+            emptyTabBtn.onclick = () => openCreateNewTableModal(year, configuredSkills, tablesList);
+        }
+        return;
+    }
+
     if (!tablesList.some(t => t.id === activeSalesTableId)) {
         activeSalesTableId = tablesList[0].id;
     }
@@ -215,7 +236,7 @@ async function renderSalesGoalsTable() {
     container.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                ${tablesList.length > 1 ? tablesList.map(t => `
+                ${tablesList.length > 0 ? tablesList.map(t => `
                     <button class="table-tab-btn ${t.id === activeSalesTableId ? 'active' : ''}" data-id="${t.id}" style="padding:6px 14px; border-radius:8px; border:1px solid ${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--border)'}; background:${t.id === activeSalesTableId ? 'rgba(99,102,241,0.15)' : 'var(--bg-surface)'}; color:${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--text-main)'}; font-weight:700; font-size:0.85rem; cursor:pointer;">
                         ${t.name}
                     </button>
@@ -328,16 +349,14 @@ async function renderSalesGoalsTable() {
             await appDb.setSetting(`sales_table_targets_${year}_${activeSalesTableId}`, {});
             await appDb.setSetting(`sales_table_collabs_${year}_${activeSalesTableId}`, []);
 
-            if (tablesList.length > 1) {
-                const idx = tablesList.findIndex(t => t.id === activeSalesTableId);
-                if (idx !== -1) tablesList.splice(idx, 1);
-                await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+            const idx = tablesList.findIndex(t => t.id === activeSalesTableId);
+            if (idx !== -1) tablesList.splice(idx, 1);
+            await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+
+            if (tablesList.length > 0) {
                 activeSalesTableId = tablesList[0].id;
             } else {
-                // Se è l'ultima, la reinizializziamo completamente vuota
-                tablesList[0] = { id: 'default', name: 'Obiettivi Sales', skill: 'ALL' };
-                await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-                activeSalesTableId = 'default';
+                activeSalesTableId = null;
             }
 
             renderSalesGoalsTable();
