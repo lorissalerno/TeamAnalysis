@@ -635,10 +635,50 @@ async function openStatModal() {
             return;
         }
 
-        const isMulti = selectedMetricsList.length > 1;
+        const y2Container = document.getElementById('y2-scale-container');
+        if (y2Container) y2Container.style.display = isMulti ? 'block' : 'none';
+
+        const customYMax = parseFloat(document.getElementById('stat-y-max')?.value);
+        const customY2Max = parseFloat(document.getElementById('stat-y2-max')?.value);
 
         if (type === 'table') {
-            container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Anteprima per ' + selectedMetricsList.length + ' metriche</span>';
+            const activeYr = window.appState.activeYear || new Date().getFullYear().toString();
+            const datesSet = new Set();
+            for (let m = 1; m <= 12; m++) datesSet.add(`${activeYr}-${String(m).padStart(2, '0')}-01`);
+
+            const metricRows = selectedMetricsList.map(m => {
+                const isP = m.startsWith('Performance: ');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const sData = isP ? perfData : salesData;
+                const agg = {};
+                sData.forEach(row => {
+                    if (isP && skill && skill !== 'ALL' && row.skill !== skill) return;
+                    const val = parseMetricValue(row.data[rKey]);
+                    datesSet.add(row.date);
+                    agg[row.date] = (agg[row.date] || 0) + val;
+                });
+                return { name: rKey, data: agg };
+            });
+
+            const labels = Array.from(datesSet).sort();
+            const displayLabels = labels.map(formatDateLabel);
+
+            let tableHtml = '<div style="width:100%; height:100%; overflow:auto; padding:12px;"><table class="data-table"><thead><tr><th>Dato / Metrica</th>';
+            displayLabels.forEach(l => {
+                tableHtml += `<th style="text-align:center;">${l}</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+
+            metricRows.forEach(mr => {
+                tableHtml += `<tr><td style="font-weight:600;">${mr.name}</td>`;
+                labels.forEach(d => {
+                    const v = mr.data[d] !== undefined ? mr.data[d] : 0;
+                    tableHtml += `<td style="text-align:center;">${v}</td>`;
+                });
+                tableHtml += '</tr>';
+            });
+            tableHtml += '</tbody></table></div>';
+            container.innerHTML = tableHtml;
             return;
         }
 
@@ -712,9 +752,12 @@ async function openStatModal() {
             const labelsArr = Array.from(datesSet).sort();
             const pts = labelsArr.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
 
+            const yAxisID = (isMulti && idx > 0) ? 'y2' : 'y';
+
             return {
                 label: rKey,
                 data: pts,
+                yAxisID: yAxisID,
                 backgroundColor: type === 'bar' ? hexToRgba(color, 0.8) : hexToRgba(color, 0.15),
                 borderColor: color,
                 borderWidth: type === 'bar' ? 1 : 1.8,
@@ -728,6 +771,31 @@ async function openStatModal() {
         const labels = Array.from(datesSet).sort();
         const displayLabels = labels.map(formatDateLabel);
 
+        // Calcolo scale con 10% di margine
+        const yScaleConfig = {};
+        if (!isNaN(customYMax) && customYMax > 0) {
+            yScaleConfig.max = customYMax * 1.1;
+        }
+
+        const y2ScaleConfig = {};
+        if (!isNaN(customY2Max) && customY2Max > 0) {
+            y2ScaleConfig.max = customY2Max * 1.1;
+        }
+
+        const scalesConfig = {
+            x: { grid: { color: 'rgba(128,128,128,0.12)' } },
+            y: { beginAtZero: true, ...yScaleConfig, grid: { color: 'rgba(128,128,128,0.15)' } }
+        };
+
+        if (isMulti) {
+            scalesConfig.y2 = {
+                position: 'right',
+                beginAtZero: true,
+                ...y2ScaleConfig,
+                grid: { drawOnChartArea: false }
+            };
+        }
+
         if (previewChart) { previewChart.destroy(); previewChart = null; }
         previewChart = new Chart(canvas, {
             type: type === 'bar' ? 'bar' : 'line',
@@ -739,10 +807,7 @@ async function openStatModal() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: isMulti } },
-                scales: {
-                    x: { grid: { color: 'rgba(128,128,128,0.12)' } },
-                    y: { beginAtZero: false, grid: { color: 'rgba(128,128,128,0.15)' } }
-                }
+                scales: scalesConfig
             }
         });
     }
@@ -764,9 +829,13 @@ async function openStatModal() {
     });
 
     const typeSelect = document.getElementById('stat-type');
+    const yMaxInput = document.getElementById('stat-y-max');
+    const y2MaxInput = document.getElementById('stat-y2-max');
 
     skillSelect.addEventListener('change', schedulePreview);
     typeSelect.addEventListener('change', schedulePreview);
+    if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
+    if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
 
     // Chiudi: distruggi chart preview
     const closeBtn = modal.querySelector('.close-modal');
@@ -813,6 +882,17 @@ function createStatModalHTML() {
                     <option value="table">Tabella Dati</option>
                     <option value="pie">Grafico a Torta</option>
                 </select>
+
+                <div id="y-scale-custom-group" style="display:flex; gap:12px; margin-bottom:16px;">
+                    <div style="flex:1;">
+                        <label style="font-size:0.78rem;">Max Asse Y (Sn, opz.):</label>
+                        <input type="number" id="stat-y-max" placeholder="es. 7000" style="width:100%; padding:6px; font-size:0.85rem;">
+                    </div>
+                    <div id="y2-scale-container" style="flex:1; display:none;">
+                        <label style="font-size:0.78rem;">Max Asse Y (Ds, opz.):</label>
+                        <input type="number" id="stat-y2-max" placeholder="es. 500" style="width:100%; padding:6px; font-size:0.85rem;">
+                    </div>
+                </div>
             </div>
             <div class="stat-modal-preview">
                 <div class="stat-modal-preview-title">Anteprima in tempo reale</div>
@@ -856,12 +936,17 @@ async function saveNewStat() {
     const templateStats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
     const maxOrder = templateStats.reduce((max, s) => Math.max(max, s.order !== undefined && s.order !== null ? s.order : -1), -1);
 
+    const yMaxVal = parseFloat(document.getElementById('stat-y-max')?.value);
+    const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
+
     const newStat = {
         id: 'stat_' + Date.now(),
         title, 
         metric: primaryMetric,
         metrics: selectedMetrics,
         skill, type, product,
+        yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
+        y2Max: !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null,
         groupId: groupId || null,
         templateId: activeTemplateId,
         year: window.appState.activeYear,
@@ -1141,7 +1226,39 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     }
 
     if (statConfig.type === 'table') {
-        if (isIndividual) {
+        const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
+        
+        if (metricsList.length > 1 && !isIndividual && !teamAvgOnly) {
+            // Tabella per metriche multiple
+            let html = `<table class="data-table"><thead><tr><th>Dato / Metrica</th>`;
+            displayLabels.forEach(l => {
+                html += `<th style="text-align:center;">${l}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            metricsList.forEach(m => {
+                const isP = m.startsWith('Performance: ');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const sData = isP ? perfData : salesData;
+                const agg = {};
+                sData.forEach(row => {
+                    if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                    const val = parseMetricValue(row.data[rKey]);
+                    if (!agg[row.date]) agg[row.date] = 0;
+                    agg[row.date] += val;
+                });
+
+                html += `<tr><td style="font-weight:600;">${rKey}</td>`;
+                labels.forEach(d => {
+                    const cellVal = datesWithData.has(d) ? (agg[d] !== undefined ? agg[d] : 0) : '';
+                    html += `<td style="text-align:center;">${cellVal}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            canvasContainer.innerHTML = html;
+        } else if (isIndividual) {
             const colHeader = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
             let html = `<table class="data-table"><thead><tr><th>${colHeader}</th>`;
             displayLabels.forEach(l => {
@@ -1526,7 +1643,9 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         }
 
         let yScalesConfig = {};
-        if (allVals.length > 0) {
+        if (statConfig.yMax && !isNaN(statConfig.yMax)) {
+            yScalesConfig = { beginAtZero: true, max: statConfig.yMax * 1.1 };
+        } else if (allVals.length > 0) {
             const minVal = Math.min(...allVals);
             const maxVal = Math.max(...allVals);
             
@@ -1546,6 +1665,33 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             yScalesConfig = { beginAtZero: true };
         }
 
+        const isMultiMetrics = metricsList.length > 1 && !isIndividual && !teamAvgOnly;
+        const scalesConfig = {
+            x: {
+                grid: {
+                    color: 'rgba(128, 128, 128, 0.12)'
+                }
+            },
+            y: {
+                ...yScalesConfig,
+                grid: {
+                    color: 'rgba(128, 128, 128, 0.15)'
+                }
+            }
+        };
+
+        if (isMultiMetrics) {
+            let y2ScalesConfig = { beginAtZero: true };
+            if (statConfig.y2Max && !isNaN(statConfig.y2Max)) {
+                y2ScalesConfig.max = statConfig.y2Max * 1.1;
+            }
+            scalesConfig.y2 = {
+                position: 'right',
+                ...y2ScalesConfig,
+                grid: { drawOnChartArea: false }
+            };
+        }
+
         new Chart(canvas, {
             type: isBar ? 'bar' : 'line',
             data: {
@@ -1558,7 +1704,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false
+                        display: isMultiMetrics
                     },
                     fullWidthGoal: relevantGoal ? {
                         target: relevantGoal.target,
@@ -1566,19 +1712,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                         minTarget: minTarget
                     } : null
                 },
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(128, 128, 128, 0.12)'
-                        }
-                    },
-                    y: {
-                        ...yScalesConfig,
-                        grid: {
-                            color: 'rgba(128, 128, 128, 0.15)'
-                        }
-                    }
-                }
+                scales: scalesConfig
             }
         });
     }
