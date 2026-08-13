@@ -256,13 +256,13 @@ async function renderSalesGoalsTable() {
                     </button>
                 </div>
             ` : `
-                <table class="sales-goals-table" style="width:100%; border-collapse:collapse; font-size:0.85rem; color:var(--text-main);">
+                <table class="sales-goals-table" style="width:auto; border-collapse:collapse; font-size:0.85rem; color:var(--text-main);">
                     <thead>
                         <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
-                            <th style="padding:12px; text-align:left; border-right:1px solid var(--border); min-width:160px; font-weight:700;">Collaboratore</th>
-                            <th style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); width:85px; font-weight:700;">% Lavoro</th>
+                            <th style="padding:12px; text-align:left; border-right:1px solid var(--border); width:200px; min-width:180px; font-weight:700;">Collaboratore</th>
+                            <th style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); width:90px; font-weight:700;">% Lavoro</th>
                             ${products.map((p, idx) => `
-                                <th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.88rem; background:rgba(59,130,246,0.06); min-width:140px; position:relative;">
+                                <th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.88rem; background:rgba(59,130,246,0.06); width:140px; min-width:140px; position:relative;">
                                     <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
                                         <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%;">
                                             <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:1px solid transparent; color:inherit; font-weight:700; text-align:center; font-size:0.88rem; flex:1; border-radius:4px; padding:2px;" onfocus="this.style.background='var(--bg-base)'; this.style.borderColor='var(--primary)';" onblur="this.style.background='transparent'; this.style.borderColor='transparent';">
@@ -286,7 +286,7 @@ async function renderSalesGoalsTable() {
                                     </div>
                                 </th>
                             `).join('')}
-                            <th style="padding:10px 14px; text-align:center; min-width:140px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
+                            <th style="padding:10px 14px; text-align:center; width:150px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
                                 <button class="btn primary btn-sm" id="add-table-col-header-btn" style="padding:8px 14px; font-weight:700; font-size:0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; border-radius:8px; cursor:pointer;" title="Aggiungi nuova colonna / prodotto">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                     + Colonna
