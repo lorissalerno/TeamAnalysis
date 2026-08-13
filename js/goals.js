@@ -535,14 +535,22 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
         `;
 
         products.forEach(p => {
-            const targetVal = savedTargets[emp + '_' + p.key] ?? 0;
-            productTargetTotals[p.key] += targetVal;
+            if (p.mode === 'team') {
+                rowHtml += `
+                    <td style="padding:6px; text-align:center; border-right:1px solid var(--border); color:var(--text-muted); opacity:0.35;">
+                        —
+                    </td>
+                `;
+            } else {
+                const targetVal = savedTargets[emp + '_' + p.key] ?? 0;
+                productTargetTotals[p.key] += targetVal;
 
-            rowHtml += `
-                <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                    <input type="number" step="any" class="sales-target-input" data-emp="${emp}" data-key="${p.key}" value="${targetVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:700; font-size:0.88rem;">
-                </td>
-            `;
+                rowHtml += `
+                    <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
+                        <input type="number" step="any" class="sales-target-input" data-emp="${emp}" data-key="${p.key}" value="${targetVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:700; font-size:0.88rem;">
+                    </td>
+                `;
+            }
         });
 
         rowHtml += `<td></td>`; // empty cell for action column
@@ -559,17 +567,26 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     `;
 
     products.forEach(p => {
-        const tgtTot = productTargetTotals[p.key];
-        const formatVal = (v) => {
-            if (p.isCHF) return Math.round(v).toLocaleString('de-CH') + '.-';
-            return Number.isInteger(v) ? v.toString() : v.toFixed(1);
-        };
+        if (p.mode === 'team') {
+            const teamVal = savedTargets['TEAM_' + p.key] ?? 0;
+            teamHtml += `
+                <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
+                    <input type="number" step="any" class="sales-team-target-input" data-key="${p.key}" value="${teamVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--primary, #6366f1); background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:0.95rem;">
+                </td>
+            `;
+        } else {
+            const tgtTot = productTargetTotals[p.key];
+            const formatVal = (v) => {
+                if (p.isCHF) return Math.round(v).toLocaleString('de-CH') + '.-';
+                return Number.isInteger(v) ? v.toString() : v.toFixed(1);
+            };
 
-        teamHtml += `
-            <td style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.95rem; color:var(--text-main);">
-                ${formatVal(tgtTot)}
-            </td>
-        `;
+            teamHtml += `
+                <td style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.95rem; color:var(--text-main);">
+                    ${formatVal(tgtTot)}
+                </td>
+            `;
+        }
     });
     teamHtml += `<td></td>`;
     teamTr.innerHTML = teamHtml;
@@ -593,25 +610,45 @@ async function saveSalesTableData(container, products, employees, year, activeSk
         savedTargets[emp + '_' + key] = val;
     });
 
+    container.querySelectorAll('.sales-team-target-input').forEach(inp => {
+        const key = inp.dataset.key;
+        const val = parseFloat(inp.value) || 0;
+        savedTargets['TEAM_' + key] = val;
+    });
+
     await appDb.setSetting('collab_work_pcts', collabWorkPcts);
     await appDb.setSetting(`sales_table_targets_${year}_${activeSkillFilter}`, savedTargets);
 
     // Sincronizza lo store 'goals' IndexedDB
     const goalsToSave = [];
-    employees.forEach(emp => {
-        products.forEach(p => {
-            const tgt = savedTargets[emp + '_' + p.key];
+    products.forEach(p => {
+        if (p.mode === 'team') {
+            const tgt = savedTargets['TEAM_' + p.key];
             if (tgt && tgt > 0) {
                 goalsToSave.push({
-                    id: `salestable_${year}_${activeSkillFilter}_${emp}_${p.key}`,
+                    id: `salestable_${year}_${activeSkillFilter}_TEAM_${p.key}`,
                     metric: `Sales: ${p.key}`,
                     skill: activeSkillFilter,
-                    employee: emp,
+                    employee: null,
                     target: tgt,
                     year: year
                 });
             }
-        });
+        } else {
+            employees.forEach(emp => {
+                const tgt = savedTargets[emp + '_' + p.key];
+                if (tgt && tgt > 0) {
+                    goalsToSave.push({
+                        id: `salestable_${year}_${activeSkillFilter}_${emp}_${p.key}`,
+                        metric: `Sales: ${p.key}`,
+                        skill: activeSkillFilter,
+                        employee: emp,
+                        target: tgt,
+                        year: year
+                    });
+                }
+            });
+        }
     });
 
     if (goalsToSave.length > 0) {
