@@ -886,18 +886,18 @@ function createStatModalHTML() {
     const viewAllBtn = modalEl.querySelector('#preview-view-all-btn');
     const viewAvgBtn = modalEl.querySelector('#preview-view-avg-btn');
 
-    if (showAvgToggle) showAvgToggle.addEventListener('change', () => updateStatPreview());
-    if (showGoalToggle) showGoalToggle.addEventListener('change', () => updateStatPreview());
+    if (showAvgToggle) showAvgToggle.addEventListener('change', () => schedulePreview());
+    if (showGoalToggle) showGoalToggle.addEventListener('change', () => schedulePreview());
     if (viewAllBtn && viewAvgBtn) {
         viewAllBtn.addEventListener('click', () => {
             viewAllBtn.classList.add('active');
             viewAvgBtn.classList.remove('active');
-            updateStatPreview();
+            schedulePreview();
         });
         viewAvgBtn.addEventListener('click', () => {
             viewAvgBtn.classList.add('active');
             viewAllBtn.classList.remove('active');
-            updateStatPreview();
+            schedulePreview();
         });
     }
 
