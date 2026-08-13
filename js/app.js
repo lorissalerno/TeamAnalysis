@@ -813,7 +813,7 @@ async function renderImportedData() {
             employee: r.employee,
             type: 'Sales',
             skill: skillName,
-            metric: productName,
+            metric: (metricKeyForRecord && metricKeyForRecord !== 'AOIT gew' && metricKeyForRecord !== 'Nb Events') ? metricKeyForRecord : productName,
             metricKey: metricKeyForRecord,
             qty: qty,
             value: value

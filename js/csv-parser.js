@@ -320,6 +320,7 @@ class CSVParser {
                 const productName = getProductName(rawHeader);
                 const dataObj = {
                     "Product": productName,
+                    [rawHeader.trim()]: val,
                     "Nb Events": val
                 };
 
