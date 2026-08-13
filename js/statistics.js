@@ -742,6 +742,21 @@ async function openStatModal(editingStat = null) {
         container.innerHTML = '';
         const cardNode = buildStatCard(tempStatConfig, pData, sData, gData, false, '', teamAvgOnly, showTeamAvg, showTeamGoal, true);
         container.appendChild(cardNode);
+
+        const canvas = cardNode.querySelector('canvas');
+        if (canvas) {
+            const chart = Chart.getChart(canvas);
+            if (chart && chart.scales) {
+                const yMaxInput = document.getElementById('stat-y-max');
+                if (yMaxInput && chart.scales.y && chart.scales.y.max !== undefined) {
+                    yMaxInput.placeholder = `es. ${chart.scales.y.max}`;
+                }
+                const y2MaxInput = document.getElementById('stat-y2-max');
+                if (y2MaxInput && chart.scales.y2 && chart.scales.y2.max !== undefined) {
+                    y2MaxInput.placeholder = `es. ${chart.scales.y2.max}`;
+                }
+            }
+        }
     }
 
     function schedulePreview() {
@@ -824,7 +839,7 @@ function createStatModalHTML() {
 
                 <div id="y-scale-custom-group" style="display:flex; gap:12px; margin-bottom:16px;">
                     <div style="flex:1;">
-                        <label style="font-size:0.78rem;">Max Asse Y (Sinistra, opz.):</label>
+                        <label style="font-size:0.78rem;">Max Asse Y (Sinistra):</label>
                         <input type="number" id="stat-y-max" placeholder="es. 7000" style="width:100%; padding:6px; font-size:0.85rem;">
                     </div>
                     <div id="y2-scale-container" style="flex:1; display:none;">
