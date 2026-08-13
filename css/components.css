@@ -145,12 +145,12 @@ input:checked + .slider:before {
     flex-direction: column;
 }
 
-/* Modal statistiche: rettangolare (molto largo e non troppo alto) */
+/* Modal statistiche: rettangolare panoramico (largo e basso) */
 #stat-config-modal {
     max-width: 1400px;
     width: 95%;
-    max-height: 70vh;
-    height: 62vh;
+    max-height: 55vh;
+    height: 48vh;
 }
 
 .stat-modal-layout {
