@@ -149,8 +149,8 @@ input:checked + .slider:before {
 #stat-config-modal {
     max-width: 1700px;
     width: 98%;
-    max-height: 68vh;
-    height: 60vh;
+    max-height: 52vh;
+    height: 48vh;
 }
 
 .stat-modal-layout {

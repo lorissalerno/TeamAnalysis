@@ -1061,7 +1061,7 @@ function createStatModalHTML() {
                         </div>
                     </div>
                 </div>
-                <div class="stat-modal-preview-inner" id="stat-preview-container" style="flex:1; min-height:340px;">
+                <div class="stat-modal-preview-inner" id="stat-preview-container" style="flex:1; min-height:220px;">
                     <span style="color:var(--text-muted); font-size:0.85rem;">Seleziona una metrica per vedere l'anteprima</span>
                 </div>
             </div>
@@ -1814,7 +1814,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         canvasContainer.style.overflowX = 'auto';
     } else {
         canvasContainer.style.height = isPreview ? '100%' : '360px';
-        canvasContainer.style.minHeight = isPreview ? '300px' : '0';
+        canvasContainer.style.minHeight = isPreview ? '200px' : '0';
         if (isPreview) canvasContainer.style.flex = '1';
     }
     card.appendChild(canvasContainer);
