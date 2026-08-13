@@ -829,16 +829,51 @@ async function openStatModal(editingStat = null) {
     const typeSelect = document.getElementById('stat-type');
     const yMaxInput = document.getElementById('stat-y-max');
     const y2MaxInput = document.getElementById('stat-y2-max');
+    const goalsTableSelectorGroup = document.getElementById('goals-table-selector-group');
+    const goalsTableIdSelect = document.getElementById('stat-goals-table-id');
+    const metricsContainer2 = document.getElementById('stat-metrics-container');
+    const addMetricBtn2 = document.getElementById('add-metric-btn');
+    const yScaleGroup = document.getElementById('y-scale-custom-group');
+
+    // Popola il selector tabelle obiettivi
+    const yr2 = window.appState?.activeYear || new Date().getFullYear().toString();
+    const tblList2 = await appDb.getSetting(`sales_tables_list_${yr2}`, []);
+    if (goalsTableIdSelect) {
+        goalsTableIdSelect.innerHTML = '<option value="">-- Seleziona tabella --</option>';
+        (tblList2 || []).forEach(t => {
+            const o = document.createElement('option');
+            o.value = t.id;
+            o.textContent = t.name + (t.skill && t.skill !== 'ALL' ? ` (${t.skill})` : '');
+            if (editingStat && editingStat.goalsTableId === t.id) o.selected = true;
+            goalsTableIdSelect.appendChild(o);
+        });
+    }
+
+    function applyTypeUI(typeVal) {
+        const isGoalsTable = typeVal === 'goals_table';
+        if (goalsTableSelectorGroup) goalsTableSelectorGroup.style.display = isGoalsTable ? 'block' : 'none';
+        if (metricsContainer2) metricsContainer2.style.display = isGoalsTable ? 'none' : '';
+        if (addMetricBtn2) addMetricBtn2.style.display = isGoalsTable ? 'none' : '';
+        if (skillSelect) skillSelect.parentElement && (skillSelect.closest('div, label') || skillSelect).closest('[style]') || null;
+        const skillLabel = skillSelect ? skillSelect.previousElementSibling : null;
+        if (skillSelect) skillSelect.style.display = isGoalsTable ? 'none' : '';
+        if (skillLabel && skillLabel.tagName === 'LABEL') skillLabel.style.display = isGoalsTable ? 'none' : '';
+        if (yScaleGroup) yScaleGroup.style.display = isGoalsTable ? 'none' : '';
+    }
 
     if (editingStat) {
         if (editingStat.skill) skillSelect.value = editingStat.skill;
         if (editingStat.type) typeSelect.value = editingStat.type;
         if (yMaxInput) yMaxInput.value = editingStat.yMax || '';
         if (y2MaxInput) y2MaxInput.value = editingStat.y2Max || '';
+        applyTypeUI(editingStat.type || 'bar');
     }
 
+    typeSelect.addEventListener('change', (e) => {
+        applyTypeUI(e.target.value);
+        schedulePreview();
+    });
     skillSelect.addEventListener('change', schedulePreview);
-    typeSelect.addEventListener('change', schedulePreview);
     if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
     if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
 
@@ -920,7 +955,13 @@ function createStatModalHTML() {
                     <option value="line">Grafico a Linee</option>
                     <option value="table">Tabella Dati</option>
                     <option value="pie">Grafico a Torta</option>
+                    <option value="goals_table">Tabella Obiettivi Vendita</option>
                 </select>
+
+                <div id="goals-table-selector-group" style="display:none; margin-bottom:16px;">
+                    <label>Seleziona Tabella Obiettivi:</label>
+                    <select id="stat-goals-table-id" style="width:100%; padding:8px;"><option value="">Caricamento...</option></select>
+                </div>
 
                 <div id="y-scale-custom-group" style="display:flex; gap:12px; margin-bottom:16px;">
                     <div style="flex:1;">
@@ -988,6 +1029,49 @@ function createStatModalHTML() {
 }
 
 async function saveNewStat() {
+    const type = document.getElementById('stat-type').value;
+    const activeTemplateId = await getActiveTemplateId();
+
+    // Tipo speciale: Tabella Obiettivi Vendita
+    if (type === 'goals_table') {
+        const tableId = document.getElementById('stat-goals-table-id')?.value || '';
+        if (!tableId) { alert('Seleziona una tabella obiettivi.'); return; }
+        const year = window.appState.activeYear;
+        const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+        const tbl = (tablesList || []).find(t => t.id === tableId);
+        const title = tbl ? tbl.name : 'Tabella Obiettivi';
+
+        const allStats = await appDb.getAll('custom_stats');
+        if (currentEditingStatId) {
+            const existing = allStats.find(s => s.id === currentEditingStatId);
+            if (existing) {
+                existing.title = title;
+                existing.type = 'goals_table';
+                existing.goalsTableId = tableId;
+                existing.metric = '__goals_table__';
+                existing.metrics = [];
+                await appDb.addMultiple('custom_stats', [existing]);
+            }
+            currentEditingStatId = null;
+        } else {
+            const templateStats = allStats.filter(s => s.templateId === activeTemplateId || (!s.templateId && activeTemplateId === 'default'));
+            const maxOrder = templateStats.reduce((max, s) => Math.max(max, s.order ?? -1), -1);
+            const newStat = {
+                id: 'stat_' + Date.now(),
+                title, type: 'goals_table', goalsTableId: tableId,
+                metric: '__goals_table__', metrics: [], colors: [],
+                skill: 'ALL', product: '', groupId: null,
+                templateId: activeTemplateId, year, order: maxOrder + 1
+            };
+            await appDb.addMultiple('custom_stats', [newStat]);
+        }
+        document.getElementById('stat-config-modal').classList.remove('open');
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay) overlay.classList.remove('open');
+        renderTeamStats();
+        return;
+    }
+
     const hiddenInputs = document.querySelectorAll('#stat-metrics-container .stat-metric-value');
     const colorInputs = document.querySelectorAll('#stat-metrics-container .stat-metric-color');
     const selectedMetrics = [];
@@ -1009,11 +1093,8 @@ async function saveNewStat() {
     const rawKeys = selectedMetrics.map(m => m.replace('Performance: ', '').replace('Sales: ', ''));
     const title = rawKeys.join('  +  ');
     const skill = document.getElementById('stat-skill').value;
-    const type = document.getElementById('stat-type').value;
     const product = '';
     const groupId = (document.getElementById('stat-group')?.value || '') || null;
-    
-    const activeTemplateId = await getActiveTemplateId();
 
     const yMaxVal = parseFloat(document.getElementById('stat-y-max')?.value);
     const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
@@ -1042,7 +1123,7 @@ async function saveNewStat() {
 
         const newStat = {
             id: 'stat_' + Date.now(),
-            title, 
+            title,
             metric: primaryMetric,
             metrics: selectedMetrics,
             colors: selectedColors,
@@ -1054,7 +1135,7 @@ async function saveNewStat() {
             year: window.appState.activeYear,
             order: maxOrder + 1
         };
-        
+
         await appDb.addMultiple('custom_stats', [newStat]);
     }
     document.getElementById('stat-config-modal').classList.remove('open');
@@ -1086,15 +1167,11 @@ async function renderTeamStats() {
     const goals = await appDb.getAll('goals', 'year', year);
     
     const teamAvgOnly = (teamViewMode === 'avg');
-
-    // Tabelle Obiettivi con valori attuali
-    const goalTablesEl = await buildGoalsActualTablesSection(year, perfData, salesData, null);
-    if (goalTablesEl) container.appendChild(goalTablesEl);
     
-    stats.forEach(stat => {
-        const card = buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly, showTeamAvgInTeam, showTeamGoalInTeam);
+    for (const stat of stats) {
+        const card = await buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly, showTeamAvgInTeam, showTeamGoalInTeam);
         container.appendChild(card);
-    });
+    }
 }
 
 async function renderIndividualStats() {
@@ -1191,9 +1268,7 @@ async function renderIndividualStats() {
         container.appendChild(goalsSection);
     }
 
-    // 2b. Tabelle Obiettivi con valori attuali per il collaboratore
-    const goalTablesEl = await buildGoalsActualTablesSection(year, perfData, salesData, employee);
-    if (goalTablesEl) container.appendChild(goalTablesEl);
+    // 2b. Statistiche individuali (goals_table type gestito in buildStatCard)
 
     // 3. Grafici e Statistiche Personalizzate (Template Grid)
     const chartsSectionHeader = document.createElement('div');
@@ -1207,10 +1282,10 @@ async function renderIndividualStats() {
     if (stats.length === 0) {
         statsGrid.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica in questo template.</p>';
     } else {
-        stats.forEach(stat => {
-            const card = buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
+        for (const stat of stats) {
+            const card = await buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
             statsGrid.appendChild(card);
-        });
+        }
     }
     container.appendChild(statsGrid);
 }
@@ -1528,11 +1603,58 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false, isPreview = false) {
+async function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false, isPreview = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
     card.style.position = 'relative';
     
+    // Gestione tipo speciale: Tabella Obiettivi Vendita
+    if (statConfig.type === 'goals_table') {
+        const title = document.createElement('h3');
+        title.textContent = statConfig.title || 'Tabella Obiettivi Vendita';
+        title.style.marginBottom = '12px';
+        card.appendChild(title);
+
+        if (!isPreview) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.style.cssText = 'position:absolute; top:16px; right:16px; display:flex; gap:6px;';
+            
+            const editBtn = document.createElement('button');
+            editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+            editBtn.className = 'btn secondary';
+            editBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+            editBtn.title = 'Modifica statistica';
+            editBtn.onclick = async () => { await openStatModal(statConfig); };
+            actionsDiv.appendChild(editBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+            deleteBtn.className = 'btn secondary';
+            deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+            deleteBtn.title = 'Elimina statistica';
+            deleteBtn.onclick = async () => {
+                if (!confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
+                await appDb.deleteRecord('custom_stats', statConfig.id);
+                renderTeamStats();
+            };
+            actionsDiv.appendChild(deleteBtn);
+            card.appendChild(actionsDiv);
+        }
+
+        const tableContainer = document.createElement('div');
+        tableContainer.style.overflowX = 'auto';
+        
+        const year = window.appState?.activeYear || new Date().getFullYear().toString();
+        const singleTableEl = await buildSingleGoalsActualTable(year, statConfig.goalsTableId, perfData, salesData, isIndividual ? employeeName : null);
+        if (singleTableEl) {
+            tableContainer.appendChild(singleTableEl);
+        } else {
+            tableContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; padding:12px 0;">Tabella non trovata o nessun dato disponibile.</p>';
+        }
+        card.appendChild(tableContainer);
+        return card;
+    }
+
     const isPerf = statConfig.metric.startsWith('Performance: ');
     const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '');
     
@@ -2452,23 +2574,46 @@ function calcActualForMetric(mappedMetrics, perfData, salesData, employee) {
 }
 
 /**
- * Costruisce la sezione delle tabelle obiettivi con i valori attuali.
- * Se employee è null => vista team (tutti i collaboratori).
- * Se employee è stringa => vista individuale (solo quel collaboratore).
+ * Costruisce una singola tabella obiettivi con i dati realizzati vs target (senza barre progressive).
  */
-async function buildGoalsActualTablesSection(year, perfData, salesData, employee) {
-    const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, null);
-    if (!tablesList || !Array.isArray(tablesList) || tablesList.length === 0) return null;
+async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, employee) {
+    const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+    const t = (tablesList || []).find(tbl => tbl.id === tableId);
+    if (!t) return null;
 
+    let products = await appDb.getSetting(`sales_table_products_${t.id}`, []);
+    if (!products || !Array.isArray(products) || products.length === 0) return null;
+
+    const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${t.id}`, {})) || {};
+    const manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.id}`, null)) || null;
     const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
 
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'margin-bottom:28px;';
+    let employees;
+    if (employee) {
+        employees = [employee];
+    } else {
+        const empSet = new Set();
+        if (manualCollabs && Array.isArray(manualCollabs)) {
+            manualCollabs.forEach(n => empSet.add(n));
+        } else {
+            const skillFilter = t.skill || 'ALL';
+            perfData.forEach(d => {
+                if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) empSet.add(d.employee);
+            });
+            salesData.forEach(d => {
+                if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) empSet.add(d.employee);
+            });
+            if (empSet.size === 0) {
+                Object.keys(window.appState.anonymousMap || {}).forEach(n => empSet.add(n));
+            }
+        }
+        employees = Array.from(empSet).sort();
+    }
 
-    const sectionHeader = document.createElement('div');
-    sectionHeader.style.cssText = 'display:flex; align-items:center; gap:10px; margin-bottom:14px;';
-    sectionHeader.innerHTML = `<h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0;">Tabelle Obiettivi Vendita</h3>`;
-    wrapper.appendChild(sectionHeader);
+    if (employees.length === 0) return null;
+
+    let totalWorkPctSum = 0;
+    employees.forEach(emp => { totalWorkPctSum += (collabWorkPcts[emp] ?? 100); });
 
     const formatVal = (v, isCHF) => {
         if (v === null || v === undefined || v === '') return '—';
@@ -2478,172 +2623,94 @@ async function buildGoalsActualTablesSection(year, perfData, salesData, employee
         return Number.isInteger(num) ? num.toString() : num.toFixed(1);
     };
 
-    let tablesRendered = 0;
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%; border-collapse:collapse; font-size:0.87rem; color:var(--text-main);';
 
-    for (const t of tablesList) {
-        let products = await appDb.getSetting(`sales_table_products_${t.id}`, null);
-        if (!products || !Array.isArray(products) || products.length === 0) continue;
+    const thead = document.createElement('thead');
+    let headHtml = `<tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
+        <th style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); font-weight:700;">Collaboratore</th>
+        <th style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:700;">% Lavoro</th>`;
 
-        const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${t.id}`, {})) || {};
-        const manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.id}`, null)) || null;
+    products.forEach(p => {
+        headHtml += `<th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05);">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                <span>${p.label}</span>
+                <span style="font-size:0.68rem; color:var(--text-muted); font-weight:500;">
+                    ${p.mode === 'team' ? 'Obiettivo Team' : 'Realizzato / Target'}
+                </span>
+            </div>
+        </th>`;
+    });
+    headHtml += '</tr>';
+    thead.innerHTML = headHtml;
+    table.appendChild(thead);
 
-        // Determina collaboratori
-        let employees;
-        if (employee) {
-            employees = [employee];
-        } else {
-            const empSet = new Set();
-            if (manualCollabs && Array.isArray(manualCollabs)) {
-                manualCollabs.forEach(n => empSet.add(n));
-            } else {
-                const skillFilter = t.skill || 'ALL';
-                perfData.forEach(d => {
-                    if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) empSet.add(d.employee);
-                });
-                salesData.forEach(d => {
-                    if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) empSet.add(d.employee);
-                });
-                if (empSet.size === 0) {
-                    Object.keys(window.appState.anonymousMap || {}).forEach(n => empSet.add(n));
-                }
-            }
-            employees = Array.from(empSet).sort();
-        }
+    const tbody = document.createElement('tbody');
 
-        if (employees.length === 0) continue;
+    employees.forEach((emp, empIdx) => {
+        const empWorkPct = collabWorkPcts[emp] ?? 100;
+        const displayName = window.getDisplayName(emp);
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:1px solid var(--border);';
 
-        // Calcola totalWorkPct
-        let totalWorkPctSum = 0;
-        employees.forEach(emp => { totalWorkPctSum += (collabWorkPcts[emp] ?? 100); });
-
-        const tableCard = document.createElement('div');
-        tableCard.className = 'card';
-        tableCard.style.cssText = 'padding:18px; margin-bottom:20px; overflow-x:auto;';
-
-        // Intestazione tabella
-        const tHeader = document.createElement('div');
-        tHeader.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
-        tHeader.innerHTML = `
-            <h4 style="font-size:1rem; font-weight:800; color:var(--text-main); margin:0;">${t.name}</h4>
-            <span style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700;">Skill: ${t.skill === 'ALL' ? 'Tutte' : t.skill}</span>
-        `;
-        tableCard.appendChild(tHeader);
-
-        // Costruisci tabella HTML
-        const table = document.createElement('table');
-        table.style.cssText = 'width:auto; border-collapse:collapse; font-size:0.87rem; color:var(--text-main);';
-
-        // Thead
-        const thead = document.createElement('thead');
-        let headHtml = `<tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
-            <th style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); min-width:160px; font-weight:700;">Collaboratore</th>
-            <th style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); min-width:80px; font-weight:700;">% Lavoro</th>`;
-
-        products.forEach(p => {
-            headHtml += `<th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); min-width:160px;">
-                <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
-                    <span style="font-weight:700;">${p.label}</span>
-                    <span style="font-size:0.68rem; color:var(--text-muted); font-weight:500;">
-                        ${p.mode === 'team' ? 'Obiettivo Team' : 'Realizzato / Obiettivo'}
-                    </span>
-                </div>
-            </th>`;
-        });
-        headHtml += '</tr>';
-        thead.innerHTML = headHtml;
-        table.appendChild(thead);
-
-        // Tbody
-        const tbody = document.createElement('tbody');
-
-        employees.forEach((emp, empIdx) => {
-            const empWorkPct = collabWorkPcts[emp] ?? 100;
-            const displayName = window.getDisplayName(emp);
-            const tr = document.createElement('tr');
-            tr.style.cssText = 'border-bottom:1px solid var(--border);';
-
-            let rowHtml = `
-                <td style="padding:10px 12px; font-weight:600; border-right:1px solid var(--border); white-space:nowrap;">${displayName}</td>
-                <td style="padding:8px 6px; text-align:center; border-right:1px solid var(--border); color:var(--text-muted); font-weight:600;">${empWorkPct}%</td>`;
-
-            products.forEach(p => {
-                const mappedMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics
-                    : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
-                const actualVal = calcActualForMetric(mappedMetrics, perfData, salesData, emp);
-
-                if (p.mode === 'team') {
-                    if (empIdx === 0) {
-                        const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
-                        const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
-                        const pct = teamTotal > 0 ? Math.round((actualTeam / teamTotal) * 100) : 0;
-                        const pctClamped = Math.min(Math.max(pct, 0), 100);
-                        const color = pct >= 100 ? '#10b981' : pct >= 70 ? '#f59e0b' : 'var(--primary)';
-                        rowHtml += `
-                            <td rowspan="${employees.length}" style="padding:12px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.03);">
-                                <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                    <span style="font-size:0.7rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.06em;">Obiettivo Team</span>
-                                    <span style="font-size:1.15rem; font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</span>
-                                    <div style="width:80px; height:6px; background:var(--bg-base); border-radius:3px; overflow:hidden; border:1px solid var(--border);">
-                                        <div style="width:${pctClamped}%; height:100%; background:${color}; border-radius:3px; transition:width 0.3s;"></div>
-                                    </div>
-                                    <span style="font-size:0.72rem; font-weight:700; color:${color};">${formatVal(actualTeam, p.isCHF)} (${pct}%)</span>
-                                </div>
-                            </td>`;
-                    }
-                } else {
-                    const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
-                    const objIndiv = totalWorkPctSum > 0 ? Math.round(indivTotal * (empWorkPct / totalWorkPctSum)) : 0;
-                    const pct = objIndiv > 0 ? Math.round((actualVal / objIndiv) * 100) : 0;
-                    const pctClamped = Math.min(Math.max(pct, 0), 100);
-                    const color = pct >= 100 ? '#10b981' : pct >= 70 ? '#f59e0b' : 'var(--primary)';
-                    rowHtml += `
-                        <td style="padding:8px 12px; text-align:center; border-right:1px solid var(--border);">
-                            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                <div style="display:flex; align-items:baseline; gap:4px; font-family:monospace;">
-                                    <span style="font-size:0.95rem; font-weight:800; color:${color};">${formatVal(actualVal, p.isCHF)}</span>
-                                    <span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">/ ${formatVal(objIndiv, p.isCHF)}</span>
-                                </div>
-                                <div style="width:70px; height:5px; background:var(--bg-base); border-radius:3px; overflow:hidden; border:1px solid var(--border);">
-                                    <div style="width:${pctClamped}%; height:100%; background:${color}; border-radius:3px; transition:width 0.3s;"></div>
-                                </div>
-                                <span style="font-size:0.7rem; font-weight:700; color:${color};">${pct}%</span>
-                            </div>
-                        </td>`;
-                }
-            });
-
-            tr.innerHTML = rowHtml;
-            tbody.appendChild(tr);
-        });
-
-        // Riga totali
-        const tfoot = document.createElement('tfoot');
-        let footHtml = `<tr style="background:var(--bg-base); font-weight:700; border-top:2px solid var(--border);">
-            <td style="padding:10px 12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-size:0.88rem;">TOTALI OBIETTIVI TEAM</td>
-            <td style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800;">${totalWorkPctSum}%</td>`;
+        let rowHtml = `
+            <td style="padding:10px 12px; font-weight:600; border-right:1px solid var(--border); white-space:nowrap;">${displayName}</td>
+            <td style="padding:8px 6px; text-align:center; border-right:1px solid var(--border); color:var(--text-muted); font-weight:600;">${empWorkPct}%</td>`;
 
         products.forEach(p => {
             const mappedMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics
                 : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+            const actualVal = calcActualForMetric(mappedMetrics, perfData, salesData, emp);
+
             if (p.mode === 'team') {
-                const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
-                footHtml += `<td style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.92rem; color:var(--primary); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</td>`;
+                if (empIdx === 0) {
+                    const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
+                    const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
+                    rowHtml += `
+                        <td rowspan="${employees.length}" style="padding:12px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.03);">
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                <span style="font-size:0.75rem; color:var(--text-muted);">Realizzato: <strong style="color:var(--text-main); font-family:monospace;">${formatVal(actualTeam, p.isCHF)}</strong></span>
+                                <span style="font-size:0.75rem; color:var(--text-muted);">Target: <strong style="color:var(--primary); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</strong></span>
+                            </div>
+                        </td>`;
+                }
             } else {
                 const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
-                footHtml += `<td style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.92rem; color:var(--primary); font-family:monospace;">${formatVal(indivTotal, p.isCHF)}</td>`;
+                const objIndiv = totalWorkPctSum > 0 ? Math.round(indivTotal * (empWorkPct / totalWorkPctSum)) : 0;
+                rowHtml += `
+                    <td style="padding:8px 12px; text-align:center; border-right:1px solid var(--border); font-family:monospace;">
+                        <span style="font-weight:700; color:var(--text-main); font-size:0.92rem;">${formatVal(actualVal, p.isCHF)}</span>
+                        <span style="color:var(--text-muted); font-size:0.8rem;"> / ${formatVal(objIndiv, p.isCHF)}</span>
+                    </td>`;
             }
         });
-        footHtml += '</tr>';
-        tfoot.innerHTML = footHtml;
 
-        table.appendChild(tbody);
-        table.appendChild(tfoot);
-        tableCard.appendChild(table);
-        wrapper.appendChild(tableCard);
-        tablesRendered++;
-    }
+        tr.innerHTML = rowHtml;
+        tbody.appendChild(tr);
+    });
 
-    if (tablesRendered === 0) return null;
-    return wrapper;
+    const tfoot = document.createElement('tfoot');
+    let footHtml = `<tr style="background:var(--bg-base); font-weight:700; border-top:2px solid var(--border);">
+        <td style="padding:10px 12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary);">TOTALI OBIETTIVI TEAM</td>
+        <td style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800;">${totalWorkPctSum}%</td>`;
+
+    products.forEach(p => {
+        const mappedMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics
+            : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+        if (p.mode === 'team') {
+            const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
+            footHtml += `<td style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</td>`;
+        } else {
+            const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
+            footHtml += `<td style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-family:monospace;">${formatVal(indivTotal, p.isCHF)}</td>`;
+        }
+    });
+    footHtml += '</tr>';
+    tfoot.innerHTML = footHtml;
+
+    table.appendChild(tbody);
+    table.appendChild(tfoot);
+    return table;
 }
+
 
