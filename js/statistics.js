@@ -2356,7 +2356,50 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     order: 1
                 });
             }
-        } else { }
+        } else {
+            employees.forEach((emp, idx) => {
+                const color = DISTINCT_COLORS[idx % DISTINCT_COLORS.length];
+                const empPts = labels.map(date => {
+                    if (!datesWithData.has(date)) return null;
+                    return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
+                });
+                datasets.push({
+                    label: window.getDisplayName(emp),
+                    data: empPts,
+                    type: isBar ? 'bar' : 'line',
+                    backgroundColor: isBar ? hexToRgba(color, 0.8) : hexToRgba(color, 0.12),
+                    borderColor: color,
+                    borderWidth: isBar ? 1 : 1.8,
+                    borderRadius: isBar ? 4 : 0,
+                    minBarLength: isBar ? 4 : 0,
+                    pointRadius: 0,
+                    pointHoverRadius: isBar ? 0 : 5,
+                    pointBackgroundColor: color,
+                    tension: 0.35,
+                    order: 2
+                });
+            });
+
+            if (showTeamAvg) {
+                datasets.push({
+                    label: 'Media Team',
+                    data: teamAvgPts,
+                    type: 'line',
+                    borderColor: '#F59E0B',
+                    backgroundColor: '#F59E0B',
+                    borderWidth: 3.5,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: '#F59E0B',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    fill: false,
+                    tension: 0.35,
+                    order: 1
+                });
+            }
+        }
 
         let maxTarget = undefined;
         let minTarget = undefined;
