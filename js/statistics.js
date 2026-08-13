@@ -547,12 +547,167 @@ async function openStatModal() {
                 metricSearchInput.value = m;
                 metricDropdown.classList.remove('open');
                 renderStatDropdown(m);
+                schedulePreview();
             });
             metricDropdown.appendChild(item);
         });
     }
 
     renderStatDropdown('');
+
+    // --- Preview in tempo reale ---
+    let previewChart = null;
+    let previewDebounce = null;
+
+    async function updateStatPreview() {
+        const container = document.getElementById('stat-preview-container');
+        if (!container) return;
+
+        const metric = document.getElementById('stat-metric').value;
+        const skill = document.getElementById('stat-skill').value;
+        const type = document.getElementById('stat-type').value;
+        const product = document.getElementById('stat-product').value;
+
+        if (!metric) {
+            container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Seleziona una metrica per vedere l\'anteprima</span>';
+            return;
+        }
+
+        if (type === 'table') {
+            // Preview tabella semplificata
+            const isPerf = metric.startsWith('Performance: ');
+            const rawKey = metric.replace('Performance: ', '').replace('Sales: ', '');
+            const sourceData = isPerf ? perfData : salesData;
+            const empSet = new Set();
+            const empTotals = {};
+            sourceData.forEach(row => {
+                if (isPerf && skill && skill !== 'ALL' && row.skill !== skill) return;
+                if (!isPerf && product && row.data['Product'] !== product) return;
+                const emp = row.employee;
+                const val = parseMetricValue(row.data[rawKey]);
+                if (emp) {
+                    empSet.add(emp);
+                    empTotals[emp] = (empTotals[emp] || 0) + val;
+                }
+            });
+            const employees = Array.from(empSet).sort().slice(0, 6);
+            if (employees.length === 0) {
+                container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Nessun dato disponibile</span>';
+                return;
+            }
+            let tableHtml = '<div style="width:100%;overflow-x:auto;padding:16px;"><table class="data-table"><thead><tr><th>Collaboratore</th><th style="text-align:right;">Totale</th></tr></thead><tbody>';
+            employees.forEach(emp => {
+                tableHtml += `<tr><td>${window.getDisplayName(emp)}</td><td style="text-align:right;">${empTotals[emp]}</td></tr>`;
+            });
+            tableHtml += '</tbody></table></div>';
+            container.innerHTML = tableHtml;
+            return;
+        }
+
+        // Preview grafico (bar / line / pie)
+        container.innerHTML = '<canvas id="stat-preview-canvas" style="max-width:100%; max-height:100%;"></canvas>';
+        const canvas = document.getElementById('stat-preview-canvas');
+        if (!canvas) return;
+
+        const isPerf = metric.startsWith('Performance: ');
+        const rawKey = metric.replace('Performance: ', '').replace('Sales: ', '');
+        const sourceData = isPerf ? perfData : salesData;
+
+        const empTotals = {};
+        const dateAgg = {};
+        const datesSet = new Set();
+        const datesWithData = new Set();
+
+        // Tutti i 12 mesi
+        const yr = window.appState.activeYear || new Date().getFullYear().toString();
+        for (let m = 1; m <= 12; m++) datesSet.add(`${yr}-${String(m).padStart(2,'0')}-01`);
+
+        sourceData.forEach(row => {
+            if (isPerf && skill && skill !== 'ALL' && row.skill !== skill) return;
+            if (!isPerf && product && row.data['Product'] !== product) return;
+            const emp = row.employee;
+            const val = parseMetricValue(row.data[rawKey]);
+            const date = row.date;
+            if (emp) empTotals[emp] = (empTotals[emp] || 0) + val;
+            datesSet.add(date);
+            datesWithData.add(date);
+            dateAgg[date] = (dateAgg[date] || 0) + val;
+        });
+
+        const BLUE_PALETTE = [
+            '#2563EB','#3B82F6','#1D4ED8','#0284C7',
+            '#4F46E5','#0369A1','#60A5FA','#1E40AF',
+            '#0D9488','#6366F1','#38BDF8','#4338CA'
+        ];
+
+        if (type === 'pie') {
+            const empEntries = Object.entries(empTotals)
+                .filter(([,v]) => v > 0)
+                .sort((a,b) => b[1]-a[1])
+                .slice(0, 12);
+            if (empEntries.length === 0) {
+                container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Nessun dato disponibile</span>';
+                return;
+            }
+            if (previewChart) { previewChart.destroy(); previewChart = null; }
+            previewChart = new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: empEntries.map(([e]) => window.getDisplayName(e)),
+                    datasets: [{
+                        data: empEntries.map(([,v]) => v),
+                        backgroundColor: empEntries.map((_,i) => BLUE_PALETTE[i % BLUE_PALETTE.length]),
+                        borderWidth: 2,
+                        borderColor: 'var(--bg-surface)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { color: 'var(--text-main)', font: { size: 11 }, padding: 10, boxWidth: 12 } } }
+                }
+            });
+            return;
+        }
+
+        const labels = Array.from(datesSet).sort();
+        const displayLabels = labels.map(formatDateLabel);
+        const dataPts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
+
+        if (previewChart) { previewChart.destroy(); previewChart = null; }
+        const isBar = type === 'bar';
+        previewChart = new Chart(canvas, {
+            type: isBar ? 'bar' : 'line',
+            data: {
+                labels: displayLabels,
+                datasets: [{
+                    label: rawKey,
+                    data: dataPts,
+                    backgroundColor: isBar ? hexToRgba('#2563EB', 0.8) : 'rgba(37,99,235,0.15)',
+                    borderColor: '#2563EB',
+                    borderWidth: isBar ? 1 : 1.8,
+                    borderRadius: isBar ? 4 : 0,
+                    pointRadius: 0,
+                    tension: 0.35,
+                    fill: !isBar
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(128,128,128,0.12)' } },
+                    y: { beginAtZero: false, grid: { color: 'rgba(128,128,128,0.15)' } }
+                }
+            }
+        });
+    }
+
+    function schedulePreview() {
+        clearTimeout(previewDebounce);
+        previewDebounce = setTimeout(updateStatPreview, 150);
+    }
 
     metricSearchInput.onfocus = () => {
         metricSearchInput.select();
@@ -568,6 +723,8 @@ async function openStatModal() {
         if (statSelectedMetric) metricSearchInput.value = statSelectedMetric;
     };
 
+
+
     const skillSelect = document.getElementById('stat-skill');
     skillSelect.innerHTML = '<option value="ALL">Tutte le Skill</option>';
     Array.from(skills).sort().forEach(s => {
@@ -576,8 +733,27 @@ async function openStatModal() {
         opt.textContent = s;
         skillSelect.appendChild(opt);
     });
-    
+
+    const typeSelect = document.getElementById('stat-type');
+    const productInput = document.getElementById('stat-product');
+
+    skillSelect.addEventListener('change', schedulePreview);
+    typeSelect.addEventListener('change', schedulePreview);
+    productInput.addEventListener('input', schedulePreview);
+
+    // Chiudi: distruggi chart preview
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) {
+        const origClose = closeBtn.onclick;
+        closeBtn.onclick = () => {
+            if (previewChart) { previewChart.destroy(); previewChart = null; }
+            modal.classList.remove('open');
+        };
+    }
+
     modal.classList.add('open');
+    // Prima anteprima
+    schedulePreview();
 }
 
 function createStatModalHTML() {
@@ -587,27 +763,36 @@ function createStatModalHTML() {
             <h2>Nuova Statistica</h2>
             <button class="close-modal" onclick="document.getElementById('stat-config-modal').classList.remove('open')">&times;</button>
         </div>
-        <div class="modal-body">
-            <label>Dato / Metrica:</label>
-            <div style="position:relative; margin-bottom:16px;">
-                <input type="text" id="stat-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
-                <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                <input type="hidden" id="stat-metric">
-                <div id="stat-metric-dropdown" class="searchable-dropdown"></div>
-            </div>
-            
-            <label>Filtro Skill Performance (opzionale):</label>
-            <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
+        <div class="stat-modal-layout">
+            <div class="stat-modal-form">
+                <label>Dato / Metrica:</label>
+                <div style="position:relative; margin-bottom:16px;">
+                    <input type="text" id="stat-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                    <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    <input type="hidden" id="stat-metric">
+                    <div id="stat-metric-dropdown" class="searchable-dropdown"></div>
+                </div>
 
-            <label>Tipo Visualizzazione:</label>
-            <select id="stat-type" style="width:100%; padding:8px; margin-bottom:16px;">
-                <option value="bar">Grafico a Barre</option>
-                <option value="line">Grafico a Linee</option>
-                <option value="table">Tabella Dati</option>
-            </select>
-            
-            <label>Filtro Prodotto (solo per Sales, opzionale):</label>
-            <input type="text" id="stat-product" placeholder="es. Multiroom Max" style="width:100%; padding:8px; margin-bottom:16px;">
+                <label>Filtro Skill Performance (opzionale):</label>
+                <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
+
+                <label>Tipo Visualizzazione:</label>
+                <select id="stat-type" style="width:100%; padding:8px; margin-bottom:16px;">
+                    <option value="bar">Grafico a Barre</option>
+                    <option value="line">Grafico a Linee</option>
+                    <option value="table">Tabella Dati</option>
+                    <option value="pie">Grafico a Torta</option>
+                </select>
+
+                <label>Filtro Prodotto (solo per Sales, opzionale):</label>
+                <input type="text" id="stat-product" placeholder="es. Multiroom Max" style="width:100%; padding:8px; margin-bottom:16px;">
+            </div>
+            <div class="stat-modal-preview">
+                <div class="stat-modal-preview-title">Anteprima in tempo reale</div>
+                <div class="stat-modal-preview-inner" id="stat-preview-container">
+                    <span style="color:var(--text-muted); font-size:0.85rem;">Seleziona una metrica per vedere l'anteprima</span>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn primary" onclick="saveNewStat()">Salva Statistica</button>
@@ -1023,6 +1208,63 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         }
+    } else if (statConfig.type === 'pie') {
+        // --- Grafico a Torta ---
+        const canvas = document.createElement('canvas');
+        canvasContainer.style.height = '360px';
+        canvasContainer.appendChild(canvas);
+
+        const BLUE_PALETTE = [
+            '#2563EB', '#3B82F6', '#1D4ED8', '#0284C7',
+            '#4F46E5', '#0369A1', '#60A5FA', '#1E40AF',
+            '#0D9488', '#6366F1', '#38BDF8', '#4338CA'
+        ];
+
+        // Totale per collaboratore (o per data se nessun dipendente)
+        const empTotals = {};
+        employees.forEach(emp => {
+            let total = 0;
+            labels.forEach(date => {
+                if (datesWithData.has(date) && empDateMap[emp] && empDateMap[emp][date] !== undefined) {
+                    total += empDateMap[emp][date];
+                }
+            });
+            if (total > 0) empTotals[emp] = total;
+        });
+
+        const pieEntries = Object.entries(empTotals).sort((a,b) => b[1]-a[1]);
+
+        if (pieEntries.length === 0) {
+            canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+        } else {
+            new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: pieEntries.map(([e]) => window.getDisplayName(e)),
+                    datasets: [{
+                        data: pieEntries.map(([,v]) => v),
+                        backgroundColor: pieEntries.map((_, i) => BLUE_PALETTE[i % BLUE_PALETTE.length]),
+                        borderWidth: 2,
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-surface') || '#1e2130'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-main') || '#e2e8f0',
+                                font: { size: 12 },
+                                padding: 12,
+                                boxWidth: 14
+                            }
+                        }
+                    }
+                }
+            });
+        }
     } else {
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
@@ -1252,9 +1494,10 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
 }
 
 function getTypeLabel(type) {
-    if (type === 'bar') return '(barra)';
+    if (type === 'bar') return '(barre)';
     if (type === 'line') return '(linee)';
     if (type === 'table') return '(dati)';
+    if (type === 'pie') return '(torta)';
     return `(${type})`;
 }
 

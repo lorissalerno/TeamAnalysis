@@ -143,6 +143,78 @@ input:checked + .slider:before {
     flex-direction: column;
 }
 
+/* Modal statistiche: più largo e alto per la preview */
+#stat-config-modal {
+    max-width: 1100px;
+    width: 95%;
+    max-height: 92vh;
+}
+
+.stat-modal-layout {
+    display: flex;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.stat-modal-form {
+    flex: 0 0 340px;
+    min-width: 280px;
+    padding: 24px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+}
+
+.stat-modal-preview {
+    flex: 1;
+    min-width: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.stat-modal-preview-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-modal-preview-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+}
+
+.stat-modal-preview-inner {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-base);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .modal.open {
     display: flex;
 }
