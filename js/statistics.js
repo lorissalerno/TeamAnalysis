@@ -861,7 +861,19 @@ async function openStatModal(editingStat = null) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: isMulti } },
+                plugins: {
+                    legend: {
+                        display: isMulti,
+                        position: 'top',
+                        align: 'start',
+                        labels: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
+                            font: { size: 11 },
+                            padding: 10,
+                            boxWidth: 12
+                        }
+                    }
+                },
                 scales: scalesConfig
             }
         });
@@ -992,7 +1004,7 @@ async function saveNewStat() {
 
     const primaryMetric = selectedMetrics[0];
     const rawKeys = selectedMetrics.map(m => m.replace('Performance: ', '').replace('Sales: ', ''));
-    const title = rawKeys.join(' & ');
+    const title = rawKeys.join('  +  ');
     const skill = document.getElementById('stat-skill').value;
     const type = document.getElementById('stat-type').value;
     const product = '';
@@ -1155,7 +1167,10 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '');
     
     const title = document.createElement('h3');
-    title.textContent = statConfig.title || rawKey;
+    const rawTitleText = statConfig.title || rawKey;
+    // Replace ' & ' or ' + ' with bold plus sign and spaces
+    const formattedTitle = rawTitleText.replace(/\s*(&|\+|\+\+)\s*/g, ' <strong style="font-weight:800; padding:0 4px;">+</strong> ');
+    title.innerHTML = formattedTitle;
     title.style.marginBottom = '4px';
     card.appendChild(title);
     
@@ -1166,6 +1181,8 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     if (isPerf) {
         if (statConfig.skill && statConfig.skill !== 'ALL') {
             infoParts.push(statConfig.skill);
+        } else {
+            infoParts.push('Tutte le Skill');
         }
     } else {
         if (statConfig.product) {
@@ -1801,7 +1818,15 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: isMultiMetrics
+                        display: isMultiMetrics,
+                        position: 'top',
+                        align: 'start',
+                        labels: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0',
+                            font: { size: 11 },
+                            padding: 10,
+                            boxWidth: 12
+                        }
                     },
                     fullWidthGoal: relevantGoal ? {
                         target: relevantGoal.target,
