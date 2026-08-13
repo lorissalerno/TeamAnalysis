@@ -71,7 +71,14 @@ const db = {
         });
     },
 
-    getSetting: function(key, defaultValue = null) {
+    _ensureDb: async function() {
+        if (!this._db) {
+            await this.init();
+        }
+    },
+
+    getSetting: async function(key, defaultValue = null) {
+        await this._ensureDb();
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction(['settings'], 'readonly');
             const store = transaction.objectStore('settings');
@@ -83,7 +90,8 @@ const db = {
         });
     },
 
-    setSetting: function(key, value) {
+    setSetting: async function(key, value) {
+        await this._ensureDb();
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction(['settings'], 'readwrite');
             const store = transaction.objectStore('settings');
@@ -94,7 +102,8 @@ const db = {
     },
 
     // Generic get all
-    getAll: function(storeName, indexName = null, indexValue = null) {
+    getAll: async function(storeName, indexName = null, indexValue = null) {
+        await this._ensureDb();
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction([storeName], 'readonly');
             const store = transaction.objectStore(storeName);
@@ -113,7 +122,8 @@ const db = {
     },
 
     // Generic add multiple items
-    addMultiple: function(storeName, items) {
+    addMultiple: async function(storeName, items) {
+        await this._ensureDb();
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction([storeName], 'readwrite');
             const store = transaction.objectStore(storeName);
@@ -125,7 +135,8 @@ const db = {
     },
 
     // Delete records from a date onwards (for CSV import replace logic)
-    deleteFromDate: function(storeName, dateString, skillName = null) {
+    deleteFromDate: async function(storeName, dateString, skillName = null) {
+        await this._ensureDb();
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction([storeName], 'readwrite');
             const store = transaction.objectStore(storeName);
