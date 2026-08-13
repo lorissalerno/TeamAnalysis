@@ -2485,7 +2485,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             yScalesConfig = { beginAtZero: true };
         }
 
-        const isMultiMetrics = metricsList.length > 1 && !teamAvgOnly;
+        const isMultiMetrics = metricsList.length > 1;
         const scalesConfig = {
             x: {
                 grid: {
@@ -2546,18 +2546,22 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 },
                 plugins: {
                     legend: {
-                        display: isMultiMetrics,
+                        display: metricsList.length > 1,
                         position: 'bottom',
                         align: 'start',
                         onClick: function(e, legendItem, legend) {
-                            if (isMultiMetrics && !isIndividual && !teamAvgOnly && legendItem.metricIndex !== undefined) {
+                            if (metricsList.length > 1 && legendItem.metricIndex !== undefined) {
                                 const idx = legendItem.metricIndex;
                                 const chart = legend.chart;
-                                const startDs = idx * employees.length;
-                                const endDs = (idx + 1) * employees.length;
-                                const isVisible = chart.isDatasetVisible(startDs);
-                                for (let i = startDs; i < endDs; i++) {
-                                    chart.setDatasetVisibility(i, !isVisible);
+                                if (!isIndividual && !teamAvgOnly) {
+                                    const startDs = idx * employees.length;
+                                    const endDs = (idx + 1) * employees.length;
+                                    const isVisible = chart.isDatasetVisible(startDs);
+                                    for (let i = startDs; i < endDs; i++) {
+                                        chart.setDatasetVisibility(i, !isVisible);
+                                    }
+                                } else {
+                                    chart.setDatasetVisibility(idx, !chart.isDatasetVisible(idx));
                                 }
                                 chart.update();
                             } else {
@@ -2570,16 +2574,18 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             padding: 12,
                             boxWidth: 12,
                             generateLabels: function(chart) {
-                                if (isMultiMetrics && !isIndividual && !teamAvgOnly) {
+                                const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
+                                if (metricsList.length > 1) {
                                     return metricsList.map((m, idx) => {
                                         const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
                                         const color = colorsList[idx % colorsList.length];
-                                        const firstDsIndex = idx * employees.length;
+                                        const firstDsIndex = (!isIndividual && !teamAvgOnly) ? idx * employees.length : idx;
                                         const isHidden = !chart.isDatasetVisible(firstDsIndex);
                                         return {
                                             text: rKey,
                                             fillStyle: color,
                                             strokeStyle: color,
+                                            fontColor: textColor,
                                             hidden: isHidden,
                                             datasetIndex: firstDsIndex,
                                             metricIndex: idx
