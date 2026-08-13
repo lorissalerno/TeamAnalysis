@@ -411,10 +411,15 @@ async function renderSalesGoalsTable() {
         };
     }
 
-    // Direct Header Editing Listeners
+    // Direct Header Editing Listeners: il click sulla matita attiva la modifica inline del titolo
     container.querySelectorAll('.edit-col-btn').forEach(btn => {
-        btn.onclick = (e) => {
-            openManageProductsModal(products);
+        btn.onclick = () => {
+            const idx = btn.dataset.idx;
+            const inp = container.querySelector(`.header-col-label-input[data-idx="${idx}"]`);
+            if (inp) {
+                inp.focus();
+                inp.select();
+            }
         };
     });
 
