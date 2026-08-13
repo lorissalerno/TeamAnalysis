@@ -919,6 +919,25 @@ async function openCalcByWorkPctModal(products, employees, year, skillFilter) {
     if (overlay) overlay.classList.add('open');
 }
 
+async function getAvailableDbMetrics(year) {
+    const activeYear = year || window.appState?.activeYear || new Date().getFullYear();
+    const perfData = await appDb.getAll('performance', 'year', activeYear);
+    const salesData = await appDb.getAll('sales', 'year', activeYear);
+
+    const salesMetricsSet = new Set(['AOIT gew', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
+    salesData.forEach(d => {
+        if (d.data?.Product) salesMetricsSet.add(d.data.Product);
+        if (d.category) salesMetricsSet.add(d.category);
+        Object.keys(d.data || {}).forEach(k => {
+            if (k !== 'Product') salesMetricsSet.add(k);
+        });
+    });
+    perfData.forEach(d => {
+        Object.keys(d.data || {}).forEach(k => salesMetricsSet.add(k));
+    });
+    return Array.from(salesMetricsSet).sort();
+}
+
 async function openManageProductsModal(currentProducts) {
     let modal = document.getElementById('manage-products-modal');
     if (!modal) {
