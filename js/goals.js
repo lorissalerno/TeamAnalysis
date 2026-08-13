@@ -279,11 +279,18 @@ async function renderSalesGoalsTable() {
                             <th style="padding:12px; text-align:left; border-right:1px solid var(--border); min-width:160px; font-weight:700;">Collaboratore</th>
                             <th style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); width:85px; font-weight:700;">% Lavoro</th>
                             ${products.map((p, idx) => `
-                                <th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.88rem; background:rgba(59,130,246,0.06); min-width:130px; position:relative;">
+                                <th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.88rem; background:rgba(59,130,246,0.06); min-width:140px; position:relative;">
                                     <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                        <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%;">
-                                            <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:1px solid transparent; color:inherit; font-weight:700; text-align:center; font-size:0.88rem; width:85px; border-radius:4px; padding:2px;" onfocus="this.style.background='var(--bg-base)'; this.style.borderColor='var(--primary)';" onblur="this.style.background='transparent'; this.style.borderColor='transparent';">
-                                            <button class="delete-col-btn" data-idx="${idx}" title="Elimina Colonna" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9rem; padding:0 3px;">&times;</button>
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%;">
+                                            <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:1px solid transparent; color:inherit; font-weight:700; text-align:center; font-size:0.88rem; flex:1; border-radius:4px; padding:2px;" onfocus="this.style.background='var(--bg-base)'; this.style.borderColor='var(--primary)';" onblur="this.style.background='transparent'; this.style.borderColor='transparent';">
+                                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                                <button class="edit-col-btn" data-idx="${idx}" title="Modifica Colonna" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                                </button>
+                                                <button class="delete-col-btn" data-idx="${idx}" title="Elimina Colonna" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.8;" onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.8';">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                </button>
+                                            </div>
                                         </div>
                                         <div style="display:flex; align-items:center; gap:6px;">
                                             <span class="toggle-mode-btn" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.65rem; padding:2px 6px; border-radius:4px; font-weight:600; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.25); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.25); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
@@ -358,6 +365,17 @@ async function renderSalesGoalsTable() {
     }
 
     // Direct Header Editing Listeners
+    container.querySelectorAll('.edit-col-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            const idx = parseInt(btn.dataset.idx, 10);
+            const input = container.querySelector(`.header-col-label-input[data-idx="${idx}"]`);
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        };
+    });
+
     container.querySelectorAll('.header-col-label-input').forEach(inp => {
         inp.onchange = async (e) => {
             const idx = parseInt(e.target.dataset.idx, 10);
