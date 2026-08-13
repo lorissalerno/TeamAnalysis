@@ -999,11 +999,7 @@ function createStatModalHTML() {
             <div class="stat-modal-preview" style="display:flex; flex-direction:column; height:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border);">
                     <div class="stat-modal-preview-title" style="margin-bottom:0;">Anteprima in tempo reale</div>
-                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">`;
-    document.body.insertAdjacentHTML('beforeend', html);
-    const modalEl = document.getElementById('stat-config-modal');
-    return modalEl;
-}
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                         <div id="preview-individual-select-container" style="display:none; align-items:center;">
                             <select id="preview-individual-select" style="padding:4px 8px; height:28px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.78rem; max-width:180px;">
                                 <option value="">Seleziona Collaboratore...</option>
@@ -1048,9 +1044,6 @@ function createStatModalHTML() {
     `;
     document.body.insertAdjacentHTML('beforeend', html);
     const modalEl = document.getElementById('stat-config-modal');
-
-
-
     return modalEl;
 }
 
