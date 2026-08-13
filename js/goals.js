@@ -221,42 +221,38 @@ async function renderSalesGoalsTable() {
     `;
 
     container.innerHTML = `
-        <div class="card" style="padding:16px 20px; margin-bottom:16px; border-radius:var(--radius); background:var(--bg-surface); border:1px solid var(--border);">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
-                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="card" style="padding:14px 18px; margin-bottom:16px; border-radius:var(--radius); background:var(--bg-surface); border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button class="btn primary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        + Nuova Tabella Obiettivi
+                    </button>
                     <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                        Tabella:
-                        <select id="sales-table-selector" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:700; font-size:0.9rem;">
+                        <select id="sales-table-selector" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:700; font-size:0.88rem;">
                             ${tableSelectOpts}
                         </select>
                     </label>
-                    <button class="btn secondary btn-sm" id="create-new-table-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        + Nuova Tabella
-                    </button>
-                    <button class="btn secondary btn-sm" id="delete-current-table-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3);">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        Elimina Tabella
-                    </button>
-                </div>
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                     <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
                         Skill:
                         <select id="sales-skill-select" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.8rem;">
                             ${skillOptsHtml}
                         </select>
                     </label>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <button class="btn secondary btn-sm" id="add-collab-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         + Collaboratore
                     </button>
                     <button class="btn secondary btn-sm" id="calc-work-pct-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                         Calcola da % Lavoro
                     </button>
                     <button class="btn primary btn-sm" id="save-sales-table-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         Salva Obiettivi
+                    </button>
+                    <button class="btn secondary btn-sm" id="delete-current-table-btn" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:5px 8px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                 </div>
             </div>
@@ -264,10 +260,8 @@ async function renderSalesGoalsTable() {
 
         <div style="overflow-x:auto; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px;">
             ${employees.length === 0 ? `
-                <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:10px; opacity:0.6;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin-bottom:6px;">Nessun Collaboratore per questa Tabella</h3>
-                    <p style="font-size:0.85rem; margin-bottom:16px;">Aggiungi dei collaboratori per impostare i loro % di lavoro e target.</p>
+                <div style="padding:32px 20px; text-align:center; color:var(--text-muted);">
+                    <p style="font-size:0.9rem; font-weight:600; color:var(--text-main); margin-bottom:12px;">Tabella Vuota</p>
                     <button class="btn primary btn-sm" id="empty-add-collab-btn" style="display:inline-flex; align-items:center; gap:6px;">
                         + Aggiungi Collaboratore
                     </button>
