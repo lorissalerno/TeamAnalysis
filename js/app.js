@@ -1935,8 +1935,9 @@ function setupImportWizard() {
                         await appDb.deleteFromDate('performance', startDate, selectedSkill);
                         logImport(`Eliminati vecchi dati automatici performance ("${selectedSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
                     } else {
-                        await appDb.deleteFromDate('sales', startDate);
-                        logImport(`Eliminati vecchi dati automatici Sales da mese ${monthVal}/${window.appState.activeYear} in poi.`);
+                        const salesSkill = wizardState.salesType === 'aoit' ? 'AOIT' : 'Nuovi Abo';
+                        await appDb.deleteFromDate('sales', startDate, salesSkill);
+                        logImport(`Eliminati vecchi dati automatici Sales ("${salesSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
                     }
                 }
 
