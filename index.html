@@ -158,68 +158,80 @@
 
         <!-- Statistics Section -->
         <section id="statistics" class="page-section">
-            <div class="section-header">
-                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <h1>Statistiche</h1>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <select id="stat-template-select" style="padding:6px 10px; border-radius:6px; background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem; font-weight:500; cursor:pointer;">
+            <div class="stats-sticky-header">
+                <!-- Sinistra: Titolo, Template, Azioni, Ricerca -->
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <h2 style="font-size:1.1rem; font-weight:700; margin:0; white-space:nowrap; color:var(--text-main);">Statistiche</h2>
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <select id="stat-template-select" style="padding:4px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.8rem; font-weight:500; cursor:pointer; height:30px;">
                         </select>
-                        <button class="btn secondary" id="manage-templates-btn" title="Gestisci Template" style="padding:6px 10px; font-size:0.85rem; display:inline-flex; align-items:center; justify-content:center;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <button class="btn secondary" id="manage-templates-btn" title="Gestisci Template" style="padding:4px 8px; height:30px; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                     </div>
+                    <div style="width:1px; height:20px; background:var(--border); margin:0 2px;"></div>
+                    <button class="btn primary" id="create-stat-btn" style="padding:4px 10px; height:30px; font-size:0.78rem; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Nuova
+                    </button>
+                    <button class="btn secondary" id="reorder-stats-btn" title="Riordina Grafici" style="padding:4px 8px; height:30px; font-size:0.78rem; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
+                        Riordina
+                    </button>
+                    <input type="text" id="stat-search-input" placeholder="Cerca statistica..." style="width:150px; height:30px; padding:4px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.78rem;">
                 </div>
-                <div class="tabs">
-                    <button class="tab-btn active" data-target="stat-team">Team</button>
-                    <button class="tab-btn" data-target="stat-individual">Individuale</button>
+
+                <!-- Destra: Controlli vista & Tab Navigazione -->
+                <div style="display:flex; align-items:center; gap:12px; flex-shrink:0; margin-left:auto;">
+                    <!-- Controlli Vista Team -->
+                    <div id="team-header-controls" style="display:flex; align-items:center; gap:12px;">
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.78rem;">
+                            <input type="checkbox" id="show-team-avg-team-toggle">
+                            <span class="slider"></span>
+                            <span class="label" style="font-size:0.78rem; margin-left:4px; white-space:nowrap;">Mostra Media Team</span>
+                        </label>
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.78rem;">
+                            <input type="checkbox" id="show-team-goal-team-toggle">
+                            <span class="slider"></span>
+                            <span class="label" style="font-size:0.78rem; margin-left:4px; white-space:nowrap;">Mostra Obiettivo Team</span>
+                        </label>
+                        <div class="tabs" style="display:inline-flex;">
+                            <button class="tab-btn active" id="team-view-all-btn" style="padding:3px 8px; font-size:0.75rem;">Tutti</button>
+                            <button class="tab-btn" id="team-view-avg-btn" style="padding:3px 8px; font-size:0.75rem;">Solo Media</button>
+                        </div>
+                    </div>
+
+                    <!-- Controlli Vista Individuale -->
+                    <div id="individual-header-controls" style="display:none; align-items:center; gap:10px;">
+                        <select id="individual-select" style="padding:4px 8px; height:30px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.78rem; max-width:180px;">
+                            <option value="">Seleziona Collaboratore...</option>
+                        </select>
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.78rem;">
+                            <input type="checkbox" id="show-team-avg-individual-toggle">
+                            <span class="slider"></span>
+                            <span class="label" style="font-size:0.78rem; margin-left:4px; white-space:nowrap;">Mostra Media Team</span>
+                        </label>
+                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.78rem;">
+                            <input type="checkbox" id="show-team-goal-individual-toggle">
+                            <span class="slider"></span>
+                            <span class="label" style="font-size:0.78rem; margin-left:4px; white-space:nowrap;">Mostra Obiettivo Team</span>
+                        </label>
+                    </div>
+
+                    <div style="width:1px; height:20px; background:var(--border); margin:0 2px;"></div>
+
+                    <!-- Tab Navigazione Principali -->
+                    <div class="tabs" style="display:inline-flex;">
+                        <button class="tab-btn active" data-target="stat-team" style="padding:3px 10px; font-size:0.78rem;">Team</button>
+                        <button class="tab-btn" data-target="stat-individual" style="padding:3px 10px; font-size:0.78rem;">Individuale</button>
+                    </div>
                 </div>
             </div>
             <div id="stat-team" class="tab-content active">
-                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <button class="btn primary" id="create-stat-btn">Nuova Statistica</button>
-                    <button class="btn secondary" id="reorder-stats-btn" title="Riordina Grafici">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
-                        Riordina Grafici
-                    </button>
-                    <div style="margin-left:auto; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
-                            <input type="checkbox" id="show-team-avg-team-toggle">
-                            <span class="slider"></span>
-                            <span class="label">Mostra Media Team</span>
-                        </label>
-                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
-                            <input type="checkbox" id="show-team-goal-team-toggle">
-                            <span class="slider"></span>
-                            <span class="label">Mostra Obiettivo Team</span>
-                        </label>
-                        <div class="tabs">
-                            <button class="tab-btn active" id="team-view-all-btn">Tutti</button>
-                            <button class="tab-btn" id="team-view-avg-btn">Solo Media</button>
-                        </div>
-                    </div>
-                </div>
-                <input type="text" id="stat-search-input" placeholder="Cerca statistica..." style="width:100%; padding:8px 12px; margin-top:10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
-                <div id="team-stats-container" class="stats-grid"></div>
+                <div id="team-stats-container" class="stats-grid" style="margin-top:12px;"></div>
             </div>
             <div id="stat-individual" class="tab-content">
-                <div class="filter-bar" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                    <select id="individual-select">
-                        <option value="">Seleziona Collaboratore...</option>
-                    </select>
-                    <div style="margin-left:auto; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
-                            <input type="checkbox" id="show-team-avg-individual-toggle">
-                            <span class="slider"></span>
-                            <span class="label">Mostra Media Team</span>
-                        </label>
-                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer;">
-                            <input type="checkbox" id="show-team-goal-individual-toggle">
-                            <span class="slider"></span>
-                            <span class="label">Mostra Obiettivo Team</span>
-                        </label>
-                    </div>
-                </div>
-                <div id="individual-stats-container" class="stats-grid"></div>
+                <div id="individual-stats-container" class="stats-grid" style="margin-top:12px;"></div>
             </div>
         </section>
 
