@@ -249,36 +249,7 @@
                     </p>
                     <button class="btn secondary" id="manage-mapping-btn">Gestisci Collaboratori</button>
                 </div>
-                <div class="card" style="grid-column: span 2;">
-                    <h2>Associazione Statistiche Correlate</h2>
-                    <p>Associa due statistiche di performance dal database (es. <em>Sr Push Interactions (#)</em> e <em>Sr Push Avg. Focus Time (s)</em>) per calcoli e comparazioni avanzate.</p>
-                    
-                    <div style="display:flex; flex-direction:column; gap:12px; margin:16px 0; background:var(--bg-base); padding:16px; border-radius:8px; border:1px solid var(--border);">
-                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                            <div style="flex:1; min-width:240px; position:relative;">
-                                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Statistica 1 (es. Quantità #):</label>
-                                <input type="text" id="assoc-stat-1-search" placeholder="Cerca statistica 1..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:0.85rem;">
-                                <svg style="position:absolute; right:10px; top:32px; pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                                <input type="hidden" id="assoc-stat-1">
-                                <div id="assoc-stat-1-dropdown" class="searchable-dropdown"></div>
-                            </div>
-                            <div style="flex:1; min-width:240px; position:relative;">
-                                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Statistica 2 (es. Tempo medio s):</label>
-                                <input type="text" id="assoc-stat-2-search" placeholder="Cerca statistica 2..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:0.85rem;">
-                                <svg style="position:absolute; right:10px; top:32px; pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                                <input type="hidden" id="assoc-stat-2">
-                                <div id="assoc-stat-2-dropdown" class="searchable-dropdown"></div>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <input type="text" id="assoc-group-name" placeholder="Nome Associazione / Gruppo (es. Sr Push)..." style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:0.85rem;">
-                            <button class="btn primary" id="save-assoc-btn" style="white-space:nowrap;">Salva Associazione</button>
-                        </div>
-                    </div>
 
-                    <h3 style="font-size:0.95rem; margin-top:16px; margin-bottom:8px;">Associazioni Salvate</h3>
-                    <div id="stat-associations-list" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto;"></div>
-                </div>
                 <div class="card">
                     <h2>Backup Dati</h2>
                     <p>Salva tutti i dati in locale o ripristina un salvataggio.</p>
