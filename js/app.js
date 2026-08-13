@@ -156,16 +156,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Anon Toggle
+    // Anon Toggle — aggiorna solo la sezione attiva per evitare reload visivo
     document.getElementById('anon-toggle').addEventListener('change', async (e) => {
         window.appState.isAnonymous = e.target.checked;
         await appDb.setSetting('isAnonymous', e.target.checked);
-        // Refresh views dynamically in-place without page reload
-        if (window.renderDashboard) window.renderDashboard();
-        if (window.renderStatistics) window.renderStatistics();
-        if (window.renderGoals) window.renderGoals();
-        renderImportedData();
-        if (typeof renderManagementTable === 'function') renderManagementTable();
+        const activeSection = document.querySelector('.page-section.active');
+        const sectionId = activeSection ? activeSection.id : 'dashboard';
+        if (sectionId === 'dashboard' && window.renderDashboard) window.renderDashboard();
+        else if (sectionId === 'statistics' && window.renderStatistics) window.renderStatistics();
+        else if (sectionId === 'goals' && window.renderGoals) window.renderGoals();
+        else if (sectionId === 'database') renderImportedData();
+        else if (sectionId === 'settings' && typeof renderManagementTable === 'function') renderManagementTable();
     });
 
     // Year Change
