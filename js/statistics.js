@@ -2643,15 +2643,15 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
     };
 
     const table = document.createElement('table');
-    table.style.cssText = 'width:100%; border-collapse:collapse; font-size:0.87rem; color:var(--text-main);';
+    table.style.cssText = 'width:auto; border-collapse:collapse; font-size:0.87rem; color:var(--text-main);';
 
     const thead = document.createElement('thead');
     let headHtml = `<tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
-        <th style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); font-weight:700;">Collaboratore</th>
-        <th style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:700;">% Lavoro</th>`;
+        <th style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
+        <th style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:90px; min-width:80px; font-weight:700;">% Lavoro</th>`;
 
     products.forEach(p => {
-        headHtml += `<th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05);">
+        headHtml += `<th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px;">
             <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
                 <span>${p.label}</span>
                 <span style="font-size:0.68rem; color:var(--text-muted); font-weight:500;">
