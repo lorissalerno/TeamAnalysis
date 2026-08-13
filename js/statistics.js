@@ -1099,7 +1099,20 @@ async function renderIndividualStats() {
     const employee = document.getElementById('individual-select').value;
     
     if (!employee) {
-        container.innerHTML = '';
+        container.innerHTML = `
+            <div class="card" style="padding: 40px 20px; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-top: 12px;">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-base); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); margin: 0 auto;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <div>
+                    <h3 style="font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Seleziona un Collaboratore</h3>
+                    <p style="font-size: 0.85rem;">Seleziona un collaboratore dal menu in alto per visualizzare le sue statistiche e gli obiettivi di vendita.</p>
+                </div>
+            </div>
+        `;
         return;
     }
     
@@ -1115,17 +1128,363 @@ async function renderIndividualStats() {
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
     const goals = await appDb.getAll('goals', 'year', year);
+
+    // Configurazione personalizzata degli obiettivi per questo collaboratore
+    const customConfig = (await appDb.getSetting('ind_goals_config_' + employee, null)) || {
+        hidden: {},
+        targets: {},
+        monthlyTargets: {}
+    };
     
     container.innerHTML = '';
-    if (stats.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica in questo template.</p>';
-        return;
+
+    // 1. Intestazione Collaboratore (Icona omino SVG + Nome Cognome + Pulsante Personalizza)
+    const displayName = window.getDisplayName(employee);
+    const headerCard = document.createElement('div');
+    headerCard.className = 'card';
+    headerCard.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:16px 20px; margin-top:12px; margin-bottom:20px; border-radius:var(--radius); background:var(--bg-surface); border:1px solid var(--border); flex-wrap:wrap; gap:16px;';
+
+    headerCard.innerHTML = `
+        <div style="display:flex; align-items:center; gap:16px;">
+            <div style="width:48px; height:48px; border-radius:50%; background:rgba(59,130,246,0.12); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid rgba(59,130,246,0.3);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            <div>
+                <h2 style="font-size:1.25rem; font-weight:700; color:var(--text-main); margin:0;">${displayName}</h2>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Statistiche & Obiettivi Individuali · Anno ${year}</div>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn secondary btn-sm" id="cust-ind-goals-btn" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding:6px 12px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Personalizza Obiettivi
+            </button>
+        </div>
+    `;
+    container.appendChild(headerCard);
+
+    const custBtn = headerCard.querySelector('#cust-ind-goals-btn');
+    if (custBtn) {
+        custBtn.onclick = () => openIndividualGoalsModal(employee, year);
     }
-    
-    stats.forEach(stat => {
-        const card = buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
-        container.appendChild(card);
+
+    // 2. Sezione Obiettivi di Vendita (Stile LolloData Dashboard)
+    const goalCardsHtml = buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig);
+    if (goalCardsHtml) {
+        const goalsSection = document.createElement('div');
+        goalsSection.style.cssText = 'margin-bottom: 24px;';
+        goalsSection.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0;">Obiettivi di Vendita</h3>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                ${goalCardsHtml}
+            </div>
+        `;
+        container.appendChild(goalsSection);
+    }
+
+    // 3. Grafici e Statistiche Personalizzate (Template Grid)
+    const chartsSectionHeader = document.createElement('div');
+    chartsSectionHeader.style.cssText = 'margin-bottom:12px;';
+    chartsSectionHeader.innerHTML = `<h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0;">Grafici e Statistiche Personalizzate</h3>`;
+    container.appendChild(chartsSectionHeader);
+
+    const statsGrid = document.createElement('div');
+    statsGrid.className = 'stats-grid';
+
+    if (stats.length === 0) {
+        statsGrid.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica in questo template.</p>';
+    } else {
+        stats.forEach(stat => {
+            const card = buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
+            statsGrid.appendChild(card);
+        });
+    }
+    container.appendChild(statsGrid);
+}
+
+function buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig) {
+    const hiddenMap = customConfig.hidden || {};
+    const customTargets = customConfig.targets || {};
+    const customMonthlyTargets = customConfig.monthlyTargets || {};
+
+    const defaultItems = [
+        { key: 'AOIT (CHF)', label: 'AOIT (CHF)', isCHF: true, defaultTarget: 5000, color: '#3b82f6' },
+        { key: 'Retention', label: 'Retention', isCHF: false, defaultTarget: 12, color: '#059669' },
+        { key: 'Internet', label: 'Internet', isCHF: false, defaultTarget: 12, color: '#d97706' },
+        { key: 'TV', label: 'TV', isCHF: false, defaultTarget: 12, color: '#8b5cf6' },
+        { key: 'Mobile', label: 'Mobile', isCHF: false, defaultTarget: 12, color: '#ec4899' }
+    ];
+
+    // Integrazione eventuali obiettivi definiti nel DB per questo collaboratore o team
+    goals.forEach(g => {
+        if (!g.employee || g.employee === employee) {
+            const cleanKey = g.metric.replace(/^Sales:\s*/i, '').replace(/^Performance:\s*/i, '');
+            const existing = defaultItems.find(i => i.key.toLowerCase() === cleanKey.toLowerCase());
+            if (!existing) {
+                defaultItems.push({
+                    key: cleanKey,
+                    label: cleanKey,
+                    isCHF: cleanKey.toLowerCase().includes('chf') || cleanKey.toLowerCase().includes('aoit'),
+                    defaultTarget: g.target || 10,
+                    color: '#3b82f6',
+                    skill: g.skill && g.skill !== 'ALL' ? g.skill : null
+                });
+            } else if (g.target) {
+                existing.defaultTarget = g.target;
+            }
+        }
     });
+
+    // Trova l'ultimo mese presente nei dati
+    let allDates = [];
+    salesData.forEach(d => { if (d.date) allDates.push(d.date); });
+    perfData.forEach(d => { if (d.date) allDates.push(d.date); });
+    
+    let latestMonthStr = '';
+    let latestMonthName = 'Corrente';
+    if (allDates.length > 0) {
+        allDates.sort();
+        const lastDate = allDates[allDates.length - 1];
+        const parts = lastDate.split('-');
+        if (parts.length >= 2) {
+            latestMonthStr = `${parts[0]}-${parts[1]}`;
+            const monthIdx = parseInt(parts[1], 10) - 1;
+            const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+            if (monthIdx >= 0 && monthIdx < 12) latestMonthName = mesi[monthIdx];
+        }
+    }
+
+    let cardsHtml = '';
+
+    defaultItems.forEach(item => {
+        if (hiddenMap[item.key]) return;
+
+        const annualTarget = customTargets[item.key] ?? item.defaultTarget;
+        const monthlyTarget = customMonthlyTargets[item.key] ?? (annualTarget > 0 ? Math.round(annualTarget / 12) : 0);
+
+        let monthlyAchieved = 0;
+        let annualAchieved = 0;
+
+        const keyLower = item.key.toLowerCase();
+        
+        salesData.forEach(r => {
+            if (r.employee !== employee || !r.data) return;
+            let val = 0;
+            if (keyLower.includes('aoit')) {
+                val = parseMetricValue(r.data['AOIT gew'] ?? r.data['AOIT (CHF)'] ?? r.data['AOIT'] ?? (r.data.Product === 'AOIT gew' ? r.data.Value : 0));
+            } else if (keyLower.includes('retention')) {
+                val = parseMetricValue(r.data['Retention'] ?? (r.data.Product === 'Retention' ? r.data.Value : 0));
+            } else if (keyLower.includes('internet')) {
+                val = parseMetricValue(r.data['Internet'] ?? (r.data.Product === 'Internet' ? r.data.Value : 0));
+            } else if (keyLower.includes('tv')) {
+                val = parseMetricValue(r.data['TV'] ?? (r.data.Product === 'TV' ? r.data.Value : 0));
+            } else if (keyLower.includes('mobile')) {
+                val = parseMetricValue(r.data['Mobile'] ?? (r.data.Product === 'Mobile' ? r.data.Value : 0));
+            } else {
+                val = parseMetricValue(r.data[item.key] ?? 0);
+            }
+
+            if (val) {
+                annualAchieved += val;
+                if (latestMonthStr && r.date && r.date.startsWith(latestMonthStr)) {
+                    monthlyAchieved += val;
+                }
+            }
+        });
+
+        if (annualAchieved === 0) {
+            perfData.forEach(r => {
+                if (r.employee !== employee || !r.data) return;
+                const val = parseMetricValue(r.data[item.key] ?? 0);
+                if (val) {
+                    annualAchieved += val;
+                    if (latestMonthStr && r.date && r.date.startsWith(latestMonthStr)) {
+                        monthlyAchieved += val;
+                    }
+                }
+            });
+        }
+
+        const formatVal = (v) => {
+            if (item.isCHF) return 'CHF ' + Math.round(v).toLocaleString('de-CH');
+            return Number.isInteger(v) ? v.toString() : v.toFixed(1);
+        };
+
+        const monthPct = monthlyTarget > 0 ? Math.round((monthlyAchieved / monthlyTarget) * 100) : 0;
+        const annualPct = annualTarget > 0 ? Math.round((annualAchieved / annualTarget) * 100) : 0;
+        const monthPctClamped = Math.min(Math.max(monthPct, 0), 100);
+        const annualPctClamped = Math.min(Math.max(annualPct, 0), 100);
+
+        cardsHtml += `
+            <div class="card" style="padding: 12px 14px; border-radius: var(--radius); background: var(--bg-surface); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="font-weight: 700; font-size: 13px; color: ${item.color}; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${item.label}</span>
+                        ${item.skill ? `<span style="font-size:10px; font-weight:500; padding:1px 6px; border-radius:10px; background:var(--bg-base); color:var(--text-muted); border:1px solid var(--border);">${item.skill}</span>` : ''}
+                    </div>
+                    
+                    <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
+                        <span style="font-size:11px; color:var(--text-muted);">Mensile ${latestMonthName}</span>
+                        <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(monthlyAchieved)} / ${formatVal(monthlyTarget)}</span>
+                    </div>
+                    <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:8px; position:relative;">
+                        <div class="goal-progress-fill" style="width:${monthPctClamped}%; height:100%; background:${item.color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
+                            ${monthPct > 12 ? monthPct + '%' : ''}
+                        </div>
+                    </div>
+
+                    <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
+                        <span style="font-size:11px; color:var(--text-muted);">Annuale</span>
+                        <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(annualAchieved)} / ${formatVal(annualTarget)}</span>
+                    </div>
+                    <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative;">
+                        <div class="goal-progress-fill" style="width:${annualPctClamped}%; height:100%; background:${item.color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
+                            ${annualPct > 12 ? annualPct + '%' : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    return cardsHtml;
+}
+
+async function openIndividualGoalsModal(employee, year) {
+    let modal = document.getElementById('ind-goals-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ind-goals-modal';
+        modal.className = 'modal';
+        modal.style.cssText = 'max-width: 600px; width: 92%; border-radius: 12px;';
+        document.body.appendChild(modal);
+    }
+
+    const overlay = document.getElementById('modal-overlay');
+    
+    const customConfig = (await appDb.getSetting('ind_goals_config_' + employee, null)) || {
+        hidden: {},
+        targets: {},
+        monthlyTargets: {}
+    };
+
+    const goals = await appDb.getAll('goals', 'year', year);
+
+    const defaultItems = [
+        { key: 'AOIT (CHF)', label: 'AOIT (CHF)', isCHF: true, defaultTarget: 5000 },
+        { key: 'Retention', label: 'Retention', isCHF: false, defaultTarget: 12 },
+        { key: 'Internet', label: 'Internet', isCHF: false, defaultTarget: 12 },
+        { key: 'TV', label: 'TV', isCHF: false, defaultTarget: 12 },
+        { key: 'Mobile', label: 'Mobile', isCHF: false, defaultTarget: 12 }
+    ];
+
+    goals.forEach(g => {
+        if (!g.employee || g.employee === employee) {
+            const cleanKey = g.metric.replace(/^Sales:\s*/i, '').replace(/^Performance:\s*/i, '');
+            if (!defaultItems.find(i => i.key.toLowerCase() === cleanKey.toLowerCase())) {
+                defaultItems.push({
+                    key: cleanKey,
+                    label: cleanKey,
+                    isCHF: cleanKey.toLowerCase().includes('chf') || cleanKey.toLowerCase().includes('aoit'),
+                    defaultTarget: g.target || 10
+                });
+            }
+        }
+    });
+
+    const displayName = window.getDisplayName(employee);
+
+    modal.innerHTML = `
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Personalizza Obiettivi: ${displayName}</h2>
+            <button class="close-modal" id="close-ind-goals-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; max-height:65vh; overflow-y:auto; display:flex; flex-direction:column; gap:16px;">
+            <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">
+                Configura quali obiettivi visualizzare e imposta i target annuali e mensili specifici per <strong>${displayName}</strong> (${year}).
+            </p>
+            <div id="ind-goals-form-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
+            <button class="btn secondary" id="cancel-ind-goals-btn">Annulla</button>
+            <button class="btn primary" id="save-ind-goals-btn">Salva Modifiche</button>
+        </div>
+    `;
+
+    const formList = modal.querySelector('#ind-goals-form-list');
+    defaultItems.forEach(item => {
+        const isHidden = !!customConfig.hidden[item.key];
+        const annualTgt = customConfig.targets[item.key] ?? item.defaultTarget;
+        const monthlyTgt = customConfig.monthlyTargets?.[item.key] ?? (annualTgt > 0 ? Math.round(annualTgt / 12) : 0);
+
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; flex-wrap:wrap;';
+        row.innerHTML = `
+            <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.9rem; color:var(--text-main); cursor:pointer; flex:1; min-width:140px;">
+                <input type="checkbox" class="ind-goal-vis-cb" data-key="${item.key}" ${!isHidden ? 'checked' : ''}>
+                <span>${item.label}</span>
+            </label>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <span style="font-size:0.7rem; color:var(--text-muted);">Target Mensile</span>
+                    <input type="number" class="ind-goal-monthly-input" data-key="${item.key}" value="${monthlyTgt}" style="width:85px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
+                </div>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <span style="font-size:0.7rem; color:var(--text-muted);">Target Annuale</span>
+                    <input type="number" class="ind-goal-annual-input" data-key="${item.key}" value="${annualTgt}" style="width:85px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
+                </div>
+            </div>
+        `;
+        formList.appendChild(row);
+    });
+
+    const closeModal = () => {
+        modal.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
+    };
+
+    modal.querySelector('#close-ind-goals-modal').onclick = closeModal;
+    modal.querySelector('#cancel-ind-goals-btn').onclick = closeModal;
+
+    modal.querySelector('#save-ind-goals-btn').onclick = async () => {
+        const newHidden = {};
+        const newTargets = {};
+        const newMonthlyTargets = {};
+
+        modal.querySelectorAll('.ind-goal-vis-cb').forEach(cb => {
+            const key = cb.dataset.key;
+            if (!cb.checked) newHidden[key] = true;
+        });
+
+        modal.querySelectorAll('.ind-goal-annual-input').forEach(inp => {
+            const key = inp.dataset.key;
+            const val = parseFloat(inp.value) || 0;
+            newTargets[key] = val;
+        });
+
+        modal.querySelectorAll('.ind-goal-monthly-input').forEach(inp => {
+            const key = inp.dataset.key;
+            const val = parseFloat(inp.value) || 0;
+            newMonthlyTargets[key] = val;
+        });
+
+        await appDb.setSetting('ind_goals_config_' + employee, {
+            hidden: newHidden,
+            targets: newTargets,
+            monthlyTargets: newMonthlyTargets
+        });
+
+        closeModal();
+        await renderIndividualStats();
+    };
+
+    modal.classList.add('open');
+    if (overlay) overlay.classList.add('active');
 }
 
 function formatDateLabel(dateStr) {
