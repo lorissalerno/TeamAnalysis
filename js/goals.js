@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // TABELLA OBIETTIVI VENDITA (STILE EXCEL)
 // ==========================================
-
+let isSalesTableEditMode = false;
 let activeSalesTableId = 'default';
 
 async function getSalesTablesList(year) {
@@ -238,15 +238,8 @@ async function renderSalesGoalsTable() {
 
     const employees = Array.from(empSet).sort();
 
-    const tableSelectOpts = tablesList.map(t => `<option value="${t.id}" ${t.id === activeSalesTableId ? 'selected' : ''}>${t.name}</option>`).join('');
-
-    const skillOptsHtml = `
-        <option value="ALL" ${currentTableObj.skill === 'ALL' ? 'selected' : ''}>Tutte le Skill</option>
-        ${configuredSkills.map(s => `<option value="${s}" ${currentTableObj.skill === s ? 'selected' : ''}>${s}</option>`).join('')}
-    `;
-
     container.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 ${tablesList.length > 0 ? tablesList.map(t => `
                     <button class="table-tab-btn ${t.id === activeSalesTableId ? 'active' : ''}" data-id="${t.id}" style="padding:6px 14px; border-radius:8px; border:1px solid ${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--border)'}; background:${t.id === activeSalesTableId ? 'rgba(99,102,241,0.15)' : 'var(--bg-surface)'}; color:${t.id === activeSalesTableId ? 'var(--primary)' : 'var(--text-main)'}; font-weight:700; font-size:0.85rem; cursor:pointer;">
@@ -260,24 +253,26 @@ async function renderSalesGoalsTable() {
             </div>
             ${employees.length > 0 ? `
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <button class="btn secondary btn-sm" id="add-collab-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        + Collaboratore
+                    <button class="btn btn-sm" id="toggle-sales-table-edit-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px; padding:6px 14px; ${isSalesTableEditMode ? 'background:var(--primary); color:#fff; border:1px solid var(--primary);' : 'background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border);'}">
+                        ${isSalesTableEditMode ? `
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            Modifica
+                        ` : `
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            Visualizza
+                        `}
                     </button>
-                    <button class="btn secondary btn-sm" id="calc-work-pct-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
-                        Calcola da % Lavoro
-                    </button>
-                    <button class="btn primary btn-sm" id="save-sales-table-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
-                        Salva Obiettivi
-                    </button>
-                    <button class="btn secondary btn-sm" id="delete-current-table-btn" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:5px 8px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
+                    ${isSalesTableEditMode ? `
+                        <button class="btn secondary btn-sm" id="delete-current-table-btn" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:6px 10px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Elimina Tabella
+                        </button>
+                    ` : ''}
                 </div>
             ` : ''}
         </div>
 
-        <div style="overflow-x:auto; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px;">
+        <div style="overflow-x:auto; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
             ${employees.length === 0 ? `
                 <div style="padding:48px 20px; text-align:center; color:var(--text-muted);">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:12px; opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
@@ -289,69 +284,77 @@ async function renderSalesGoalsTable() {
                     </button>
                 </div>
             ` : `
-                <table class="sales-goals-table" style="width:auto; border-collapse:collapse; font-size:0.85rem; color:var(--text-main);">
+                <table class="sales-goals-table" style="width:auto; border-collapse:collapse; font-size:0.83rem; color:var(--text-main);">
                     <thead>
                         <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
-                            <th style="padding:12px; text-align:left; border-right:1px solid var(--border); width:200px; min-width:180px; font-weight:700;">Collaboratore</th>
-                            <th style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); width:90px; font-weight:700;">% Lavoro</th>
+                            <th style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:160px; min-width:150px; font-weight:700;">Collaboratore</th>
+                            <th style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:75px; min-width:70px; font-weight:700;">% Lavoro</th>
                             ${products.map((p, idx) => `
-                                <th style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.88rem; background:rgba(59,130,246,0.06); width:140px; min-width:140px; position:relative;">
+                                <th style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.85rem; background:rgba(59,130,246,0.06); width:115px; min-width:115px; position:relative;">
                                     <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%;">
-                                            <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:1px solid transparent; color:inherit; font-weight:700; text-align:center; font-size:0.88rem; flex:1; border-radius:4px; padding:2px;" onfocus="this.style.background='var(--bg-base)'; this.style.borderColor='var(--primary)';" onblur="this.style.background='transparent'; this.style.borderColor='transparent';">
-                                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-                                                <button class="edit-col-btn" data-idx="${idx}" title="Modifica Colonna" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';">
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                                </button>
-                                                <button class="delete-col-btn" data-idx="${idx}" title="Elimina Colonna" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.8;" onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.8';">
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                                </button>
-                                            </div>
+                                        <div style="display:flex; align-items:center; justify-content:center; gap:4px; width:100%;">
+                                            ${isSalesTableEditMode ? `
+                                                <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:1px solid transparent; color:inherit; font-weight:700; text-align:center; font-size:0.85rem; flex:1; border-radius:4px; padding:2px;" onfocus="this.style.background='var(--bg-base)'; this.style.borderColor='var(--primary)';" onblur="this.style.background='transparent'; this.style.borderColor='transparent';">
+                                                <div style="display:flex; align-items:center; gap:2px; flex-shrink:0;">
+                                                    <button class="edit-col-btn" data-idx="${idx}" title="Modifica Titolo" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:2px; display:inline-flex; align-items:center; border-radius:4px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                                    </button>
+                                                    <button class="delete-col-btn" data-idx="${idx}" title="Elimina Colonna" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:2px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.8;" onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.8';">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                    </button>
+                                                </div>
+                                            ` : `
+                                                <span style="font-weight:700; font-size:0.85rem; color:var(--text-main); line-height:1.2; word-break:break-word;">${p.label}</span>
+                                            `}
                                         </div>
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <span class="toggle-mode-btn" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.65rem; padding:2px 6px; border-radius:4px; font-weight:600; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.25); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.25); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
-                                                ${p.mode === 'team' ? 'TEAM' : 'INDIV.'}
-                                            </span>
-                                            <span class="toggle-chf-btn" data-idx="${idx}" title="Clicca per cambiare tipo di valore" style="cursor:pointer; font-size:0.65rem; padding:2px 6px; border-radius:4px; font-weight:600; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted);">
-                                                ${p.isCHF ? 'CHF' : 'Qtà'}
-                                            </span>
-                                        </div>
-                                        <div class="col-metrics-picker" data-idx="${idx}" style="position:relative; width:100%; margin-top:3px;">
-                                            <button type="button" class="col-metrics-btn" data-idx="${idx}" style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); font-size:0.68rem; border-radius:4px; padding:3px 6px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
-                                                <span class="col-metrics-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:center;">
-                                                    ${(() => {
-                                                        const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key ? [p.key] : []));
-                                                        return sel.length === 0 ? '-- Prodotti DB --' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
-                                                    })()}
+                                        ${isSalesTableEditMode ? `
+                                            <div style="display:flex; align-items:center; gap:4px;">
+                                                <span class="toggle-mode-btn" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.62rem; padding:1px 5px; border-radius:4px; font-weight:600; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.25); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.25); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
+                                                    ${p.mode === 'team' ? 'TEAM' : 'INDIV.'}
                                                 </span>
-                                                <span style="font-size:0.55rem; opacity:0.7; margin-left:2px;">▼</span>
-                                            </button>
-                                            <div class="col-metrics-dropdown" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; box-shadow:0 8px 16px rgba(0,0,0,0.4); padding:6px; max-height:220px; overflow-y:auto; text-align:left;">
-                                                <div style="position:sticky; top:0; background:var(--bg-surface); padding-bottom:4px; margin-bottom:4px; border-bottom:1px solid var(--border); z-index:2;">
-                                                    <input type="text" class="metric-search-input" data-idx="${idx}" placeholder="🔍 Cerca prodotto..." style="width:100%; padding:4px 6px; font-size:0.7rem; border-radius:4px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
-                                                </div>
-                                                <div class="metric-items-list" data-idx="${idx}">
-                                                    ${availableSalesMetrics.map(m => {
-                                                        const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key === m ? [m] : []));
-                                                        const isChecked = sel.includes(m);
-                                                        return `
-                                                            <label class="metric-item-label" data-idx="${idx}" data-metric="${m}" style="display:flex; align-items:center; gap:6px; font-size:0.72rem; padding:4px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
-                                                                <input type="checkbox" class="metric-cb" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
-                                                                <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
-                                                            </label>
-                                                        `;
-                                                    }).join('')}
+                                                <span class="toggle-chf-btn" data-idx="${idx}" title="Clicca per cambiare tipo di valore" style="cursor:pointer; font-size:0.62rem; padding:1px 5px; border-radius:4px; font-weight:600; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted);">
+                                                    ${p.isCHF ? 'CHF' : 'Qtà'}
+                                                </span>
+                                            </div>
+                                            <div class="col-metrics-picker" data-idx="${idx}" style="position:relative; width:100%; margin-top:2px;">
+                                                <button type="button" class="col-metrics-btn" data-idx="${idx}" style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); font-size:0.65rem; border-radius:4px; padding:2px 4px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
+                                                    <span class="col-metrics-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:center;">
+                                                        ${(() => {
+                                                            const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key ? [p.key] : []));
+                                                            return sel.length === 0 ? '-- Prodotti DB --' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
+                                                        })()}
+                                                    </span>
+                                                    <span style="font-size:0.5rem; opacity:0.7; margin-left:2px;">▼</span>
+                                                </button>
+                                                <div class="col-metrics-dropdown" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; box-shadow:0 8px 16px rgba(0,0,0,0.4); padding:6px; max-height:220px; overflow-y:auto; text-align:left;">
+                                                    <div style="position:sticky; top:0; background:var(--bg-surface); padding-bottom:4px; margin-bottom:4px; border-bottom:1px solid var(--border); z-index:2;">
+                                                        <input type="text" class="metric-search-input" data-idx="${idx}" placeholder="🔍 Cerca prodotto..." style="width:100%; padding:4px 6px; font-size:0.7rem; border-radius:4px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
+                                                    </div>
+                                                    <div class="metric-items-list" data-idx="${idx}">
+                                                        ${availableSalesMetrics.map(m => {
+                                                            const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key === m ? [m] : []));
+                                                            const isChecked = sel.includes(m);
+                                                            return `
+                                                                <label class="metric-item-label" data-idx="${idx}" data-metric="${m}" style="display:flex; align-items:center; gap:6px; font-size:0.72rem; padding:4px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
+                                                                    <input type="checkbox" class="metric-cb" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
+                                                                    <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
+                                                                </label>
+                                                            `;
+                                                        }).join('')}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        ` : ''}
                                     </div>
                                 </th>
                             `).join('')}
-                            <th style="padding:6px; text-align:center; width:55px; min-width:55px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
-                                <button class="btn primary" id="add-table-col-header-btn" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; font-weight:700; cursor:pointer; margin:0 auto;" title="Aggiungi Obiettivo">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                </button>
-                            </th>
+                            ${isSalesTableEditMode ? `
+                                <th style="padding:6px; text-align:center; width:45px; min-width:45px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
+                                    <button class="btn primary" id="add-table-col-header-btn" style="width:28px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; font-weight:700; cursor:pointer; margin:0 auto;" title="Aggiungi Obiettivo">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    </button>
+                                </th>
+                            ` : ''}
                         </tr>
                     </thead>
                     <tbody id="sales-goals-tbody"></tbody>
@@ -360,6 +363,15 @@ async function renderSalesGoalsTable() {
             `}
         </div>
     `;
+
+    // Event handler per lo switch Visualizza / Modifica
+    const toggleEditBtn = container.querySelector('#toggle-sales-table-edit-btn');
+    if (toggleEditBtn) {
+        toggleEditBtn.onclick = () => {
+            isSalesTableEditMode = !isSalesTableEditMode;
+            renderSalesGoalsTable();
+        };
+    }
 
     // Event handlers for Table tabs
     container.querySelectorAll('.table-tab-btn').forEach(btn => {
@@ -429,6 +441,7 @@ async function renderSalesGoalsTable() {
             if (products[idx]) {
                 products[idx].label = e.target.value.trim() || products[idx].key;
                 await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
+                await saveSalesTableData(container, products, employees, year, activeSalesTableId);
             }
         };
     });
@@ -439,7 +452,7 @@ async function renderSalesGoalsTable() {
             if (!isNaN(idx) && products[idx]) {
                 products.splice(idx, 1);
                 await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                renderSalesGoalsTable();
+                await renderSalesGoalsTable();
             }
         };
     });
@@ -450,7 +463,7 @@ async function renderSalesGoalsTable() {
             if (!isNaN(idx) && products[idx]) {
                 products[idx].mode = products[idx].mode === 'team' ? 'individual' : 'team';
                 await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                renderSalesGoalsTable();
+                await renderSalesGoalsTable();
             }
         };
     });
@@ -461,7 +474,7 @@ async function renderSalesGoalsTable() {
             if (!isNaN(idx) && products[idx]) {
                 products[idx].isCHF = !products[idx].isCHF;
                 await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-                renderSalesGoalsTable();
+                await renderSalesGoalsTable();
             }
         };
     });
@@ -585,15 +598,19 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
     tbody.innerHTML = '';
     tfoot.innerHTML = '';
 
+    const year = window.appState?.activeYear || new Date().getFullYear();
+
     let totalWorkPctSum = 0;
     employees.forEach(emp => {
         totalWorkPctSum += (collabWorkPcts[emp] ?? 100);
     });
 
     const formatVal = (v, isCHF) => {
-        if (!v) return '—';
-        if (isCHF) return Math.round(v).toLocaleString('de-CH') + '.-';
-        return Number.isInteger(v) ? v.toString() : v.toFixed(1);
+        if (v === null || v === undefined || v === '') return '—';
+        const num = parseFloat(v);
+        if (isNaN(num)) return '—';
+        if (isCHF) return Math.round(num).toLocaleString('de-CH') + '.-';
+        return Number.isInteger(num) ? num.toString() : num.toFixed(1);
     };
 
     employees.forEach((emp, empIdx) => {
@@ -604,11 +621,15 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
         tr.style.cssText = 'border-bottom:1px solid var(--border);';
 
         let rowHtml = `
-            <td style="padding:10px 12px; font-weight:600; border-right:1px solid var(--border); white-space:nowrap;">
+            <td style="padding:8px 10px; font-weight:600; border-right:1px solid var(--border); white-space:nowrap;">
                 ${displayName}
             </td>
-            <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                <input type="number" class="collab-work-pct-input" data-emp="${emp}" value="${empWorkPct}" min="0" max="200" style="width:55px; text-align:center; padding:4px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600; font-size:0.8rem;">%
+            <td style="padding:4px 6px; text-align:center; border-right:1px solid var(--border);">
+                ${isSalesTableEditMode ? `
+                    <input type="number" class="collab-work-pct-input" data-emp="${emp}" value="${empWorkPct}" min="0" max="200" style="width:48px; text-align:center; padding:3px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600; font-size:0.8rem;">%
+                ` : `
+                    <span style="font-weight:600; font-size:0.82rem; color:var(--text-muted);">${empWorkPct}%</span>
+                `}
             </td>
         `;
 
@@ -618,10 +639,10 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
                 if (empIdx === 0) {
                     const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
                     rowHtml += `
-                        <td rowspan="${employees.length}" style="padding:16px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.04);">
+                        <td rowspan="${employees.length}" style="padding:12px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.03);">
                             <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                <span style="font-size:0.68rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; opacity:0.8;">Obiettivo Team</span>
-                                <span class="team-total-display" data-key="${p.key}" style="font-size:1.2rem; font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</span>
+                                <span style="font-size:0.68rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; opacity:0.85;">Obiettivo Team</span>
+                                <span class="team-total-display" data-key="${p.key}" style="font-size:1.15rem; font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</span>
                             </div>
                         </td>
                     `;
@@ -633,23 +654,27 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
 
                 rowHtml += `
                     <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                        <span class="indiv-calc-display" data-emp="${emp}" data-key="${p.key}" style="display:inline-block; width:90px; text-align:center; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-muted); font-weight:600; font-size:0.88rem;">${calcVal || '—'}</span>
+                        ${isSalesTableEditMode ? `
+                            <span class="indiv-calc-display" data-emp="${emp}" data-key="${p.key}" style="display:inline-block; width:75px; text-align:center; padding:4px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-muted); font-weight:600; font-size:0.83rem;">${formatVal(calcVal, p.isCHF)}</span>
+                        ` : `
+                            <span class="indiv-calc-display" data-emp="${emp}" data-key="${p.key}" style="font-weight:600; font-size:0.85rem; color:var(--text-main); font-family:monospace;">${formatVal(calcVal, p.isCHF)}</span>
+                        `}
                     </td>
                 `;
             }
         });
 
-        rowHtml += `<td></td>`;
+        if (isSalesTableEditMode) rowHtml += `<td></td>`;
         tr.innerHTML = rowHtml;
         tbody.appendChild(tr);
     });
 
-    // RIGA TOTALI TEAM — solo qui si può inserire il valore
+    // RIGA TOTALI TEAM
     const teamTr = document.createElement('tr');
     teamTr.style.cssText = 'background:var(--bg-base); font-weight:700; border-top:2px solid var(--border);';
     let teamHtml = `
-        <td style="padding:12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary);">TOTALI OBIETTIVI TEAM</td>
-        <td style="padding:12px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800;" id="total-work-pct-sum">${totalWorkPctSum}%</td>
+        <td style="padding:10px 12px; border-right:1px solid var(--border); font-weight:800; color:var(--primary);">TOTALI OBIETTIVI TEAM</td>
+        <td style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800;" id="total-work-pct-sum">${totalWorkPctSum}%</td>
     `;
 
     products.forEach(p => {
@@ -660,18 +685,26 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
         const inputClass = p.mode === 'team' ? 'sales-team-target-input' : 'sales-indiv-total-input';
         const borderColor = p.mode === 'team' ? 'var(--primary, #6366f1)' : 'var(--border)';
 
-        teamHtml += `
-            <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                <input type="number" step="any" class="${inputClass}" data-key="${p.key}" data-mode="${p.mode}" value="${storedVal || ''}" placeholder="0" style="width:90px; text-align:center; padding:6px; border-radius:6px; border:2px solid ${borderColor}; background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:0.95rem;">
-            </td>
-        `;
+        if (isSalesTableEditMode) {
+            teamHtml += `
+                <td style="padding:4px; text-align:center; border-right:1px solid var(--border);">
+                    <input type="number" step="any" class="${inputClass}" data-key="${p.key}" data-mode="${p.mode}" value="${storedVal || ''}" placeholder="0" style="width:75px; text-align:center; padding:5px; border-radius:6px; border:2px solid ${borderColor}; background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:0.9rem;">
+                </td>
+            `;
+        } else {
+            teamHtml += `
+                <td style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800; font-size:0.9rem; color:var(--primary); font-family:monospace;">
+                    ${formatVal(storedVal, p.isCHF)}
+                </td>
+            `;
+        }
     });
-    teamHtml += `<td></td>`;
+    if (isSalesTableEditMode) teamHtml += `<td></td>`;
     teamTr.innerHTML = teamHtml;
     tfoot.appendChild(teamTr);
 
-    // Ricalcolo in tempo reale al cambio del totale o della % lavoro
-    const handleDynamicRecalc = () => {
+    // Ricalcolo ed Auto-Save in tempo reale al cambio del totale o della % lavoro
+    const handleDynamicRecalc = async () => {
         let currentTotalWork = 0;
         container.querySelectorAll('.collab-work-pct-input').forEach(inp => {
             currentTotalWork += (parseFloat(inp.value) || 0);
@@ -685,24 +718,24 @@ function buildTableBodyAndFoot(container, products, employees, savedTargets, col
                 ? `.sales-team-target-input[data-key="${p.key}"]`
                 : `.sales-indiv-total-input[data-key="${p.key}"]`;
             const totalInp = container.querySelector(selector);
-            const totalVal = totalInp ? (parseFloat(totalInp.value) || 0) : 0;
+            const totalVal = totalInp ? (parseFloat(totalInp.value) || 0) : (savedTargets[p.mode === 'team' ? 'TEAM_' + p.key : 'INDIV_TOTAL_' + p.key] || 0);
 
             if (p.mode === 'team') {
-                // Aggiorna solo il display centrale
                 const display = container.querySelector(`.team-total-display[data-key="${p.key}"]`);
                 if (display) display.textContent = formatVal(totalVal, p.isCHF);
             } else {
-                // Ricalcola e aggiorna i display dei singoli
                 employees.forEach(emp => {
                     const empWorkInp = container.querySelector(`.collab-work-pct-input[data-emp="${emp}"]`);
-                    const empWorkPct = empWorkInp ? (parseFloat(empWorkInp.value) || 0) : 100;
+                    const empWorkPct = empWorkInp ? (parseFloat(empWorkInp.value) || 0) : (collabWorkPcts[emp] ?? 100);
                     const calcVal = currentTotalWork > 0 ? Math.round(totalVal * (empWorkPct / currentTotalWork)) : 0;
 
                     const display = container.querySelector(`.indiv-calc-display[data-emp="${emp}"][data-key="${p.key}"]`);
-                    if (display) display.textContent = calcVal || '—';
+                    if (display) display.textContent = formatVal(calcVal, p.isCHF);
                 });
             }
         });
+
+        await saveSalesTableData(container, products, employees, year, activeSalesTableId);
     };
 
     container.querySelectorAll('.sales-team-target-input, .sales-indiv-total-input, .collab-work-pct-input').forEach(inp => {
