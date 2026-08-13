@@ -1238,17 +1238,6 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
                     ${configuredSkills.map(s => `<option value="${s}">${s}</option>`).join('')}
                 </select>
             </div>
-
-            <div>
-                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">Prodotti / Colonne Iniziali:</label>
-                <div style="display:flex; flex-wrap:wrap; gap:8px; background:var(--bg-base); padding:10px; border-radius:6px; border:1px solid var(--border);">
-                    ${defaultProds.map(p => `
-                        <label style="font-size:0.8rem; display:flex; align-items:center; gap:5px; background:var(--bg-surface); padding:4px 8px; border-radius:4px; border:1px solid var(--border); color:var(--text-main); cursor:pointer;">
-                            <input type="checkbox" class="init-prod-cb" value="${p.key}" checked> ${p.label}
-                        </label>
-                    `).join('')}
-                </div>
-            </div>
         </div>
         <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
             <button class="btn secondary" id="cancel-create-tab-btn">Annulla</button>
@@ -1273,14 +1262,11 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
             return;
         }
 
-        const selectedKeys = Array.from(modal.querySelectorAll('.init-prod-cb:checked')).map(cb => cb.value);
-        const selectedProds = defaultProds.filter(p => selectedKeys.includes(p.key));
-
         const newId = 'table_' + Date.now();
         tablesList.push({ id: newId, name: name, skill: skill });
 
         await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-        await appDb.setSetting(`sales_table_products_${newId}`, selectedProds);
+        await appDb.setSetting(`sales_table_products_${newId}`, defaultProds);
 
         activeSalesTableId = newId;
         closeModal();
