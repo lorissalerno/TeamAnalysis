@@ -159,17 +159,21 @@
         <!-- Statistics Section -->
         <section id="statistics" class="page-section">
             <div class="stats-sticky-header">
-                <!-- Sinistra: Titolo, Template, Azioni, Ricerca -->
+                <!-- Sinistra: Titolo e Template -->
                 <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
                     <h2 style="font-size:1.1rem; font-weight:700; margin:0; white-space:nowrap; color:var(--text-main);">Statistiche</h2>
                     <div style="display:flex; align-items:center; gap:4px;">
-                        <select id="stat-template-select" style="padding:4px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.8rem; font-weight:500; cursor:pointer; height:30px;">
+                        <select id="stat-template-select" style="padding:4px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem; font-weight:500; cursor:pointer; height:30px; min-width:140px;">
                         </select>
                         <button class="btn secondary" id="manage-templates-btn" title="Gestisci Template" style="padding:4px 8px; height:30px; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center;">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                     </div>
-                    <div style="width:1px; height:20px; background:var(--border); margin:0 2px;"></div>
+                </div>
+
+                <!-- Centro: Ricerca, Nuova Statistica, Riordina -->
+                <div id="stats-center-controls" style="display:flex; align-items:center; justify-content:center; gap:8px; flex:1;">
+                    <input type="text" id="stat-search-input" placeholder="Cerca statistica..." style="width:180px; height:30px; padding:4px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.78rem;">
                     <button class="btn primary" id="create-stat-btn" style="padding:4px 10px; height:30px; font-size:0.78rem; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Nuova
@@ -178,7 +182,6 @@
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
                         Riordina
                     </button>
-                    <input type="text" id="stat-search-input" placeholder="Cerca statistica..." style="width:150px; height:30px; padding:4px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.78rem;">
                 </div>
 
                 <!-- Destra: Controlli vista & Tab Navigazione -->

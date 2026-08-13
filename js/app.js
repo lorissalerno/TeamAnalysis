@@ -109,25 +109,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (targetId === 'stat-team') {
                 const tc = document.getElementById('team-header-controls');
                 const ic = document.getElementById('individual-header-controls');
+                const cc = document.getElementById('stats-center-controls');
                 if (tc) tc.style.display = 'flex';
                 if (ic) ic.style.display = 'none';
-                const createBtn = document.getElementById('create-stat-btn');
-                const reorderBtn = document.getElementById('reorder-stats-btn');
-                const searchInp = document.getElementById('stat-search-input');
-                if (createBtn) createBtn.style.display = 'inline-flex';
-                if (reorderBtn) reorderBtn.style.display = 'inline-flex';
-                if (searchInp) searchInp.style.display = 'block';
+                if (cc) cc.style.display = 'flex';
             } else if (targetId === 'stat-individual') {
                 const tc = document.getElementById('team-header-controls');
                 const ic = document.getElementById('individual-header-controls');
+                const cc = document.getElementById('stats-center-controls');
                 if (tc) tc.style.display = 'none';
                 if (ic) ic.style.display = 'flex';
-                const createBtn = document.getElementById('create-stat-btn');
-                const reorderBtn = document.getElementById('reorder-stats-btn');
-                const searchInp = document.getElementById('stat-search-input');
-                if (createBtn) createBtn.style.display = 'none';
-                if (reorderBtn) reorderBtn.style.display = 'none';
-                if (searchInp) searchInp.style.display = 'none';
+                if (cc) cc.style.display = 'none';
             }
         });
     });
