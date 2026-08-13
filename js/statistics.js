@@ -1881,6 +1881,35 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
     if (!relevantGoal) {
         relevantGoal = candidateGoals.find(g => g.employee === employeeName && (!g.skill || g.skill === 'ALL')) ||
                        candidateGoals.find(g => !g.employee && (!g.skill || g.skill === 'ALL'));
+    }    function getTeamAvgPtsForMetric(m) {
+        const isP = m.startsWith('Performance: ');
+        const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+        const sData = isP ? perfData : salesData;
+        const empMap = {};
+        sData.forEach(row => {
+            if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+            if (!isP && statConfig.product && row.data['Product'] !== statConfig.product) return;
+            const date = row.date;
+            const emp = row.employee;
+            if (!emp) return;
+            const val = parseMetricValue(row.data[rKey]);
+            if (!empMap[emp]) empMap[emp] = {};
+            if (!empMap[emp][date]) empMap[emp][date] = 0;
+            empMap[emp][date] += val;
+        });
+
+        return labels.map(date => {
+            if (!datesWithData.has(date)) return null;
+            let sum = 0;
+            let count = 0;
+            employees.forEach(emp => {
+                if (empMap[emp] && empMap[emp][date] !== undefined) {
+                    sum += empMap[emp][date];
+                    count++;
+                }
+            });
+            return count > 0 ? Math.round(sum / count) : 0;
+        });
     }
 
     if (statConfig.type === 'table') {
@@ -1958,18 +1987,24 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             canvasContainer.innerHTML = html;
         } else if (teamAvgOnly) {
             // Solo Media Team nella tabella
-            let html = '<table class="data-table"><thead><tr><th></th>';
+            let html = '<table class="data-table"><thead><tr><th>Metrica</th>';
             displayLabels.forEach(l => {
                 html += `<th style="text-align:center;">${l}</th>`;
             });
             html += '</tr></thead><tbody>';
-            html += '<tr style="font-weight:700;">';
-            html += `<td>Media Team</td>`;
-            labels.forEach((date, idx) => {
-                const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
-                html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
+
+            metricsList.forEach(m => {
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const avgPts = getTeamAvgPtsForMetric(m);
+                const labelText = metricsList.length > 1 ? `Media Team (${rKey})` : 'Media Team';
+                html += '<tr style="font-weight:700;">';
+                html += `<td>${labelText}</td>`;
+                labels.forEach((date, idx) => {
+                    const avgVal = avgPts[idx] === null ? '' : avgPts[idx];
+                    html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
+                });
+                html += '</tr>';
             });
-            html += '</tr>';
 
             if (showTeamGoal && relevantGoal) {
                 html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
@@ -2148,23 +2183,50 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 });
 
                 if (showTeamAvg) {
-                    datasets.push({
-                        label: 'Media Team',
-                        data: teamAvgPts,
-                        type: 'line',
-                        borderColor: '#F59E0B',
-                        backgroundColor: '#F59E0B',
-                        borderWidth: 3.5,
-                        borderDash: [6, 4],
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                        pointBackgroundColor: '#F59E0B',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        fill: false,
-                        tension: 0.35,
-                        order: 1
-                    });
+                    if (metricsList.length > 1) {
+                        metricsList.forEach((m, idx) => {
+                            const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                            const avgPts = getTeamAvgPtsForMetric(m);
+                            const baseColor = colorsList[idx % colorsList.length];
+                            const yAxisID = idx > 0 ? 'y2' : 'y';
+                            datasets.push({
+                                label: `Media Team (${rKey})`,
+                                data: avgPts,
+                                type: 'line',
+                                yAxisID: yAxisID,
+                                borderColor: baseColor,
+                                backgroundColor: baseColor,
+                                borderWidth: 2.5,
+                                borderDash: [6, 4],
+                                pointRadius: 0,
+                                pointHoverRadius: 5,
+                                pointBackgroundColor: baseColor,
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2,
+                                fill: false,
+                                tension: 0.35,
+                                order: 1
+                            });
+                        });
+                    } else {
+                        datasets.push({
+                            label: 'Media Team',
+                            data: teamAvgPts,
+                            type: 'line',
+                            borderColor: '#F59E0B',
+                            backgroundColor: '#F59E0B',
+                            borderWidth: 3.5,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: '#F59E0B',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            fill: false,
+                            tension: 0.35,
+                            order: 1
+                        });
+                    }
                 }
             } else {
                 metricsList.forEach((m, idx) => {
@@ -2248,68 +2310,53 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             }
         } else if (teamAvgOnly) {
             // Solo Media Team
-            datasets.push({
-                label: 'Media Team',
-                data: teamAvgPts,
-                type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#F59E0B', 0.85) : 'rgba(245, 158, 11, 0.15)',
-                borderColor: '#F59E0B',
-                borderWidth: isBar ? 1 : 3.5,
-                borderRadius: isBar ? 4 : 0,
-                minBarLength: isBar ? 4 : 0,
-                pointRadius: 0,
-                pointHoverRadius: isBar ? 0 : 5,
-                pointBackgroundColor: '#F59E0B',
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2,
-                borderDash: isBar ? [] : [6, 4],
-                tension: 0.35,
-                order: 1
-            });
-        } else {
-            employees.forEach((emp, idx) => {
-                const color = DISTINCT_COLORS[idx % DISTINCT_COLORS.length];
-                const empPts = labels.map(date => {
-                    if (!datesWithData.has(date)) return null;
-                    return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
+            if (metricsList.length > 1) {
+                metricsList.forEach((m, idx) => {
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                    const avgPts = getTeamAvgPtsForMetric(m);
+                    const baseColor = colorsList[idx % colorsList.length];
+                    const yAxisID = idx > 0 ? 'y2' : 'y';
+                    datasets.push({
+                        label: `Media Team (${rKey})`,
+                        data: avgPts,
+                        type: isBar ? 'bar' : 'line',
+                        yAxisID: yAxisID,
+                        backgroundColor: isBar ? hexToRgba(baseColor, 0.85) : hexToRgba(baseColor, 0.15),
+                        borderColor: baseColor,
+                        borderWidth: isBar ? 1 : 3.5,
+                        borderRadius: isBar ? 4 : 0,
+                        minBarLength: isBar ? 4 : 0,
+                        pointRadius: 0,
+                        pointHoverRadius: isBar ? 0 : 5,
+                        pointBackgroundColor: baseColor,
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        borderDash: isBar ? [] : [6, 4],
+                        tension: 0.35,
+                        order: 1
+                    });
                 });
+            } else {
                 datasets.push({
-                    label: window.getDisplayName(emp),
-                    data: empPts,
+                    label: 'Media Team',
+                    data: teamAvgPts,
                     type: isBar ? 'bar' : 'line',
-                    backgroundColor: isBar ? hexToRgba(color, 0.8) : hexToRgba(color, 0.12),
-                    borderColor: color,
-                    borderWidth: isBar ? 1 : 1.8,
+                    backgroundColor: isBar ? hexToRgba('#F59E0B', 0.85) : 'rgba(245, 158, 11, 0.15)',
+                    borderColor: '#F59E0B',
+                    borderWidth: isBar ? 1 : 3.5,
                     borderRadius: isBar ? 4 : 0,
                     minBarLength: isBar ? 4 : 0,
                     pointRadius: 0,
                     pointHoverRadius: isBar ? 0 : 5,
-                    pointBackgroundColor: color,
-                    tension: 0.35,
-                    order: 2
-                });
-            });
-
-            if (showTeamAvg) {
-                datasets.push({
-                    label: 'Media Team',
-                    data: teamAvgPts,
-                    type: 'line',
-                    borderColor: '#F59E0B',
-                    backgroundColor: '#F59E0B',
-                    borderWidth: 3.5,
-                    borderDash: [6, 4],
-                    pointRadius: 0,
-                    pointHoverRadius: 5,
                     pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
-                    fill: false,
+                    borderDash: isBar ? [] : [6, 4],
                     tension: 0.35,
                     order: 1
                 });
             }
-        }
+        } else { }
 
         let maxTarget = undefined;
         let minTarget = undefined;
