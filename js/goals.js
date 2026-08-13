@@ -306,10 +306,9 @@ async function renderSalesGoalsTable() {
                                     </div>
                                 </th>
                             `).join('')}
-                            <th style="padding:10px 14px; text-align:center; width:150px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
-                                <button class="btn primary btn-sm" id="add-table-col-header-btn" style="padding:8px 14px; font-weight:700; font-size:0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; border-radius:8px; cursor:pointer;" title="Aggiungi nuova colonna / obiettivo">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                    Obiettivo
+                            <th style="padding:6px; text-align:center; width:55px; min-width:55px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
+                                <button class="btn primary" id="add-table-col-header-btn" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; font-weight:700; cursor:pointer; margin:0 auto;" title="Aggiungi Obiettivo">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                 </button>
                             </th>
                         </tr>
@@ -374,12 +373,7 @@ async function renderSalesGoalsTable() {
     // Direct Header Editing Listeners
     container.querySelectorAll('.edit-col-btn').forEach(btn => {
         btn.onclick = (e) => {
-            const idx = parseInt(btn.dataset.idx, 10);
-            const input = container.querySelector(`.header-col-label-input[data-idx="${idx}"]`);
-            if (input) {
-                input.focus();
-                input.select();
-            }
+            openManageProductsModal(products);
         };
     });
 
@@ -429,17 +423,25 @@ async function renderSalesGoalsTable() {
     const addColHeaderBtn = container.querySelector('#add-table-col-header-btn');
     if (addColHeaderBtn) {
         addColHeaderBtn.onclick = async () => {
-            const label = prompt('Inserisci il nome della nuova colonna / prodotto:');
-            if (!label || !label.trim()) return;
+            const newIdx = products.length;
+            const newKey = 'Obiettivo_' + Date.now();
             products.push({
-                key: label.trim(),
-                label: label.trim(),
-                mappedMetric: label.trim(),
+                key: newKey,
+                label: 'Nuovo Obiettivo',
+                mappedMetric: '',
                 isCHF: false,
                 mode: 'individual'
             });
             await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
-            renderSalesGoalsTable();
+            await renderSalesGoalsTable();
+
+            setTimeout(() => {
+                const newInp = container.querySelector(`.header-col-label-input[data-idx="${newIdx}"]`);
+                if (newInp) {
+                    newInp.focus();
+                    newInp.select();
+                }
+            }, 50);
         };
     }
 
@@ -867,7 +869,7 @@ async function openManageProductsModal(currentProducts) {
             if (activeProds[idx]) activeProds[idx].isCHF = cb.checked;
         });
 
-        await appDb.setSetting('sales_table_products', activeProds);
+        await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, activeProds);
         closeModal();
         await renderSalesGoalsTable();
     };
