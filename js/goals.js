@@ -192,6 +192,19 @@ async function renderSalesGoalsTable() {
     const salesData = await appDb.getAll('sales', 'year', year);
     const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
 
+    const salesMetricsSet = new Set(['AOIT gew', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
+    salesData.forEach(d => {
+        if (d.data?.Product) salesMetricsSet.add(d.data.Product);
+        if (d.category) salesMetricsSet.add(d.category);
+        Object.keys(d.data || {}).forEach(k => {
+            if (k !== 'Product') salesMetricsSet.add(k);
+        });
+    });
+    perfData.forEach(d => {
+        Object.keys(d.data || {}).forEach(k => salesMetricsSet.add(k));
+    });
+    const availableSalesMetrics = Array.from(salesMetricsSet).sort();
+
     let products = await appDb.getSetting(`sales_table_products_${activeSalesTableId}`, null);
     if (!products || !Array.isArray(products)) {
         products = [];
@@ -303,6 +316,10 @@ async function renderSalesGoalsTable() {
                                                 ${p.isCHF ? 'CHF' : 'Qtà'}
                                             </span>
                                         </div>
+                                        <select class="col-metric-select" data-idx="${idx}" style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); font-size:0.68rem; border-radius:4px; padding:2px 4px; width:100%; margin-top:3px; font-weight:600; cursor:pointer;" title="Collega a Prodotto DB Sales">
+                                            <option value="">-- Prodotto DB --</option>
+                                            ${availableSalesMetrics.map(m => `<option value="${m}" ${(p.mappedMetric === m || p.key === m) ? 'selected' : ''}>${m}</option>`).join('')}
+                                        </select>
                                     </div>
                                 </th>
                             `).join('')}
@@ -414,6 +431,21 @@ async function renderSalesGoalsTable() {
             const idx = parseInt(e.target.dataset.idx, 10);
             if (products[idx]) {
                 products[idx].isCHF = !products[idx].isCHF;
+                await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
+                renderSalesGoalsTable();
+            }
+        };
+    });
+
+    container.querySelectorAll('.col-metric-select').forEach(sel => {
+        sel.onchange = async (e) => {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (products[idx]) {
+                const val = e.target.value;
+                products[idx].mappedMetric = val;
+                if ((products[idx].label === 'Nuovo Obiettivo' || !products[idx].label) && val) {
+                    products[idx].label = val;
+                }
                 await appDb.setSetting(`sales_table_products_${activeSalesTableId}`, products);
                 renderSalesGoalsTable();
             }
