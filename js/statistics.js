@@ -2656,40 +2656,26 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
     const table = document.createElement('table');
     table.style.cssText = 'width:auto; border-collapse:collapse; font-size:0.87rem; color:var(--text-main);';
 
-    const hasIndiv = products.some(p => p.mode !== 'team');
-
     const thead = document.createElement('thead');
-    let headHtml = `<tr style="background:var(--bg-base); border-bottom:${hasIndiv ? '1px' : '2px'} solid var(--border);">
-        <th ${hasIndiv ? 'rowspan="2"' : ''} style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
-        <th ${hasIndiv ? 'rowspan="2"' : ''} style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:90px; min-width:80px; font-weight:700;">% Lavoro</th>`;
+    let headHtml = `<tr style="background:var(--bg-base); border-bottom:1px solid var(--border);">
+        <th rowspan="2" style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
+        <th rowspan="2" style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:90px; min-width:80px; font-weight:700;">% Lavoro</th>`;
 
     products.forEach(p => {
-        if (p.mode === 'team') {
-            headHtml += `<th ${hasIndiv ? 'rowspan="2"' : ''} style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); min-width:145px;">
-                <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                    <span>${p.label}</span>
-                    <span style="font-size:0.68rem; color:var(--text-muted); font-weight:500;">Obiettivo Team</span>
-                </div>
-            </th>`;
-        } else {
-            headHtml += `<th colspan="2" style="padding:8px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05);">
-                <span>${p.label}</span>
-            </th>`;
-        }
+        headHtml += `<th colspan="2" style="padding:8px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05);">
+            <span>${p.label}</span>
+        </th>`;
     });
     headHtml += '</tr>';
 
-    if (hasIndiv) {
-        headHtml += `<tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">`;
-        products.forEach(p => {
-            if (p.mode !== 'team') {
-                headHtml += `
-                    <th style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Realizzato</th>
-                    <th style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Target</th>`;
-            }
-        });
-        headHtml += '</tr>';
-    }
+    headHtml += `<tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">`;
+    products.forEach(p => {
+        headHtml += `
+            <th style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Realizzato</th>
+            <th style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Target</th>`;
+    });
+    headHtml += '</tr>';
+
     thead.innerHTML = headHtml;
     table.appendChild(thead);
 
@@ -2711,15 +2697,13 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
             const actualVal = calcActualForMetric(mappedMetrics, perfData, salesData, emp);
 
             if (p.mode === 'team') {
+                const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
+                rowHtml += `
+                    <td style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-family:monospace; font-weight:700; color:var(--text-main);">${formatVal(actualVal, p.isCHF)}</td>`;
                 if (empIdx === 0) {
-                    const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
-                    const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
                     rowHtml += `
-                        <td rowspan="${employees.length}" style="padding:12px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.03);">
-                            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                                <span style="font-size:0.75rem; color:var(--text-muted);">Realizzato: <strong style="color:var(--text-main); font-family:monospace;">${formatVal(actualTeam, p.isCHF)}</strong></span>
-                                <span style="font-size:0.75rem; color:var(--text-muted);">Target: <strong style="color:var(--primary); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</strong></span>
-                            </div>
+                        <td rowspan="${employees.length}" style="padding:12px; text-align:center; vertical-align:middle; border-right:1px solid var(--border); background:rgba(99,102,241,0.03); font-weight:800; color:var(--primary); font-family:monospace; font-size:0.95rem;">
+                            ${formatVal(teamTotal, p.isCHF)}
                         </td>`;
                 }
             } else {
@@ -2743,12 +2727,14 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
     products.forEach(p => {
         const mappedMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics
             : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+        const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
         if (p.mode === 'team') {
             const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
-            footHtml += `<td style="padding:10px 12px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</td>`;
+            footHtml += `
+                <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(actualTeam, p.isCHF)}</td>
+                <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</td>`;
         } else {
             const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
-            const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
             footHtml += `
                 <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(actualTeam, p.isCHF)}</td>
                 <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-family:monospace;">${formatVal(indivTotal, p.isCHF)}</td>`;
