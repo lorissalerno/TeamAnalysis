@@ -1354,7 +1354,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     if (statConfig.type === 'table') {
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
         
-        if (metricsList.length > 1 && !isIndividual && !teamAvgOnly) {
+        if (metricsList.length > 1 && !teamAvgOnly) {
             // Tabella per metriche multiple
             let html = `<table class="data-table"><thead><tr><th>Dato / Metrica</th>`;
             displayLabels.forEach(l => {
@@ -1369,6 +1369,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 const agg = {};
                 sData.forEach(row => {
                     if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                    if (isIndividual && employeeName && row.employee !== employeeName) return;
                     const val = parseMetricValue(row.data[rKey]);
                     if (!agg[row.date]) agg[row.date] = 0;
                     agg[row.date] += val;
@@ -1578,7 +1579,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
         const isBar = statConfig.type === 'bar';
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
 
-        if (metricsList.length > 1 && !isIndividual && !teamAvgOnly) {
+        if (metricsList.length > 1 && !teamAvgOnly) {
             // Se multi-metrica, ogni dataset rappresenta una metrica aggregata
             metricsList.forEach((m, idx) => {
                 const isP = m.startsWith('Performance: ');
@@ -1587,12 +1588,13 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                 const dateAgg = {};
                 sData.forEach(row => {
                     if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                    if (isIndividual && employeeName && row.employee !== employeeName) return;
                     const val = parseMetricValue(row.data[rKey]);
                     if (!dateAgg[row.date]) dateAgg[row.date] = 0;
                     dateAgg[row.date] += val;
                 });
                 const color = colorsList[idx % colorsList.length];
-                const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] || 0) : null);
+                const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] !== undefined ? dateAgg[l] : 0) : null);
                 const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
                 datasets.push({
                     label: rKey,
@@ -1611,6 +1613,26 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
                     order: 2
                 });
             });
+
+            if (isIndividual && showTeamAvg) {
+                datasets.push({
+                    label: 'Media Team',
+                    data: teamAvgPts,
+                    type: 'line',
+                    borderColor: '#F59E0B',
+                    backgroundColor: '#F59E0B',
+                    borderWidth: 3.5,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: '#F59E0B',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    fill: false,
+                    tension: 0.35,
+                    order: 1
+                });
+            }
         } else if (isIndividual) {
             datasets.push({
                 label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
@@ -1788,7 +1810,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
             yScalesConfig = { beginAtZero: true };
         }
 
-        const isMultiMetrics = metricsList.length > 1 && !isIndividual && !teamAvgOnly;
+        const isMultiMetrics = metricsList.length > 1 && !teamAvgOnly;
         const scalesConfig = {
             x: {
                 grid: {
