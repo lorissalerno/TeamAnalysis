@@ -528,7 +528,7 @@ async function openStatModal() {
         row.style.cssText = 'margin-bottom: 12px;';
         
         const isFirst = metricsContainer.children.length === 0;
-        let selectedMetric = initialValue || (allMetrics.length > 0 ? allMetrics[0] : '');
+        let selectedMetric = initialValue || '';
 
         row.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -536,7 +536,7 @@ async function openStatModal() {
                 ${!isFirst ? `<button type="button" class="remove-metric-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.8rem; padding:2px 4px;">Rimuovi</button>` : ''}
             </div>
             <div style="position:relative;">
-                <input type="text" class="stat-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);" value="${selectedMetric}">
+                <input type="text" class="stat-metric-search" placeholder="Cerca metrica" autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);" value="${selectedMetric}">
                 <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 <input type="hidden" class="stat-metric-value" value="${selectedMetric}">
                 <div class="searchable-dropdown stat-metric-dropdown"></div>
@@ -581,17 +581,28 @@ async function openStatModal() {
         renderDropdown('');
 
         searchInput.onfocus = () => {
-            searchInput.select();
+            if (selectedMetric && searchInput.value === selectedMetric) {
+                searchInput.select();
+            }
             renderDropdown(searchInput.value === selectedMetric ? '' : searchInput.value);
             dropdown.classList.add('open');
         };
         searchInput.oninput = (e) => {
+            if (e.target.value === '') {
+                selectedMetric = '';
+                hiddenInput.value = '';
+                schedulePreview();
+            }
             renderDropdown(e.target.value);
             dropdown.classList.add('open');
         };
         searchInput.onblur = () => {
             dropdown.classList.remove('open');
-            if (selectedMetric) searchInput.value = selectedMetric;
+            if (selectedMetric) {
+                searchInput.value = selectedMetric;
+            } else {
+                searchInput.value = '';
+            }
         };
 
         if (removeBtn) {
