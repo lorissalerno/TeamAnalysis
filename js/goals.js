@@ -148,6 +148,11 @@ async function getSalesTablesList(year) {
     let tables = await appDb.getSetting(`sales_tables_list_${year}`, null);
     if (!tables || !Array.isArray(tables)) {
         tables = [];
+    }
+    // Rimuovi tabella di default non richiesta
+    const filtered = tables.filter(t => t.name !== 'Tabella Principale Obiettivi' && t.name !== 'Tabella Principale');
+    if (filtered.length !== tables.length) {
+        tables = filtered;
         await appDb.setSetting(`sales_tables_list_${year}`, tables);
     }
     return tables;
@@ -160,6 +165,29 @@ async function renderSalesGoalsTable() {
     const year = window.appState?.activeYear || new Date().getFullYear();
     const tablesList = await getSalesTablesList(year);
     const configuredSkills = (await appDb.getSetting('skills', [])) || [];
+
+    // Sposta il tasto Visualizza / Modifica nella barra in alto sulla destra
+    const topActionsContainer = document.getElementById('goals-top-actions');
+    if (topActionsContainer) {
+        topActionsContainer.innerHTML = `
+            <button class="btn btn-sm" id="toggle-sales-table-edit-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px; padding:6px 14px; ${isSalesTableEditMode ? 'background:var(--primary); color:#fff; border:1px solid var(--primary);' : 'background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border);'}">
+                ${isSalesTableEditMode ? `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Modifica
+                ` : `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Visualizza
+                `}
+            </button>
+        `;
+        const toggleBtn = topActionsContainer.querySelector('#toggle-sales-table-edit-btn');
+        if (toggleBtn) {
+            toggleBtn.onclick = () => {
+                isSalesTableEditMode = !isSalesTableEditMode;
+                renderSalesGoalsTable();
+            };
+        }
+    }
 
     if (tablesList.length === 0) {
         container.innerHTML = `
@@ -214,7 +242,6 @@ async function renderSalesGoalsTable() {
     const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${activeSalesTableId}`, {})) || {};
     const manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${activeSalesTableId}`, null)) || null;
 
-    // Collaboratori per la tabella attiva
     const empSet = new Set();
     if (manualCollabs && Array.isArray(manualCollabs)) {
         manualCollabs.forEach(n => empSet.add(n));
@@ -251,23 +278,12 @@ async function renderSalesGoalsTable() {
                     Aggiungi Tabella Obiettivi
                 </button>
             </div>
-            ${employees.length > 0 ? `
+            ${(employees.length > 0 && isSalesTableEditMode) ? `
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <button class="btn btn-sm" id="toggle-sales-table-edit-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:8px; padding:6px 14px; ${isSalesTableEditMode ? 'background:var(--primary); color:#fff; border:1px solid var(--primary);' : 'background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border);'}">
-                        ${isSalesTableEditMode ? `
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                            Modifica
-                        ` : `
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            Visualizza
-                        `}
+                    <button class="btn secondary btn-sm" id="delete-current-table-btn" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:6px 10px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Elimina Tabella
                     </button>
-                    ${isSalesTableEditMode ? `
-                        <button class="btn secondary btn-sm" id="delete-current-table-btn" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:6px 10px;">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            Elimina Tabella
-                        </button>
-                    ` : ''}
                 </div>
             ` : ''}
         </div>
@@ -290,41 +306,37 @@ async function renderSalesGoalsTable() {
                             <th style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:160px; min-width:150px; font-weight:700;">Collaboratore</th>
                             <th style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:75px; min-width:70px; font-weight:700;">% Lavoro</th>
                             ${products.map((p, idx) => `
-                                <th style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; font-size:0.85rem; background:rgba(59,130,246,0.06); width:115px; min-width:115px; position:relative;">
-                                    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-                                        <div style="display:flex; align-items:center; justify-content:center; gap:4px; width:100%;">
-                                            ${isSalesTableEditMode ? `
-                                                <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:1px solid transparent; color:inherit; font-weight:700; text-align:center; font-size:0.85rem; flex:1; border-radius:4px; padding:2px;" onfocus="this.style.background='var(--bg-base)'; this.style.borderColor='var(--primary)';" onblur="this.style.background='transparent'; this.style.borderColor='transparent';">
+                                <th style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.06); width:120px; min-width:120px; position:relative;">
+                                    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                                        ${isSalesTableEditMode ? `
+                                            <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:3px 6px; border-radius:6px; border:1px solid var(--border);">
+                                                <input type="text" class="header-col-label-input" data-idx="${idx}" value="${p.label}" style="background:transparent; border:none; color:var(--text-main); font-weight:700; text-align:center; font-size:0.83rem; width:100%; outline:none;" placeholder="Titolo...">
                                                 <div style="display:flex; align-items:center; gap:2px; flex-shrink:0;">
                                                     <button class="edit-col-btn" data-idx="${idx}" title="Modifica Titolo" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:2px; display:inline-flex; align-items:center; border-radius:4px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                                                     </button>
                                                     <button class="delete-col-btn" data-idx="${idx}" title="Elimina Colonna" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:2px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.8;" onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.8';">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                                                     </button>
                                                 </div>
-                                            ` : `
-                                                <span style="font-weight:700; font-size:0.85rem; color:var(--text-main); line-height:1.2; word-break:break-word;">${p.label}</span>
-                                            `}
-                                        </div>
-                                        ${isSalesTableEditMode ? `
-                                            <div style="display:flex; align-items:center; gap:4px;">
-                                                <span class="toggle-mode-btn" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.62rem; padding:1px 5px; border-radius:4px; font-weight:600; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.25); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.25); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
+                                            </div>
+                                            <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%;">
+                                                <span class="toggle-mode-btn" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.62rem; padding:2px 6px; border-radius:4px; font-weight:700; letter-spacing:0.02em; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.2); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
                                                     ${p.mode === 'team' ? 'TEAM' : 'INDIV.'}
                                                 </span>
-                                                <span class="toggle-chf-btn" data-idx="${idx}" title="Clicca per cambiare tipo di valore" style="cursor:pointer; font-size:0.62rem; padding:1px 5px; border-radius:4px; font-weight:600; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted);">
+                                                <span class="toggle-chf-btn" data-idx="${idx}" title="Clicca per cambiare tipo di valore" style="cursor:pointer; font-size:0.62rem; padding:2px 6px; border-radius:4px; font-weight:700; letter-spacing:0.02em; background:var(--bg-surface); border:1px solid var(--border); color:var(--text-muted);">
                                                     ${p.isCHF ? 'CHF' : 'Qtà'}
                                                 </span>
                                             </div>
-                                            <div class="col-metrics-picker" data-idx="${idx}" style="position:relative; width:100%; margin-top:2px;">
-                                                <button type="button" class="col-metrics-btn" data-idx="${idx}" style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); font-size:0.65rem; border-radius:4px; padding:2px 4px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
+                                            <div class="col-metrics-picker" data-idx="${idx}" style="position:relative; width:100%;">
+                                                <button type="button" class="col-metrics-btn" data-idx="${idx}" style="background:var(--bg-surface); border:1px solid var(--border); color:var(--text-main); font-size:0.65rem; border-radius:6px; padding:3px 6px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
                                                     <span class="col-metrics-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:center;">
                                                         ${(() => {
                                                             const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key ? [p.key] : []));
                                                             return sel.length === 0 ? '-- Prodotti DB --' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
                                                         })()}
                                                     </span>
-                                                    <span style="font-size:0.5rem; opacity:0.7; margin-left:2px;">▼</span>
+                                                    <span style="font-size:0.5rem; opacity:0.6; margin-left:2px;">▼</span>
                                                 </button>
                                                 <div class="col-metrics-dropdown" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; box-shadow:0 8px 16px rgba(0,0,0,0.4); padding:6px; max-height:220px; overflow-y:auto; text-align:left;">
                                                     <div style="position:sticky; top:0; background:var(--bg-surface); padding-bottom:4px; margin-bottom:4px; border-bottom:1px solid var(--border); z-index:2;">
@@ -344,7 +356,9 @@ async function renderSalesGoalsTable() {
                                                     </div>
                                                 </div>
                                             </div>
-                                        ` : ''}
+                                        ` : `
+                                            <span style="font-weight:700; font-size:0.85rem; color:var(--text-main); line-height:1.2; word-break:break-word;">${p.label}</span>
+                                        `}
                                     </div>
                                 </th>
                             `).join('')}
