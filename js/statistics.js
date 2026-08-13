@@ -424,12 +424,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup Team view mode toggle
     const allBtn = document.getElementById('team-view-all-btn');
     const avgBtn = document.getElementById('team-view-avg-btn');
+
+    function updateMainTeamAvgToggleVisibility() {
+        const label = document.getElementById('show-team-avg-team-label');
+        if (label) {
+            label.style.display = (teamViewMode === 'avg') ? 'none' : 'flex';
+        }
+    }
+
     if (allBtn && avgBtn) {
         allBtn.addEventListener('click', async () => {
             teamViewMode = 'all';
             await appDb.setSetting('stat_team_view_mode', 'all');
             allBtn.classList.add('active');
             avgBtn.classList.remove('active');
+            updateMainTeamAvgToggleVisibility();
             renderTeamStats();
         });
         avgBtn.addEventListener('click', async () => {
@@ -437,6 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await appDb.setSetting('stat_team_view_mode', 'avg');
             avgBtn.classList.add('active');
             allBtn.classList.remove('active');
+            updateMainTeamAvgToggleVisibility();
             renderTeamStats();
         });
     }
@@ -481,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 avgBtn.classList.remove('active');
             }
         }
+        updateMainTeamAvgToggleVisibility();
 
         // Populate individual select
         const select = document.getElementById('individual-select');
@@ -899,6 +910,15 @@ async function openStatModal(editingStat = null) {
     if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
     if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
 
+    function updatePreviewAvgToggleVisibility() {
+        const previewAvgLabel = modal.querySelector('#preview-show-team-avg-label');
+        const isAvgActive = viewAvgBtn?.classList.contains('active');
+        const isIndActive = modeIndBtn?.classList.contains('active');
+        if (previewAvgLabel) {
+            previewAvgLabel.style.display = (!isIndActive && isAvgActive) ? 'none' : 'flex';
+        }
+    }
+
     // Listener toggle anteprima (media team, obiettivo, tutti/solo media, vista team/singolo)
 
     if (showAvgToggle) showAvgToggle.addEventListener('change', () => schedulePreview());
@@ -907,11 +927,13 @@ async function openStatModal(editingStat = null) {
         viewAllBtn.addEventListener('click', () => {
             viewAllBtn.classList.add('active');
             viewAvgBtn.classList.remove('active');
+            updatePreviewAvgToggleVisibility();
             schedulePreview();
         });
         viewAvgBtn.addEventListener('click', () => {
             viewAvgBtn.classList.add('active');
             viewAllBtn.classList.remove('active');
+            updatePreviewAvgToggleVisibility();
             schedulePreview();
         });
     }
@@ -921,6 +943,7 @@ async function openStatModal(editingStat = null) {
             modeIndBtn.classList.remove('active');
             if (teamTabs) teamTabs.style.display = 'inline-flex';
             if (indSelectContainer) indSelectContainer.style.display = 'none';
+            updatePreviewAvgToggleVisibility();
             schedulePreview();
         });
         modeIndBtn.addEventListener('click', () => {
@@ -928,6 +951,7 @@ async function openStatModal(editingStat = null) {
             modeTeamBtn.classList.remove('active');
             if (teamTabs) teamTabs.style.display = 'none';
             if (indSelectContainer) indSelectContainer.style.display = 'inline-flex';
+            updatePreviewAvgToggleVisibility();
             schedulePreview();
         });
     }
@@ -946,7 +970,7 @@ async function openStatModal(editingStat = null) {
 
     modal.classList.add('open');
     if (overlay) overlay.classList.add('open');
-    // Prima anteprima
+    updatePreviewAvgToggleVisibility();
     schedulePreview();
 }
 
@@ -1007,8 +1031,7 @@ function createStatModalHTML() {
                                 <option value="">Seleziona Collaboratore...</option>
                             </select>
                         </div>
-                        <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; font-size:0.8rem;">
-                            <input type="checkbox" id="preview-show-team-avg">
+                        <label class="toggle-switch" id="preview-show-team-avg-label" style="display:flex; align-items:center; cursor:pointer; font-size:0.8rem;">
                             <span class="slider"></span>
                             <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra Media Team</span>
                         </label>
