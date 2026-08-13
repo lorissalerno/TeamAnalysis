@@ -1260,7 +1260,7 @@ function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, emp
     
     const canvasContainer = document.createElement('div');
     canvasContainer.style.width = '100%';
-    canvasContainer.style.marginTop = '0px';
+    canvasContainer.style.marginTop = isPreview ? '0' : '8px';
     if (statConfig.type === 'table') {
         canvasContainer.style.height = 'auto';
         canvasContainer.style.overflowX = 'auto';
