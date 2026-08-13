@@ -792,10 +792,6 @@ async function openStatModal(editingStat = null) {
     if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
 
     // Listener toggle anteprima (media team, obiettivo, tutti/solo media)
-    const showAvgToggle = modal.querySelector('#preview-show-team-avg');
-    const showGoalToggle = modal.querySelector('#preview-show-team-goal');
-    const viewAllBtn = modal.querySelector('#preview-view-all-btn');
-    const viewAvgBtn = modal.querySelector('#preview-view-avg-btn');
 
     if (showAvgToggle) showAvgToggle.addEventListener('change', () => schedulePreview());
     if (showGoalToggle) showGoalToggle.addEventListener('change', () => schedulePreview());
