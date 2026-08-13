@@ -233,12 +233,6 @@ async function renderSalesGoalsTable() {
                             ${tableSelectOpts}
                         </select>
                     </label>
-                    <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-                        Skill:
-                        <select id="sales-skill-select" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.8rem;">
-                            ${skillOptsHtml}
-                        </select>
-                    </label>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <button class="btn secondary btn-sm" id="add-collab-btn" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
@@ -322,14 +316,8 @@ async function renderSalesGoalsTable() {
 
     const createTabBtn = container.querySelector('#create-new-table-btn');
     if (createTabBtn) {
-        createTabBtn.onclick = async () => {
-            const name = prompt('Inserisci il nome per la nuova tabella obiettivi:');
-            if (!name || !name.trim()) return;
-            const newId = 'table_' + Date.now();
-            tablesList.push({ id: newId, name: name.trim(), skill: 'ALL' });
-            await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-            activeSalesTableId = newId;
-            renderSalesGoalsTable();
+        createTabBtn.onclick = () => {
+            openCreateNewTableModal(year, configuredSkills, tablesList);
         };
     }
 
@@ -1204,4 +1192,66 @@ async function saveNewGoal() {
     if (document.getElementById('statistics').classList.contains('active') && window.renderStatistics) {
         renderStatistics();
     }
+}
+
+async function openCreateNewTableModal(year, configuredSkills, tablesList) {
+    let modal = document.getElementById('create-table-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'create-table-modal';
+        modal.className = 'modal';
+        modal.style.cssText = 'max-width: 480px; width: 92%; border-radius: 12px;';
+        document.body.appendChild(modal);
+    }
+
+    const overlay = document.getElementById('modal-overlay');
+
+    modal.innerHTML = `
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Crea Nuova Tabella Obiettivi Sales</h2>
+            <button class="close-modal" id="close-create-tab-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">Nome Tabella:</label>
+            <input type="text" id="new-table-name-input" placeholder="es. Obiettivi Sales 2026 Wireline" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600; font-size:0.88rem;">
+            
+            <label style="font-size:0.85rem; font-weight:600; color:var(--text-main);">Skill Associata:</label>
+            <select id="new-table-skill-select" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.88rem;">
+                <option value="ALL">Tutte le Skill</option>
+                ${configuredSkills.map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
+            <button class="btn secondary" id="cancel-create-tab-btn">Annulla</button>
+            <button class="btn primary" id="confirm-create-tab-btn">Crea Tabella</button>
+        </div>
+    `;
+
+    const closeModal = () => {
+        modal.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    };
+
+    modal.querySelector('#close-create-tab-modal').onclick = closeModal;
+    modal.querySelector('#cancel-create-tab-btn').onclick = closeModal;
+
+    modal.querySelector('#confirm-create-tab-btn').onclick = async () => {
+        const name = modal.querySelector('#new-table-name-input').value.trim();
+        const skill = modal.querySelector('#new-table-skill-select').value;
+
+        if (!name) {
+            alert('Inserisci un nome per la tabella.');
+            return;
+        }
+
+        const newId = 'table_' + Date.now();
+        tablesList.push({ id: newId, name: name, skill: skill });
+        await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+        activeSalesTableId = newId;
+        closeModal();
+        renderSalesGoalsTable();
+    };
+
+    modal.classList.add('open');
+    if (overlay) overlay.classList.add('open');
 }
