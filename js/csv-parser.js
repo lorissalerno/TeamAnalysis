@@ -260,41 +260,78 @@ class CSVParser {
     }
 
     static parseSalesNuovi(lines) {
-        const headers = this.parseLine(lines[2]); // Metrics like "W- Value ACQ"
+        let headerRowIdx = 2;
+        for (let i = 0; i < Math.min(5, lines.length); i++) {
+            const parsed = this.parseLine(lines[i]);
+            if (parsed.some(c => c.includes("ACQ") || c.includes("RET"))) {
+                headerRowIdx = i;
+                break;
+            }
+        }
+        const headers = this.parseLine(lines[headerRowIdx]);
         
+        const getProductName = (header) => {
+            const h = header.trim();
+            if (h === "W- Value ACQ") return "Nuovo Mobile";
+            if (h === "W+ BB ACQ") return "Nuovo Internet";
+            if (h === "W+ TV with STB ACQ") return "Nuovo TV";
+            if (h === "W- Value RET & W+ RET") return "Retention";
+            
+            if (h.includes("W- Value ACQ") || h.includes("Mobile")) return "Nuovo Mobile";
+            if (h.includes("BB ACQ")) return "Nuovo Internet";
+            if (h.includes("TV")) return "Nuovo TV";
+            if (h.includes("RET")) return "Retention";
+            
+            return h;
+        };
+
         const results = [];
-        // Data starts at row 4
-        for (let i = 3; i < lines.length; i++) {
+        for (let i = headerRowIdx + 1; i < lines.length; i++) {
             const cols = this.parseLine(lines[i]);
-            if (cols.length < 4) continue;
+            if (cols.length < 3) continue;
             
-            const yearStr = cols[0];
-            const employee = cols[1];
-            const dateStr = cols[2];
+            const yearStr = cols[0] ? cols[0].trim() : '';
+            const employee = cols[1] ? cols[1].trim() : '';
+            const dateStr = cols[2] ? cols[2].trim() : '';
             
-            if (!employee || !dateStr || dateStr.toLowerCase() === 'total') continue;
+            if (!employee || !dateStr || dateStr.toLowerCase() === 'total' || employee.toLowerCase() === 'total') continue;
             
-            const year = parseInt(yearStr);
             let date = null;
-            if (dateStr.length >= 6) {
+            let year = parseInt(yearStr);
+            if (isNaN(year)) year = new Date().getFullYear();
+
+            if (/^\d{6}$/.test(dateStr)) {
                 const y = parseInt(dateStr.substring(0, 4));
                 const m = parseInt(dateStr.substring(4, 6));
                 date = this.getDateFromMonth(y, m);
+                year = y;
             } else {
                 continue;
             }
-            
-            const dataObj = {};
+
             for (let c = 3; c < cols.length; c++) {
-                if (headers[c]) {
-                    const val = parseFloat(cols[c].replace(/\./g, '').replace(',', '.'));
-                    dataObj[headers[c]] = isNaN(val) ? 0 : val;
-                }
+                const rawHeader = headers[c];
+                if (!rawHeader) continue;
+
+                const rawVal = cols[c] ? cols[c].replace(/\./g, '').replace(',', '.').trim() : '';
+                const val = parseFloat(rawVal);
+                if (isNaN(val) || val <= 0) continue;
+
+                const productName = getProductName(rawHeader);
+                const dataObj = {
+                    "Product": productName,
+                    "Nb Events": val
+                };
+
+                results.push({
+                    year: year.toString(),
+                    date,
+                    employee,
+                    skill: productName,
+                    data: dataObj,
+                    category: 'sales'
+                });
             }
-            
-            dataObj["Product"] = "Nuovi Abo";
-            
-            results.push({ year: year.toString(), date, employee, skill: 'Nuovi Abo', data: dataObj, category: 'sales' });
         }
         return results;
     }

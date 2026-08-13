@@ -794,6 +794,9 @@ async function renderImportedData() {
                 if (keys.length > 0) {
                     metricKeyForRecord = keys[0];
                     value = r.data[keys[0]];
+                } else if (r.data['Nb Events'] !== undefined) {
+                    metricKeyForRecord = 'Nb Events';
+                    value = r.data['Nb Events'];
                 }
             }
         }
