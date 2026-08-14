@@ -1807,8 +1807,8 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
-// Genera N tonalità (chiaro/scuro) dello stesso colore di base, alternando
-// il chiaro e lo scuro per distinguere le fette adiacenti della torta.
+// Genera N colori armoniosi spaziando nella fascia cromatica vicina (colori analoghi)
+// e variando luminosità e saturazione per massimizzare la distinzione tra fette adiacenti.
 function generateColorShades(hex, count) {
     if (!count || count <= 0) return [];
     if (!hex || typeof hex !== 'string') hex = '#2563EB';
@@ -1832,17 +1832,40 @@ function generateColorShades(hex, count) {
         }
     }
     if (count === 1) return ['#' + h];
-    // Scala di luminosità dal più chiaro al più scuro
-    const steps = [];
-    for (let i = 0; i < count; i++) steps.push(0.8 - (i * 0.42) / (count - 1));
-    // Il colore esatto scelto dall'utente resta al centro della scala
-    steps[Math.floor(count / 2)] = Math.min(Math.max(baseLight, 0.12), 0.88);
-    // Alterna chiaro/scuro per il contrasto tra fette adiacenti
-    const ordered = [];
+
+    const colors = [];
+    const maxHueShift = Math.min(50, 15 + count * 4); // fascia di colori vicini
+    const baseS = Math.max(sat, 0.7);
+
     for (let i = 0; i < count; i++) {
-        ordered.push(i % 2 === 0 ? steps[Math.floor(i / 2)] : steps[count - 1 - Math.floor(i / 2)]);
+        const norm = count > 1 ? (i / (count - 1)) * 2 - 1 : 0;
+        const curHue = hue + norm * maxHueShift;
+        const lightAlt = (i % 2 === 0) 
+            ? 0.60 + (i % 4 === 0 ? 0.08 : -0.04) 
+            : 0.42 + ((i - 1) % 4 === 0 ? -0.06 : 0.06);
+        const curLight = Math.min(Math.max(lightAlt, 0.32), 0.78);
+        const curSat = Math.min(Math.max(baseS + (i % 2 === 0 ? -0.06 : 0.06), 0.55), 0.95);
+
+        colors.push(hslToHex(curHue, curSat, curLight));
     }
-    return ordered.map(light => hslToHex(hue, sat, light));
+
+    if (count > 2) {
+        const shuffled = [];
+        let left = 0;
+        let right = count - 1;
+        let toggle = true;
+        while (left <= right) {
+            if (toggle) {
+                shuffled.push(colors[left++]);
+            } else {
+                shuffled.push(colors[right--]);
+            }
+            toggle = !toggle;
+        }
+        return shuffled;
+    }
+
+    return colors;
 }
 
 function hslToHex(hue, sat, light) {
