@@ -1343,30 +1343,29 @@ select option {
 }
 
 .ind-col-month {
-    width: 1%;
-    min-width: 44px;
+    min-width: 62px;
     text-align: center;
-    padding: 8px 4px !important;
+    padding: 8px 6px !important;
 }
 
 .ind-col-total {
-    width: 1%;
+    min-width: 90px;
     white-space: nowrap;
     text-align: right;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
 }
 
 .ind-col-target {
-    width: 1%;
+    min-width: 85px;
     white-space: nowrap;
     text-align: right;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
 }
 
 .ind-col-pct {
-    width: 1%;
+    min-width: 65px;
     white-space: nowrap;
     text-align: center;
     padding-left: 8px !important;
