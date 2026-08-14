@@ -1949,25 +1949,6 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
         return employeeSkills.has(table.skill);
     });
 
-    const items = [];
-    for (const table of matchSkillTables) {
-        const products = await appDb.getSetting(`sales_table_products_${table.id}`, []);
-        for (const product of products || []) {
-            const label = product.label || product.key || 'Obiettivo';
-            const mappedMetrics = Array.isArray(product.mappedMetrics)
-                ? product.mappedMetrics
-                : (product.mappedMetric ? product.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
-
-            items.push({
-                key: label,
-                label,
-                isCHF: !!product.isCHF,
-                skill: table.skill && table.skill !== 'ALL' ? table.skill : null,
-                mappedMetrics
-            });
-        }
-    }
-
     const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
     const totalWork = Object.values(collabWorkPcts).reduce((sum, val) => sum + (Number(val) || 0), 0) || 1;
     const empWorkPct = Number(collabWorkPcts[employee] || 100);
