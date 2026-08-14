@@ -1942,7 +1942,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             actionsDiv.appendChild(editBtn);
 
             const thresholdsBtn = document.createElement('button');
-            thresholdsBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
+            thresholdsBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>';
             thresholdsBtn.className = 'btn secondary';
             thresholdsBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
             thresholdsBtn.title = 'Soglie colori realizzato';
