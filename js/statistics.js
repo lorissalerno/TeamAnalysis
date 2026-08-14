@@ -1666,10 +1666,6 @@ async function renderIndividualStats() {
                     ${templateOptionsHtml}
                 </select>
             </div>
-            <button class="btn secondary btn-sm" id="cust-ind-goals-btn" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding:6px 12px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                Personalizza Obiettivi
-            </button>
         </div>
     `;
     container.appendChild(headerCard);
@@ -1694,11 +1690,6 @@ async function renderIndividualStats() {
             }
             await renderStatistics();
         });
-    }
-
-    const custBtn = headerCard.querySelector('#cust-ind-goals-btn');
-    if (custBtn) {
-        custBtn.onclick = () => openIndividualGoalsModal(employee, year);
     }
 
     // 2. Sezione Obiettivi di Vendita (Stile LolloData Dashboard)
