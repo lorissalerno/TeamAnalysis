@@ -2397,6 +2397,8 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 price += parseMetricValue(row.data[k]);
             });
             return price;
+        };
+
         const isSalesRowMatching = (row) => {
             if (!row || !row.data) return false;
             // Se la metrica è AOIT, accetta solo righe AOIT ed escludi altri tipi di vendita (Nuovi Abo, Ret, ecc.)
