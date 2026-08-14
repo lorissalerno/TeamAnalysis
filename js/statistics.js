@@ -1642,6 +1642,20 @@ async function renderIndividualStats() {
 
     // 1. Intestazione Collaboratore (Icona omino SVG + Nome Cognome + Selettore Template + Pulsante Personalizza)
     const displayName = window.getDisplayName(employee);
+    let employeeSkills = (window.appState?.collaboratorSkills?.[employee] || [])
+        .map(skill => String(skill).trim())
+        .filter(Boolean);
+    if (employeeSkills.length === 0) {
+        const discovered = new Set();
+        perfData.forEach(d => { if (d.employee === employee && d.skill) discovered.add(d.skill); });
+        salesData.forEach(d => { if (d.employee === employee && d.skill) discovered.add(d.skill); });
+        employeeSkills = Array.from(discovered);
+    }
+
+    const skillsBadgesHtml = employeeSkills.length > 0
+        ? employeeSkills.map(sk => `<span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(59,130,246,0.12); color:var(--primary); border:1px solid rgba(59,130,246,0.25);">${sk}</span>`).join(' ')
+        : '';
+
     const headerCard = document.createElement('div');
     headerCard.className = 'card';
     headerCard.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:16px 20px; margin-top:12px; margin-bottom:20px; border-radius:var(--radius); background:var(--bg-surface); border:1px solid var(--border); flex-wrap:wrap; gap:16px;';
@@ -1663,7 +1677,10 @@ async function renderIndividualStats() {
                 </svg>
             </div>
             <div>
-                <h2 style="font-size:1.25rem; font-weight:700; color:var(--text-main); margin:0;">${displayName}</h2>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <h2 style="font-size:1.25rem; font-weight:700; color:var(--text-main); margin:0;">${displayName}</h2>
+                    ${skillsBadgesHtml}
+                </div>
                 <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Statistiche & Obiettivi Individuali · Anno ${year}</div>
             </div>
         </div>
@@ -1899,9 +1916,8 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
         cardsHtml += `
             <div class="card" style="padding: 12px 14px; border-radius: var(--radius); background: var(--bg-surface); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
                 <div>
-                    <div style="font-weight: 700; font-size: 13px; color: ${item.color}; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-weight: 700; font-size: 13px; color: ${item.color}; margin-bottom: 8px;">
                         <span>${item.label}</span>
-                        ${item.skill ? `<span style="font-size:10px; font-weight:500; padding:1px 6px; border-radius:10px; background:var(--bg-base); color:var(--text-muted); border:1px solid var(--border);">${item.skill}</span>` : ''}
                     </div>
                     
                     <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
@@ -2095,7 +2111,6 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${isCHF ? '#3b82f6' : '#10b981'}; flex-shrink:0;"></span>
                         <span style="color:var(--text-main);">${item.label}</span>
                         ${isCHF ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:500;">(CHF)</span>` : ''}
-                        ${item.skill ? `<span style="font-size:10px; font-weight:500; padding:1px 6px; border-radius:10px; background:var(--bg-base); color:var(--text-muted); border:1px solid var(--border); margin-left:4px;">${item.skill}</span>` : ''}
                     </div>
                 </td>
                 ${rowVals.map(val => `
