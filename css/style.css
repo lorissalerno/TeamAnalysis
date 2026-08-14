@@ -27,6 +27,28 @@
     --transition: 0.15s ease;
 }
 
+[data-theme="dim"] {
+    --bg-base: #161a22;
+    --bg-surface: #212631;
+    --bg-surface-hover: #2a313e;
+    --sidebar-bg: #1c212a;
+    --sidebar-bg-hover: #262c38;
+    --sidebar-text: #e6edf3;
+    --sidebar-text-muted: #8b949e;
+    --sidebar-border: #2c333f;
+    --text-main: #e6edf3;
+    --text-muted: #9aa4af;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --secondary: #272d39;
+    --secondary-hover: #343c4c;
+    --secondary-text: #e6edf3;
+    --border: #2d3441;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --accent-muted: rgba(59, 130, 246, 0.12);
+}
+
 [data-theme="dark"] {
     --bg-base: #000000;
     --bg-surface: #0f1115;

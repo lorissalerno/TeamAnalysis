@@ -325,20 +325,21 @@
     border-color: var(--sidebar-text-muted);
 }
 
-/* Theme Icon Sun/Moon Visibility */
-[data-theme="dark"] #theme-toggle .moon-icon {
+/* Theme Icon Visibility (dark -> dim -> light) */
+#theme-toggle .theme-icon {
     display: none;
 }
-[data-theme="dark"] #theme-toggle .sun-icon {
+
+[data-theme="dark"] #theme-toggle .dim-icon {
     display: block;
 }
 
-html:not([data-theme="dark"]) #theme-toggle .sun-icon,
-[data-theme="light"] #theme-toggle .sun-icon {
-    display: none;
+[data-theme="dim"] #theme-toggle .sun-icon {
+    display: block;
 }
-html:not([data-theme="dark"]) #theme-toggle .moon-icon,
-[data-theme="light"] #theme-toggle .moon-icon {
+
+[data-theme="light"] #theme-toggle .moon-icon,
+html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .moon-icon {
     display: block;
 }
 

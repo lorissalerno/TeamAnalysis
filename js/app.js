@@ -27,15 +27,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         dbSort: { column: 'date', direction: 'desc' }
     };
 
-    // Load Settings
-    const savedTheme = await appDb.getSetting('theme', 'dark');
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    const themeBtn = document.getElementById('theme-toggle');
-    if (themeBtn) {
-        const tip = savedTheme === 'dark' ? 'Passa al Tema Chiaro' : 'Passa al Tema Scuro';
+    // Theme helpers & tooltips
+    const themeCycle = {
+        'dark': 'dim',
+        'dim': 'light',
+        'light': 'dark'
+    };
+    function updateThemeTooltip(theme) {
+        const themeBtn = document.getElementById('theme-toggle');
+        if (!themeBtn) return;
+        const tooltips = {
+            'dark': 'Passa al Tema Intermedio (Grigio)',
+            'dim': 'Passa al Tema Chiaro',
+            'light': 'Passa al Tema Scuro (Nero)'
+        };
+        const tip = tooltips[theme] || 'Cambia Tema';
         themeBtn.title = tip;
         themeBtn.setAttribute('data-tooltip', tip);
     }
+
+    // Load Settings
+    const savedTheme = await appDb.getSetting('theme', 'dark');
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeTooltip(savedTheme);
 
     const savedAnon = await appDb.getSetting('isAnonymous', false);
     document.getElementById('anon-toggle').checked = savedAnon;
@@ -148,16 +162,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Theme Toggle
     document.getElementById('theme-toggle').addEventListener('click', async () => {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = themeCycle[current] || 'dark';
         document.documentElement.setAttribute('data-theme', next);
         await appDb.setSetting('theme', next);
-        const themeBtn = document.getElementById('theme-toggle');
-        if (themeBtn) {
-            const tip = next === 'dark' ? 'Passa al Tema Chiaro' : 'Passa al Tema Scuro';
-            themeBtn.title = tip;
-            themeBtn.setAttribute('data-tooltip', tip);
-        }
+        updateThemeTooltip(next);
         if (window.renderStatistics) {
             window.renderStatistics();
         }
