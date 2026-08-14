@@ -3213,6 +3213,33 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                         });
                     });
                 });
+
+                if (showTeamAvg) {
+                    metricsList.forEach((m, idx) => {
+                        const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                        const avgPts = getTeamAvgPtsForMetric(m);
+                        const baseColor = colorsList[idx % colorsList.length];
+                        const yAxisID = idx > 0 ? 'y2' : 'y';
+                        datasets.push({
+                            label: `Media Team (${rKey})`,
+                            data: avgPts,
+                            type: 'line',
+                            yAxisID: yAxisID,
+                            borderColor: baseColor,
+                            backgroundColor: baseColor,
+                            borderWidth: 2.5,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: baseColor,
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            fill: false,
+                            tension: 0.35,
+                            order: 1
+                        });
+                    });
+                }
             }
         } else if (isIndividual) {
             const indColor = colorsList[0];
