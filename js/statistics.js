@@ -3321,18 +3321,20 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     });
                 });
             } else {
+                const teamBaseColor = colorsList[0] || '#2563EB';
+                const lineColor = getMediaTeamLineColor(teamBaseColor);
                 datasets.push({
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: isBar ? 'bar' : 'line',
-                    backgroundColor: isBar ? hexToRgba('#F59E0B', 0.85) : 'rgba(245, 158, 11, 0.15)',
-                    borderColor: '#F59E0B',
+                    backgroundColor: isBar ? hexToRgba(teamBaseColor, 0.85) : hexToRgba(teamBaseColor, 0.15),
+                    borderColor: isBar ? teamBaseColor : lineColor,
                     borderWidth: isBar ? 1 : 3.5,
                     borderRadius: isBar ? 4 : 0,
                     minBarLength: isBar ? 4 : 0,
                     pointRadius: 0,
                     pointHoverRadius: isBar ? 0 : 5,
-                    pointBackgroundColor: '#F59E0B',
+                    pointBackgroundColor: lineColor,
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     borderDash: isBar ? [] : [6, 4],
@@ -3367,17 +3369,18 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             });
 
             if (showTeamAvg) {
+                const lineColor = getMediaTeamLineColor(teamBaseColor);
                 datasets.push({
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#F59E0B',
-                    backgroundColor: '#F59E0B',
+                    borderColor: lineColor,
+                    backgroundColor: lineColor,
                     borderWidth: 3.5,
                     borderDash: [6, 4],
                     pointRadius: 0,
                     pointHoverRadius: 5,
-                    pointBackgroundColor: '#F59E0B',
+                    pointBackgroundColor: lineColor,
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     fill: false,
