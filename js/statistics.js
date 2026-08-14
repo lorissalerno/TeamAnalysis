@@ -2578,8 +2578,15 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
                 return;
             }
+            let target = container;
+            if (container === canvasContainer) {
+                const singleBox = document.createElement('div');
+                singleBox.style.cssText = 'max-width:580px; width:100%; height:100%; position:relative;';
+                container.appendChild(singleBox);
+                target = singleBox;
+            }
             const canvas = document.createElement('canvas');
-            container.appendChild(canvas);
+            target.appendChild(canvas);
             const total = entries.reduce((sum, [, v]) => sum + v, 0);
             const pieShades = generateColorShades(baseColor, entries.length);
             const center = getCenterText(entries);
