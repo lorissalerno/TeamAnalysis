@@ -78,7 +78,6 @@ if (typeof Chart !== 'undefined' && Chart.register) {
 }
 
 // Helper for templates
-// Helper for templates
 async function getTemplates() {
     let tpls = await appDb.getSetting('stat_templates', null);
     if (!tpls || !Array.isArray(tpls) || tpls.length === 0) {
@@ -97,6 +96,29 @@ async function getActiveTemplateId() {
     }
     return activeId;
 }
+
+async function handleCollaboratorTemplateSwitch(employeeName) {
+    if (!employeeName) return;
+    const assignedTemplateId = window.appState?.collaboratorTemplates?.[employeeName];
+    if (!assignedTemplateId) return;
+
+    const tpls = await getTemplates();
+    const targetTpl = tpls.find(t => t.id === assignedTemplateId);
+    if (!targetTpl) return;
+
+    const currentActive = await getActiveTemplateId();
+    if (currentActive !== assignedTemplateId) {
+        await appDb.setSetting('active_stat_template', assignedTemplateId);
+        const templateSelect = document.getElementById('stat-template-select');
+        if (templateSelect) {
+            templateSelect.value = assignedTemplateId;
+        }
+    }
+}
+
+window.getTemplates = getTemplates;
+window.getActiveTemplateId = getActiveTemplateId;
+window.handleCollaboratorTemplateSwitch = handleCollaboratorTemplateSwitch;
 
 async function duplicateTemplate(templateId) {
     const tpls = await getTemplates();
@@ -417,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(indSelect) {
         indSelect.addEventListener('change', async () => {
             if (window.appDb) await appDb.setSetting('stat_selected_employee', indSelect.value);
+            await handleCollaboratorTemplateSwitch(indSelect.value);
             renderIndividualStats();
         });
     }
@@ -551,6 +574,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const cc = document.getElementById('stats-center-controls');
 
         if (savedSubTab === 'stat-individual') {
+            if (savedEmployee) {
+                await handleCollaboratorTemplateSwitch(savedEmployee);
+            }
             if (teamTabBtn) teamTabBtn.classList.remove('active');
             if (indTabBtn) indTabBtn.classList.add('active');
             if (teamContent) teamContent.classList.remove('active');
@@ -610,6 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
             onSelect: async (val) => {
                 if (select) select.value = val;
                 if (window.appDb) await appDb.setSetting('stat_selected_employee', val);
+                await handleCollaboratorTemplateSwitch(val);
                 renderIndividualStats();
             }
         });
@@ -1581,6 +1608,7 @@ async function renderIndividualStats() {
     if (prevHeight > 0) container.style.minHeight = prevHeight + 'px';
 
     const year = window.appState.activeYear;
+    await handleCollaboratorTemplateSwitch(employee);
     const activeTemplateId = await getActiveTemplateId();
 
     const allStats = await appDb.getAll('custom_stats');
@@ -1601,11 +1629,19 @@ async function renderIndividualStats() {
     
     container.innerHTML = '';
 
-    // 1. Intestazione Collaboratore (Icona omino SVG + Nome Cognome + Pulsante Personalizza)
+    // 1. Intestazione Collaboratore (Icona omino SVG + Nome Cognome + Selettore Template + Pulsante Personalizza)
     const displayName = window.getDisplayName(employee);
     const headerCard = document.createElement('div');
     headerCard.className = 'card';
     headerCard.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:16px 20px; margin-top:12px; margin-bottom:20px; border-radius:var(--radius); background:var(--bg-surface); border:1px solid var(--border); flex-wrap:wrap; gap:16px;';
+
+    const tpls = await getTemplates();
+    const currentAssignedTemplateId = window.appState?.collaboratorTemplates?.[employee] || '';
+    
+    let templateOptionsHtml = `<option value="">Nessuno (Default)</option>`;
+    tpls.forEach(t => {
+        templateOptionsHtml += `<option value="${t.id}" ${t.id === currentAssignedTemplateId ? 'selected' : ''}>${t.name}</option>`;
+    });
 
     headerCard.innerHTML = `
         <div style="display:flex; align-items:center; gap:16px;">
@@ -1620,7 +1656,16 @@ async function renderIndividualStats() {
                 <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Statistiche & Obiettivi Individuali · Anno ${year}</div>
             </div>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; background:var(--bg-base); border:1px solid var(--border); border-radius:6px; padding:4px 8px;">
+                <label for="ind-collab-template-select" style="font-size:0.78rem; font-weight:500; color:var(--text-muted); white-space:nowrap; display:flex; align-items:center; gap:4px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Template:
+                </label>
+                <select id="ind-collab-template-select" style="padding:3px 6px; border-radius:4px; background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border); font-size:0.8rem; cursor:pointer; outline:none;">
+                    ${templateOptionsHtml}
+                </select>
+            </div>
             <button class="btn secondary btn-sm" id="cust-ind-goals-btn" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding:6px 12px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 Personalizza Obiettivi
@@ -1628,6 +1673,28 @@ async function renderIndividualStats() {
         </div>
     `;
     container.appendChild(headerCard);
+
+    const indTplSelect = headerCard.querySelector('#ind-collab-template-select');
+    if (indTplSelect) {
+        indTplSelect.addEventListener('change', async () => {
+            const newTplId = indTplSelect.value;
+            const allMappings = await appDb.getAll('anonymous_map', 'year', year);
+            const mapRecord = allMappings.find(m => m.realName === employee);
+            if (mapRecord) {
+                mapRecord.templateId = newTplId;
+                await appDb.updateRecord('anonymous_map', mapRecord);
+            }
+            if (!window.appState.collaboratorTemplates) window.appState.collaboratorTemplates = {};
+            window.appState.collaboratorTemplates[employee] = newTplId;
+            
+            if (newTplId) {
+                await appDb.setSetting('active_stat_template', newTplId);
+                const mainTplSelect = document.getElementById('stat-template-select');
+                if (mainTplSelect) mainTplSelect.value = newTplId;
+            }
+            await renderStatistics();
+        });
+    }
 
     const custBtn = headerCard.querySelector('#cust-ind-goals-btn');
     if (custBtn) {

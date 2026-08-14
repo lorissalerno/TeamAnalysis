@@ -316,7 +316,7 @@
         </div>
         <div class="modal-body">
             <p class="modal-desc">
-                Gestisci i collaboratori del team, i relativi ID per la modalità anonima e assegna le skill corrispondenti.
+                Gestisci i collaboratori del team, i relativi ID per la modalità anonima e assegna le skill e i template corrispondenti.
             </p>
             <!-- Toolbar azioni di massa -->
             <div id="collab-bulk-toolbar" class="collab-bulk-bar" style="display:none;">
@@ -328,6 +328,10 @@
                     </select>
                     <button type="button" class="collab-bulk-btn assign" id="collab-bulk-add-skill">Assegna Skill</button>
                     <button type="button" class="collab-bulk-btn remove-skill" id="collab-bulk-remove-skill">Rimuovi Skill</button>
+                    <div style="width:1px; height:18px; background:var(--border); margin:0 2px;"></div>
+                    <select id="collab-bulk-template-select" class="collab-bulk-select">
+                    </select>
+                    <button type="button" class="collab-bulk-btn assign" id="collab-bulk-assign-template">Assegna Template</button>
                     <button type="button" class="collab-bulk-btn delete-collab" id="collab-bulk-delete">Elimina Selezionati</button>
                 </div>
             </div>
@@ -335,11 +339,12 @@
                 <table class="mapping-table" id="mapping-table">
                     <thead>
                         <tr>
-                            <th style="width: 5%; text-align:center;"><input type="checkbox" id="collab-select-all" title="Seleziona tutti"></th>
-                            <th style="width: 25%;">Nome Collaboratore</th>
-                            <th style="width: 14%; text-align:center;">ID Anonimo</th>
-                            <th style="width: 46%;">Skill Assegnate</th>
-                            <th style="width: 10%; text-align: center;">Azione</th>
+                            <th style="width: 4%; text-align:center;"><input type="checkbox" id="collab-select-all" title="Seleziona tutti"></th>
+                            <th style="width: 22%;">Nome Collaboratore</th>
+                            <th style="width: 11%; text-align:center;">ID Anonimo</th>
+                            <th style="width: 37%;">Skill Assegnate</th>
+                            <th style="width: 20%;">Template Statistiche</th>
+                            <th style="width: 6%; text-align: center;">Azione</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

@@ -191,6 +191,20 @@ const db = {
         });
     },
 
+    putRecord: function(storeName, item) {
+        return new Promise((resolve, reject) => {
+            const transaction = this._db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.put(item);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    },
+
+    updateRecord: function(storeName, item) {
+        return this.putRecord(storeName, item);
+    },
+
     deleteBySkill: function(storeName, skillName, year = null) {
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction([storeName], 'readwrite');

@@ -125,6 +125,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (tc) tc.style.display = 'none';
                 if (ic) ic.style.display = 'flex';
                 if (cc) cc.style.display = 'none';
+                if (window.handleCollaboratorTemplateSwitch) {
+                    const select = document.getElementById('individual-select');
+                    const savedEmployee = await appDb.getSetting('stat_selected_employee', '');
+                    const emp = select ? (select.value || savedEmployee) : savedEmployee;
+                    if (emp) await window.handleCollaboratorTemplateSwitch(emp);
+                }
                 if (window.renderIndividualStats) {
                     window.renderIndividualStats();
                 }
@@ -306,9 +312,13 @@ async function loadAnonymousMap() {
     const mappings = await appDb.getAll('anonymous_map', 'year', window.appState.activeYear);
     window.appState.anonymousMap = {};
     window.appState.collaboratorSkills = {};
+    window.appState.collaboratorTemplates = {};
     mappings.forEach(m => {
         window.appState.anonymousMap[m.realName] = m.anonId;
         window.appState.collaboratorSkills[m.realName] = m.skills || [];
+        if (m.templateId) {
+            window.appState.collaboratorTemplates[m.realName] = m.templateId;
+        }
     });
 }
 
@@ -897,6 +907,8 @@ function setupSettings() {
     const bulkSkillSelect = document.getElementById('collab-bulk-skill-select');
     const bulkAddSkill = document.getElementById('collab-bulk-add-skill');
     const bulkRemoveSkill = document.getElementById('collab-bulk-remove-skill');
+    const bulkTemplateSelect = document.getElementById('collab-bulk-template-select');
+    const bulkAssignTemplate = document.getElementById('collab-bulk-assign-template');
     const bulkDelete = document.getElementById('collab-bulk-delete');
 
 
@@ -932,6 +944,19 @@ function setupSettings() {
         });
     };
 
+    // Popola il select template nella toolbar di massa
+    const populateBulkTemplateSelect = async () => {
+        if (!bulkTemplateSelect) return;
+        const allTemplates = window.getTemplates ? await window.getTemplates() : await appDb.getSetting('stat_templates', [{ id: 'default', name: 'Default' }]);
+        bulkTemplateSelect.innerHTML = '<option value="">Nessuno (Default)</option>';
+        allTemplates.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            bulkTemplateSelect.appendChild(opt);
+        });
+    };
+
     // Restituisce le righe selezionate
     const getSelectedRows = () => {
         return Array.from(document.querySelectorAll('#mapping-table tbody tr.mapping-row')).filter(tr => {
@@ -940,12 +965,13 @@ function setupSettings() {
         });
     };
 
-    const renderMappingRow = (m, allSkills, fallbackAnonId = 1) => {
+    const renderMappingRow = (m, allSkills, allTemplates = [], fallbackAnonId = 1) => {
         const tr = document.createElement('tr');
         tr.className = 'mapping-row';
         tr.setAttribute('data-id', m.id || 'new');
         
         const userSkills = m.skills || [];
+        const userTemplateId = m.templateId || '';
         
         const skillsHtml = allSkills.length > 0
             ? allSkills.map(skill => {
@@ -958,6 +984,11 @@ function setupSettings() {
                 `;
             }).join('')
             : '<span class="collab-no-skills">Nessuna skill creata</span>';
+
+        let templateOptionsHtml = `<option value="">Nessuno (Default)</option>`;
+        allTemplates.forEach(t => {
+            templateOptionsHtml += `<option value="${t.id}" ${t.id === userTemplateId ? 'selected' : ''}>${t.name}</option>`;
+        });
 
         tr.innerHTML = `
             <td style="text-align:center;">
@@ -973,6 +1004,11 @@ function setupSettings() {
                 <div class="collab-skills-container">
                     ${skillsHtml}
                 </div>
+            </td>
+            <td>
+                <select class="collab-template-select collab-input">
+                    ${templateOptionsHtml}
+                </select>
             </td>
             <td style="text-align:center;">
                 <button type="button" class="collab-delete-btn remove-collab-btn" title="Elimina collaboratore">
@@ -1045,6 +1081,19 @@ function setupSettings() {
         });
     }
 
+    // Azione: Assegna template ai selezionati
+    if (bulkAssignTemplate && bulkTemplateSelect) {
+        bulkAssignTemplate.addEventListener('click', () => {
+            const tplId = bulkTemplateSelect.value;
+            getSelectedRows().forEach(tr => {
+                const sel = tr.querySelector('.collab-template-select');
+                if (sel) {
+                    sel.value = tplId;
+                }
+            });
+        });
+    }
+
     // Azione: Elimina selezionati
     if (bulkDelete) {
         bulkDelete.addEventListener('click', () => {
@@ -1073,12 +1122,14 @@ function setupSettings() {
         bulkToolbar.style.display = 'none';
         
         const allSkills = await getSkills();
+        const allTemplates = window.getTemplates ? await window.getTemplates() : await appDb.getSetting('stat_templates', [{ id: 'default', name: 'Default' }]);
         await populateBulkSkillSelect();
+        await populateBulkTemplateSelect();
         const mappings = await appDb.getAll('anonymous_map', 'year', window.appState.activeYear);
         mappings.sort((a,b) => (a.realName || '').localeCompare(b.realName || ''));
         
         mappings.forEach(m => {
-            tbody.appendChild(renderMappingRow(m, allSkills));
+            tbody.appendChild(renderMappingRow(m, allSkills, allTemplates));
         });
         
         modal.classList.add('open');
@@ -1090,10 +1141,11 @@ function setupSettings() {
         addCollabBtn.addEventListener('click', async () => {
             const tbody = document.querySelector('#mapping-table tbody');
             const allSkills = await getSkills();
+            const allTemplates = window.getTemplates ? await window.getTemplates() : await appDb.getSetting('stat_templates', [{ id: 'default', name: 'Default' }]);
             const inputs = Array.from(document.querySelectorAll('.anon-id-input'));
             const maxId = inputs.reduce((max, inp) => Math.max(max, parseInt(inp.value) || 0), 0);
             
-            const newRow = renderMappingRow({ realName: '', anonId: maxId + 1, skills: [] }, allSkills, maxId + 1);
+            const newRow = renderMappingRow({ realName: '', anonId: maxId + 1, skills: [], templateId: '' }, allSkills, allTemplates, maxId + 1);
             tbody.appendChild(newRow);
         });
     }
@@ -1120,6 +1172,7 @@ function setupSettings() {
             const realName = tr.querySelector('.collab-name-input').value.trim();
             const anonId = parseInt(tr.querySelector('.anon-id-input').value) || 1;
             const checkedSkills = Array.from(tr.querySelectorAll('.collab-skill-cb:checked')).map(cb => cb.value);
+            const templateId = tr.querySelector('.collab-template-select')?.value || '';
 
             if (!realName) return;
 
@@ -1130,6 +1183,7 @@ function setupSettings() {
                     data.realName = realName;
                     data.anonId = anonId;
                     data.skills = checkedSkills;
+                    data.templateId = templateId;
                     data.year = data.year || window.appState.activeYear;
                     store.put(data);
                 };
@@ -1138,7 +1192,8 @@ function setupSettings() {
                     year: window.appState.activeYear,
                     realName: realName,
                     anonId: anonId,
-                    skills: checkedSkills
+                    skills: checkedSkills,
+                    templateId: templateId
                 });
             }
         });
