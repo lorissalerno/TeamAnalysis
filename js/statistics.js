@@ -2345,6 +2345,16 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             canvasContainer.style.maxHeight = '52vh';
             canvasContainer.style.overflowY = 'auto';
         }
+    } else if (statConfig.type === 'pie') {
+        if (isPreview) {
+            canvasContainer.style.height = '0';
+            canvasContainer.style.flex = '1 1 auto';
+            canvasContainer.style.minHeight = '340px';
+            canvasContainer.style.maxHeight = '580px';
+            canvasContainer.style.overflow = 'hidden';
+        } else {
+            canvasContainer.style.height = '390px';
+        }
     } else {
         if (isPreview) {
             canvasContainer.style.height = '0';
@@ -2831,9 +2841,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             const total = entries.reduce((sum, [, v]) => sum + v, 0);
             if (pieGoalCenter && relevantGoalTarget && relevantGoalTarget > 0) {
                 const pct = Math.round((total / relevantGoalTarget) * 100);
-                return { text: pct + '%', color: primaryColor, size: 24 };
+                return { text: pct + '%', color: primaryColor, size: 28 };
             }
-            return { text: Math.round(total).toLocaleString('it-CH'), color: textColor, size: 18 };
+            return { text: Math.round(total).toLocaleString('it-CH'), color: textColor, size: 22 };
         };
 
         // Renderizza una singola torta dentro un contenitore con spaziatura uniforme
@@ -2851,28 +2861,28 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             });
 
             const wrap = document.createElement('div');
-            wrap.style.cssText = 'display:flex; align-items:center; gap:20px; height:100%; width:100%; min-width:0;';
+            wrap.style.cssText = 'display:flex; align-items:center; gap:28px; height:100%; width:100%; min-width:0;';
 
             const canvasWrap = document.createElement('div');
-            canvasWrap.style.cssText = 'width:260px; height:260px; min-width:260px; min-height:260px; position:relative; flex-shrink:0;';
+            canvasWrap.style.cssText = 'width:320px; height:320px; min-width:320px; min-height:320px; position:relative; flex-shrink:0;';
             const canvas = document.createElement('canvas');
             canvasWrap.appendChild(canvas);
             wrap.appendChild(canvasWrap);
 
             const legendEl = document.createElement('div');
-            legendEl.style.cssText = 'display:flex; flex-direction:column; gap:8px; min-width:0; justify-content:center;';
+            legendEl.style.cssText = 'display:flex; flex-direction:column; gap:10px; min-width:0; justify-content:center;';
             if (titleText) {
                 const tEl = document.createElement('div');
-                tEl.style.cssText = 'font-size:14px; font-weight:600; color:var(--text-main); margin-bottom:4px; white-space:nowrap;';
+                tEl.style.cssText = 'font-size:15px; font-weight:600; color:var(--text-main); margin-bottom:6px; white-space:nowrap;';
                 tEl.textContent = titleText;
                 legendEl.appendChild(tEl);
             }
 
             entries.forEach(([, v], idx) => {
                 const item = document.createElement('div');
-                item.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-main); cursor:pointer; user-select:none; transition:opacity 0.2s;';
+                item.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-main); cursor:pointer; user-select:none; transition:opacity 0.2s;';
                 item.innerHTML = `
-                    <span style="width:12px; height:12px; border-radius:2px; background:${pieShades[idx]}; flex-shrink:0; display:inline-block;"></span>
+                    <span style="width:13px; height:13px; border-radius:3px; background:${pieShades[idx]}; flex-shrink:0; display:inline-block;"></span>
                     <span class="donut-item-label" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${labels[idx]}</span>
                 `;
                 legendEl.appendChild(item);
@@ -2949,19 +2959,19 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 if (pkgPriceEntries.length === 0 && collabEntries.length === 0) {
                     canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
                 } else {
-                    canvasContainer.style.height = '360px';
+                    canvasContainer.style.height = '390px';
                     const wrapper = document.createElement('div');
-                    wrapper.style.cssText = 'display:flex; gap:32px; height:100%; width:100%; flex-wrap:wrap; align-items:center;';
+                    wrapper.style.cssText = 'display:flex; gap:36px; height:100%; width:100%; flex-wrap:wrap; align-items:center;';
                     const fmtPrice = (v) => 'CHF ' + Math.round(v).toLocaleString('de-CH');
                     if (collabEntries.length > 0) {
                         const box1 = document.createElement('div');
-                        box1.style.cssText = 'flex:1 1 340px; display:flex; min-width:0;';
+                        box1.style.cssText = 'flex:1 1 380px; display:flex; min-width:0;';
                         wrapper.appendChild(box1);
                         renderDonut(box1, collabEntries, null, 'Totale per Collaboratore');
                     }
                     if (pkgPriceEntries.length > 0) {
                         const box2 = document.createElement('div');
-                        box2.style.cssText = 'flex:1 1 340px; display:flex; min-width:0;';
+                        box2.style.cssText = 'flex:1 1 380px; display:flex; min-width:0;';
                         wrapper.appendChild(box2);
                         renderDonut(box2, pkgPriceEntries, (v, pct) => 'CHF ' + Math.round(v).toLocaleString('de-CH') + ' · ' + pct + '%', 'Pacchetti — Prezzo Totale (Team)');
                     }
@@ -3010,7 +3020,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 }
             }
         }
-        if (!canvasContainer.style.height) canvasContainer.style.height = '360px';
+        if (!canvasContainer.style.height) canvasContainer.style.height = '390px';
     } else {
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
