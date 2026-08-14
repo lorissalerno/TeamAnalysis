@@ -30,6 +30,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load Settings
     const savedTheme = await appDb.getSetting('theme', 'dark');
     document.documentElement.setAttribute('data-theme', savedTheme);
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) {
+        const tip = savedTheme === 'dark' ? 'Passa al Tema Chiaro' : 'Passa al Tema Scuro';
+        themeBtn.title = tip;
+        themeBtn.setAttribute('data-tooltip', tip);
+    }
 
     const savedAnon = await appDb.getSetting('isAnonymous', false);
     document.getElementById('anon-toggle').checked = savedAnon;
@@ -146,6 +152,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         await appDb.setSetting('theme', next);
+        const themeBtn = document.getElementById('theme-toggle');
+        if (themeBtn) {
+            const tip = next === 'dark' ? 'Passa al Tema Chiaro' : 'Passa al Tema Scuro';
+            themeBtn.title = tip;
+            themeBtn.setAttribute('data-tooltip', tip);
+        }
         if (window.renderStatistics) {
             window.renderStatistics();
         }
