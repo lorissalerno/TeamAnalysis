@@ -847,6 +847,22 @@ input:checked + .slider:before {
     background: var(--bg-surface-hover);
 }
 
+.db-manual-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    flex-shrink: 0;
+    user-select: none;
+}
+
 /* Logs */
 .log-area {
     margin-top: 20px;

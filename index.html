@@ -446,56 +446,123 @@
     </div>
 
     <!-- Manual Data Modal -->
-    <div id="manual-data-modal" class="modal">
+    <div id="manual-data-modal" class="modal" style="max-width: 580px;">
         <div class="modal-header">
-            <h2 id="manual-data-modal-title">Aggiungi Dato Manuale</h2>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div id="manual-modal-icon-badge" style="width:36px; height:36px; border-radius:8px; background:var(--accent-muted); display:flex; align-items:center; justify-content:center; color:var(--primary); flex-shrink:0;">
+                    <svg id="manual-modal-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </div>
+                <div>
+                    <h2 id="manual-data-modal-title" style="margin:0; font-size:1.15rem; font-weight:700;">Aggiungi Dato Manuale</h2>
+                    <p id="manual-data-modal-subtitle" style="margin:2px 0 0 0; font-size:0.78rem; color:var(--text-muted);">Inserisci un dato personalizzato nel database</p>
+                </div>
+            </div>
             <button class="close-modal" id="close-manual-data-modal">&times;</button>
         </div>
-        <div class="modal-body" style="padding:16px 24px; display:flex; flex-direction:column; gap:14px; overflow-y:auto;">
+        <div class="modal-body" style="padding:20px 24px; display:flex; flex-direction:column; gap:14px; overflow-y:auto;">
             <input type="hidden" id="manual-edit-mode" value="add">
             <input type="hidden" id="manual-record-id" value="">
             <input type="hidden" id="manual-old-store" value="">
             <input type="hidden" id="manual-old-metric" value="">
 
-            <div>
-                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Tipo / Fonte:</label>
-                <select id="manual-store-type" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-                    <option value="performance">Performance</option>
-                    <option value="sales">Sales</option>
-                </select>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+                <div>
+                    <label class="form-label" style="display:block; margin-bottom:6px; font-weight:600; font-size:0.82rem;">Tipo / Fonte:</label>
+                    <select id="manual-store-type" class="form-input" style="width:100%; height:38px; padding:6px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                        <option value="performance">Performance</option>
+                        <option value="sales">Sales</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label" style="display:block; margin-bottom:6px; font-weight:600; font-size:0.82rem;" id="manual-skill-label">Skill / Prodotto:</label>
+                    <input type="text" id="manual-skill-input" list="manual-skill-list" placeholder="Es. Voice Inbound, AOIT..." class="form-input" style="width:100%; height:38px; padding:6px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                    <datalist id="manual-skill-list"></datalist>
+                </div>
+
+                <div>
+                    <label class="form-label" style="display:block; margin-bottom:6px; font-weight:600; font-size:0.82rem;">Collaboratore:</label>
+                    <input type="text" id="manual-employee-input" list="manual-employee-list" placeholder="Nome cognome..." class="form-input" style="width:100%; height:38px; padding:6px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                    <datalist id="manual-employee-list"></datalist>
+                </div>
+
+                <div>
+                    <label class="form-label" style="display:block; margin-bottom:6px; font-weight:600; font-size:0.82rem;">Data:</label>
+                    <input type="date" id="manual-date-input" class="form-input" style="width:100%; height:38px; padding:6px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                </div>
+
+                <div>
+                    <label class="form-label" style="display:block; margin-bottom:6px; font-weight:600; font-size:0.82rem;">Metrica / Prodotto:</label>
+                    <input type="text" id="manual-metric-input" list="manual-metric-list" placeholder="Es. Chat First Reply, AOIT..." class="form-input" style="width:100%; height:38px; padding:6px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                    <datalist id="manual-metric-list"></datalist>
+                </div>
+
+                <div>
+                    <label class="form-label" style="display:block; margin-bottom:6px; font-weight:600; font-size:0.82rem;">Valore:</label>
+                    <input type="text" id="manual-value-input" placeholder="Es. 12.5, 100, ecc." class="form-input" style="width:100%; height:38px; padding:6px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                </div>
             </div>
 
-            <div>
-                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;" id="manual-skill-label">Skill / Prodotto:</label>
-                <input type="text" id="manual-skill-input" list="manual-skill-list" placeholder="Es. Voice Inbound, AOIT..." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-                <datalist id="manual-skill-list"></datalist>
-            </div>
-
-            <div>
-                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Collaboratore:</label>
-                <input type="text" id="manual-employee-input" list="manual-employee-list" placeholder="Nome cognome..." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-                <datalist id="manual-employee-list"></datalist>
-            </div>
-
-            <div>
-                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Data:</label>
-                <input type="date" id="manual-date-input" style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-            </div>
-
-            <div>
-                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Metrica / Prodotto:</label>
-                <input type="text" id="manual-metric-input" list="manual-metric-list" placeholder="Es. Tempo Medio di Chiamata, Quantità..." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-                <datalist id="manual-metric-list"></datalist>
-            </div>
-
-            <div>
-                <label style="display:block; margin-bottom:4px; font-weight:500; font-size:0.85rem;">Valore:</label>
-                <input type="text" id="manual-value-input" placeholder="Es. 12.5, 100, ecc." style="width:100%; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+            <div style="padding:10px 12px; border-radius:6px; background:var(--accent-muted); border:1px solid var(--border); font-size:0.78rem; color:var(--text-muted); display:flex; align-items:center; gap:8px; margin-top:4px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; color:var(--primary);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>I dati inseriti o modificati manualmente saranno contrassegnati dal simbolo <strong style="color:var(--text-main);">Manuale</strong> nel database.</span>
             </div>
         </div>
-        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
-            <button class="btn secondary" id="cancel-manual-data-btn">Annulla</button>
-            <button class="btn primary" id="save-manual-data-btn">Salva Dato</button>
+        <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding:14px 24px;">
+            <button type="button" class="btn secondary" id="cancel-manual-data-btn">Annulla</button>
+            <button type="button" class="btn primary" id="save-manual-data-btn" style="display:inline-flex; align-items:center; gap:6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Salva Dato
+            </button>
+        </div>
+    </div>
+
+    <!-- Manual Data Overwrite Conflict Modal -->
+    <div id="manual-overwrite-confirm-modal" class="modal" style="max-width: 520px;">
+        <div class="modal-header" style="border-bottom:1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:8px; background:rgba(245, 158, 11, 0.15); display:flex; align-items:center; justify-content:center; color:#f59e0b; flex-shrink:0;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div>
+                    <h2 style="margin:0; font-size:1.1rem; font-weight:700;">Dati Manuali Rilevati</h2>
+                    <p style="margin:2px 0 0 0; font-size:0.78rem; color:var(--text-muted);">Scegli la modalità di gestione dei dati manuali</p>
+                </div>
+            </div>
+            <button class="close-modal" id="close-manual-conflict-modal">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+            <p style="font-size:0.88rem; color:var(--text-main); margin:0; line-height:1.5;">
+                Nel periodo di importazione selezionato sono presenti <strong style="color:#f59e0b;" id="manual-conflict-count-badge">0</strong> dati inseriti o modificati manualmente.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div id="manual-opt-preserve-card" style="padding:12px 14px; border-radius:8px; border:2px solid var(--primary); background:var(--accent-muted); cursor:pointer; display:flex; gap:12px; align-items:flex-start;">
+                    <div style="color:var(--primary); margin-top:2px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:600; font-size:0.88rem; color:var(--text-main);">Mantieni Dati Manuali (Consigliato)</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">I valori inseriti o modificati a mano verranno preservati, mentre il resto dei dati verrà aggiornato dal file CSV.</div>
+                    </div>
+                </div>
+
+                <div id="manual-opt-overwrite-card" style="padding:12px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-base); cursor:pointer; display:flex; gap:12px; align-items:flex-start;">
+                    <div style="color:var(--danger); margin-top:2px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight:600; font-size:0.88rem; color:var(--text-main);">Sovrascrivi Tutto</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Tutti i dati del periodo selezionato, inclusi quelli manuali, saranno rimpiazzati interamente dal file CSV.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:14px 24px; border-top:1px solid var(--border);">
+            <button type="button" class="btn secondary" id="cancel-manual-conflict-btn">Annulla Importazione</button>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="btn danger" id="confirm-manual-overwrite-btn">Sovrascrivi Tutto</button>
+                <button type="button" class="btn primary" id="confirm-manual-preserve-btn">Mantieni Manuali</button>
+            </div>
         </div>
     </div>
 

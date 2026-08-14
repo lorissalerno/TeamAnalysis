@@ -498,9 +498,23 @@ function setupImports() {
             }
 
             try {
+                const conflictDecision = await checkManualDataConflict('performance', window.appState.activeYear, startDate, selectedSkill);
+                if (conflictDecision === 'cancel') {
+                    logImport(`Importazione annullata dall'utente.`);
+                    perfInput.value = '';
+                    return;
+                }
+
                 logImport(`Lettura ${file.name} per lo skill "${selectedSkill}"...`);
                 const parsed = await CSVParser.parse(file, startDate);
                 parsed.data.forEach(d => { d.skill = selectedSkill; });
+
+                if (conflictDecision === 'preserve') {
+                    const preserved = await preserveManualDataInList(parsed.data, 'performance', window.appState.activeYear, startDate, selectedSkill);
+                    if (preserved > 0) {
+                        logImport(`Preservati ${preserved} dati inseriti/modificati manualmente.`);
+                    }
+                }
 
                 if (startDate) {
                     await appDb.deleteFromDate('performance', startDate, selectedSkill);
@@ -512,6 +526,7 @@ function setupImports() {
                 await autoAssignAnonIds(parsed.data);
                 await refreshYearsList();
                 await renderImportedData();
+                if (window.renderStatistics) window.renderStatistics();
             } catch (err) {
                 logImport(`Errore: ${err}`, true);
             }
@@ -527,9 +542,23 @@ function setupImports() {
             const startDate = monthVal ? `${window.appState.activeYear}-${monthVal}-01` : null;
             
             try {
+                const conflictDecision = await checkManualDataConflict('sales', window.appState.activeYear, startDate, null);
+                if (conflictDecision === 'cancel') {
+                    logImport(`Importazione annullata dall'utente.`);
+                    salesInput.value = '';
+                    return;
+                }
+
                 logImport(`Lettura ${file.name}...`);
                 const parsed = await CSVParser.parse(file, startDate);
                 
+                if (conflictDecision === 'preserve') {
+                    const preserved = await preserveManualDataInList(parsed.data, 'sales', window.appState.activeYear, startDate, null);
+                    if (preserved > 0) {
+                        logImport(`Preservati ${preserved} dati inseriti/modificati manualmente.`);
+                    }
+                }
+
                 if (startDate) {
                     await appDb.deleteFromDate('sales', startDate);
                     logImport(`Eliminati vecchi dati sales da ${monthVal}/${window.appState.activeYear} in poi.`);
@@ -540,6 +569,7 @@ function setupImports() {
                 await autoAssignAnonIds(parsed.data);
                 await refreshYearsList();
                 await renderImportedData();
+                if (window.renderStatistics) window.renderStatistics();
             } catch (err) {
                 logImport(`Errore: ${err}`, true);
             }
@@ -813,6 +843,7 @@ async function renderImportedData() {
         const skillName = r.skill || 'Performance (Generale)';
         if (r.data && typeof r.data === 'object') {
             Object.entries(r.data).forEach(([metricName, val]) => {
+                const isMan = Boolean(r.isManual && (!r.manualMetrics || r.manualMetrics[metricName] !== false));
                 singleRows.push({
                     recordId: r.id,
                     store: 'performance',
@@ -823,7 +854,8 @@ async function renderImportedData() {
                     filterCategory: skillName,
                     metric: metricName,
                     qty: '-',
-                    value: val
+                    value: val,
+                    isManual: isMan
                 });
             });
         }
@@ -868,6 +900,8 @@ async function renderImportedData() {
             qty = r.data['Nb Events'];
         }
 
+        const isMan = Boolean(r.isManual && (!r.manualMetrics || r.manualMetrics[metricKeyForRecord] !== false || r.manualMetrics[productName] !== false));
+
         singleRows.push({
             recordId: r.id,
             store: 'sales',
@@ -879,7 +913,8 @@ async function renderImportedData() {
             metric: (metricKeyForRecord && metricKeyForRecord !== 'AOIT' && metricKeyForRecord !== 'Nb Events') ? metricKeyForRecord : productName,
             metricKey: metricKeyForRecord,
             qty: qty,
-            value: Math.round(value)
+            value: Math.round(value),
+            isManual: isMan
         });
     });
 
@@ -1004,6 +1039,10 @@ async function renderImportedData() {
             ? `<span style="padding:3px 8px; border-radius:4px; background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`
             : `<span style="padding:3px 8px; border-radius:4px; background:#10b981; color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`;
 
+        const manualBadge = r.isManual 
+            ? `<span class="db-manual-tag" title="Dato inserito o modificato manualmente"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Manuale</span>`
+            : '';
+
         let displayDate = r.date || '-';
         if (r.date && r.date.includes('-')) {
             const parts = r.date.split('-');
@@ -1015,8 +1054,25 @@ async function renderImportedData() {
             <td style="white-space:nowrap; font-weight:500;">${displayDate}</td>
             <td><strong>${dispEmployee}</strong></td>
             <td>${skillBadge}</td>
-            <td style="font-weight:500;">${r.metric}</td>
+            <td>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-weight:500;">${r.metric}</span>
+                    ${manualBadge}
+                </div>
+            </td>
             <td style="font-weight:600; text-align:center;">${r.value}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px; display:inline-flex; align-items:center; justify-content:center;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px; display:inline-flex; align-items:center; justify-content:center;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </td>
+        `;
+        fragment.appendChild(tr);
+    });
+    tbody.appendChild(fragment);
             <td style="text-align:center; white-space:nowrap;">
                 <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px; display:inline-flex; align-items:center; justify-content:center;">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -1572,6 +1628,9 @@ async function openManualDataModal(mode = 'add', editTarget = null) {
     const modal = document.getElementById('manual-data-modal');
     const overlay = document.getElementById('modal-overlay');
     const titleEl = document.getElementById('manual-data-modal-title');
+    const subtitleEl = document.getElementById('manual-data-modal-subtitle');
+    const iconSlot = document.getElementById('manual-modal-icon-badge');
+    const skillLabel = document.getElementById('manual-skill-label');
     
     const modeInput = document.getElementById('manual-edit-mode');
     const recordIdInput = document.getElementById('manual-record-id');
@@ -1590,7 +1649,12 @@ async function openManualDataModal(mode = 'add', editTarget = null) {
     modeInput.value = mode;
 
     if (mode === 'edit' && editTarget) {
-        titleEl.textContent = 'Modifica Dato Manuale';
+        if (titleEl) titleEl.textContent = 'Modifica Dato Manuale';
+        if (subtitleEl) subtitleEl.textContent = 'Modifica il dato salvato nel database';
+        if (iconSlot) {
+            iconSlot.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+        }
+
         const { id, store, metricKey } = editTarget;
         recordIdInput.value = id;
         oldStoreInput.value = store;
@@ -1608,7 +1672,12 @@ async function openManualDataModal(mode = 'add', editTarget = null) {
             valueInput.value = record.data[metricKey] !== undefined ? record.data[metricKey] : '';
         }
     } else {
-        titleEl.textContent = 'Aggiungi Dato Manuale';
+        if (titleEl) titleEl.textContent = 'Aggiungi Dato Manuale';
+        if (subtitleEl) subtitleEl.textContent = 'Inserisci un dato personalizzato nel database';
+        if (iconSlot) {
+            iconSlot.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+        }
+
         recordIdInput.value = '';
         oldStoreInput.value = '';
         oldMetricInput.value = '';
@@ -1619,6 +1688,10 @@ async function openManualDataModal(mode = 'add', editTarget = null) {
         dateInput.value = `${window.appState.activeYear}-01-01`;
         metricInput.value = '';
         valueInput.value = '';
+    }
+
+    if (skillLabel) {
+        skillLabel.textContent = storeSelect.value === 'performance' ? 'Skill:' : 'Prodotto:';
     }
 
     await populateManualDataDatalists(storeSelect.value);
@@ -1738,6 +1811,7 @@ function setupManualDataModalListeners() {
     const cancelBtn = document.getElementById('cancel-manual-data-btn');
     const saveBtn = document.getElementById('save-manual-data-btn');
     const storeSelect = document.getElementById('manual-store-type');
+    const skillLabel = document.getElementById('manual-skill-label');
 
     if (addBtn) addBtn.addEventListener('click', () => openManualDataModal('add'));
     if (closeBtn) closeBtn.addEventListener('click', closeManualDataModal);
@@ -1746,9 +1820,168 @@ function setupManualDataModalListeners() {
 
     if (storeSelect) {
         storeSelect.addEventListener('change', (e) => {
+            if (skillLabel) {
+                skillLabel.textContent = e.target.value === 'performance' ? 'Skill:' : 'Prodotto:';
+            }
             populateManualDataDatalists(e.target.value);
         });
     }
+}
+
+// Helper to detect manual records in scope and prompt user if needed
+async function checkManualDataConflict(storeName, activeYear, startDate, selectedSkill) {
+    const existingRecords = await appDb.getAll(storeName, 'year', activeYear);
+    const manualRecords = existingRecords.filter(r => {
+        if (!r.isManual && (!r.manualMetrics || Object.keys(r.manualMetrics).length === 0)) return false;
+        if (startDate && r.date < startDate) return false;
+        if (storeName === 'performance' && selectedSkill) {
+            return (r.skill || '') === selectedSkill;
+        }
+        if (storeName === 'sales' && selectedSkill) {
+            return (r.data && r.data.Product === selectedSkill) || (r.skill === selectedSkill);
+        }
+        return true;
+    });
+
+    if (manualRecords.length === 0) return 'none';
+
+    let totalManualCount = 0;
+    manualRecords.forEach(r => {
+        if (r.manualMetrics && Object.keys(r.manualMetrics).length > 0) {
+            totalManualCount += Object.keys(r.manualMetrics).length;
+        } else {
+            totalManualCount += 1;
+        }
+    });
+
+    return new Promise((resolve) => {
+        const modal = document.getElementById('manual-overwrite-confirm-modal');
+        const overlay = document.getElementById('modal-overlay');
+        const countBadge = document.getElementById('manual-conflict-count-badge');
+        const preserveBtn = document.getElementById('confirm-manual-preserve-btn');
+        const overwriteBtn = document.getElementById('confirm-manual-overwrite-btn');
+        const cancelBtn = document.getElementById('cancel-manual-conflict-btn');
+        const closeBtn = document.getElementById('close-manual-conflict-modal');
+        const preserveCard = document.getElementById('manual-opt-preserve-card');
+        const overwriteCard = document.getElementById('manual-opt-overwrite-card');
+
+        if (!modal || !overlay) {
+            const ans = confirm(`Attenzione: sono presenti ${totalManualCount} dati manuali o modificati nel periodo di importazione.\n\nPremi OK per MANTENERE i dati manuali.\nPremi ANNULLA per SOVRASCRIVERE anche i dati manuali.`);
+            resolve(ans ? 'preserve' : 'overwrite');
+            return;
+        }
+
+        if (countBadge) countBadge.textContent = `${totalManualCount}`;
+
+        if (preserveCard && overwriteCard) {
+            preserveCard.style.borderColor = 'var(--primary)';
+            preserveCard.style.background = 'var(--accent-muted)';
+            overwriteCard.style.borderColor = 'var(--border)';
+            overwriteCard.style.background = 'var(--bg-base)';
+        }
+
+        const cleanup = () => {
+            modal.classList.remove('open');
+            overlay.classList.remove('open');
+            preserveBtn.removeEventListener('click', onPreserve);
+            overwriteBtn.removeEventListener('click', onOverwrite);
+            cancelBtn.removeEventListener('click', onCancel);
+            if (closeBtn) closeBtn.removeEventListener('click', onCancel);
+        };
+
+        const onPreserve = () => { cleanup(); resolve('preserve'); };
+        const onOverwrite = () => { cleanup(); resolve('overwrite'); };
+        const onCancel = () => { cleanup(); resolve('cancel'); };
+
+        preserveBtn.addEventListener('click', onPreserve);
+        overwriteBtn.addEventListener('click', onOverwrite);
+        cancelBtn.addEventListener('click', onCancel);
+        if (closeBtn) closeBtn.addEventListener('click', onCancel);
+
+        if (preserveCard) {
+            preserveCard.onclick = () => {
+                preserveCard.style.borderColor = 'var(--primary)';
+                preserveCard.style.background = 'var(--accent-muted)';
+                overwriteCard.style.borderColor = 'var(--border)';
+                overwriteCard.style.background = 'var(--bg-base)';
+            };
+        }
+        if (overwriteCard) {
+            overwriteCard.onclick = () => {
+                overwriteCard.style.borderColor = 'var(--danger)';
+                overwriteCard.style.background = 'rgba(220, 38, 38, 0.08)';
+                preserveCard.style.borderColor = 'var(--border)';
+                preserveCard.style.background = 'var(--bg-base)';
+            };
+        }
+
+        modal.classList.add('open');
+        overlay.classList.add('open');
+    });
+}
+
+// Helper to preserve manual metrics and purely manual records into parsed data list
+async function preserveManualDataInList(parsedData, storeName, activeYear, startDate, selectedSkill) {
+    const existingRecords = await appDb.getAll(storeName, 'year', activeYear);
+    const manualRecords = existingRecords.filter(r => {
+        if (!r.isManual && (!r.manualMetrics || Object.keys(r.manualMetrics).length === 0)) return false;
+        if (startDate && r.date < startDate) return false;
+        if (storeName === 'performance' && selectedSkill) {
+            return (r.skill || '') === selectedSkill;
+        }
+        if (storeName === 'sales' && selectedSkill) {
+            return (r.data && r.data.Product === selectedSkill) || (r.skill === selectedSkill);
+        }
+        return true;
+    });
+
+    if (manualRecords.length === 0) return 0;
+
+    const manualMap = {};
+    manualRecords.forEach(r => {
+        const skillKey = storeName === 'performance' ? (r.skill || '') : ((r.data && r.data.Product) || r.skill || '');
+        const key = `${r.date}_${r.employee}_${skillKey}`;
+        manualMap[key] = r;
+    });
+
+    const matchedKeys = new Set();
+    let preservedCount = 0;
+
+    parsedData.forEach(d => {
+        const skillKey = storeName === 'performance' ? (d.skill || '') : ((d.data && d.data.Product) || d.skill || '');
+        const key = `${d.date}_${d.employee}_${skillKey}`;
+        const manRec = manualMap[key];
+        if (manRec && manRec.data) {
+            matchedKeys.add(key);
+            d.isManual = true;
+            d.manualMetrics = { ...(d.manualMetrics || {}), ...(manRec.manualMetrics || {}) };
+            if (manRec.manualMetrics && Object.keys(manRec.manualMetrics).length > 0) {
+                Object.keys(manRec.manualMetrics).forEach(mKey => {
+                    if (manRec.data[mKey] !== undefined) {
+                        d.data[mKey] = manRec.data[mKey];
+                        preservedCount++;
+                    }
+                });
+            } else {
+                Object.entries(manRec.data).forEach(([mKey, mVal]) => {
+                    d.data[mKey] = mVal;
+                    preservedCount++;
+                });
+            }
+        }
+    });
+
+    // Re-inject manual records not matched in the CSV
+    manualRecords.forEach(r => {
+        const skillKey = storeName === 'performance' ? (r.skill || '') : ((r.data && r.data.Product) || r.skill || '');
+        const key = `${r.date}_${r.employee}_${skillKey}`;
+        if (!matchedKeys.has(key)) {
+            parsedData.push(r);
+            preservedCount += Object.keys(r.data || {}).length;
+        }
+    });
+
+    return preservedCount;
 }
 
 // --- IMPORT WIZARD & LOG HISTORY ---
@@ -2076,6 +2309,7 @@ function setupImportWizard() {
                 const storeName = wizardState.type === 'performance' ? 'performance' : 'sales';
                 
                 let selectedSkill = '';
+                let targetSkillFilter = null;
                 if (wizardState.type === 'performance') {
                     const skillSelect = document.getElementById('wizard-perf-skill-select');
                     selectedSkill = skillSelect ? skillSelect.value : wizardState.skill;
@@ -2084,9 +2318,23 @@ function setupImportWizard() {
                         submitBtn.disabled = false;
                         return;
                     }
+                    targetSkillFilter = selectedSkill;
                     logImport(`Avvio importazione file ${wizardState.file.name} per lo skill "${selectedSkill}"...`);
                 } else {
-                    logImport(`Avvio importazione file ${wizardState.file.name} per Sales...`);
+                    targetSkillFilter = wizardState.salesType === 'aoit' ? 'AOIT' : 'Nuovi Abo';
+                    logImport(`Avvio importazione file ${wizardState.file.name} per Sales ("${targetSkillFilter}")...`);
+                }
+
+                const conflictDecision = await checkManualDataConflict(storeName, window.appState.activeYear, startDate, targetSkillFilter);
+                if (conflictDecision === 'cancel') {
+                    logImport(`Importazione annullata dall'utente.`);
+                    if (statusBadge) {
+                        statusBadge.textContent = 'Importazione Annullata';
+                        statusBadge.style.background = 'var(--bg-base)';
+                        statusBadge.style.color = 'var(--text-muted)';
+                    }
+                    submitBtn.disabled = false;
+                    return;
                 }
 
                 const parsed = await CSVParser.parse(wizardState.file, startDate);
@@ -2096,45 +2344,21 @@ function setupImportWizard() {
                     parsed.data.forEach(d => { d.skill = selectedSkill; });
                 }
 
-                // Preserve manual metrics so CSV import does NOT overwrite user's manual additions/edits
-                const existingRecords = await appDb.getAll(storeName, 'year', window.appState.activeYear);
-                const manualMap = {};
-                existingRecords.forEach(r => {
-                    if (r.isManual && r.manualMetrics) {
-                        const targetSkill = storeName === 'performance' ? (r.skill || '') : (r.data && r.data.Product || '');
-                        const key = `${r.date}_${r.employee}_${targetSkill}`;
-                        manualMap[key] = r;
-                    }
-                });
-
-                if (Object.keys(manualMap).length > 0) {
-                    let preservedCount = 0;
-                    parsed.data.forEach(d => {
-                        const targetSkill = storeName === 'performance' ? (d.skill || '') : (d.data && d.data.Product || '');
-                        const key = `${d.date}_${d.employee}_${targetSkill}`;
-                        const manualRec = manualMap[key];
-                        if (manualRec && manualRec.data && manualRec.manualMetrics) {
-                            Object.keys(manualRec.manualMetrics).forEach(mKey => {
-                                if (manualRec.data[mKey] !== undefined) {
-                                    d.data[mKey] = manualRec.data[mKey];
-                                    preservedCount++;
-                                }
-                            });
-                        }
-                    });
-                    if (preservedCount > 0) {
-                        logImport(`Preservate ${preservedCount} metriche inserite/modificate manualmente.`);
+                if (conflictDecision === 'preserve') {
+                    const preserved = await preserveManualDataInList(parsed.data, storeName, window.appState.activeYear, startDate, targetSkillFilter);
+                    if (preserved > 0) {
+                        logImport(`Preservati ${preserved} dati inseriti/modificati manualmente.`);
                     }
                 }
 
                 if (startDate) {
                     if (wizardState.type === 'performance') {
                         await appDb.deleteFromDate('performance', startDate, selectedSkill);
-                        logImport(`Eliminati vecchi dati automatici performance ("${selectedSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
+                        logImport(`Eliminati vecchi dati performance ("${selectedSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
                     } else {
                         const salesSkill = wizardState.salesType === 'aoit' ? 'AOIT' : 'Nuovi Abo';
                         await appDb.deleteFromDate('sales', startDate, salesSkill);
-                        logImport(`Eliminati vecchi dati automatici Sales ("${salesSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
+                        logImport(`Eliminati vecchi dati Sales ("${salesSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
                     }
                 }
 
