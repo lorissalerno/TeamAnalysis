@@ -603,12 +603,14 @@ document.addEventListener('DOMContentLoaded', () => {
             select.innerHTML = `<option value="">${placeholder}</option>`;
         }
         
-        const names = Object.keys(window.appState.anonymousMap || {}).sort();
+        const names = Object.keys(window.appState.anonymousMap || {}).sort((a, b) => {
+            return window.getDisplayName(a).localeCompare(window.getDisplayName(b), undefined, { numeric: true });
+        });
         if (select) {
             names.forEach(name => {
                 const opt = document.createElement('option');
                 opt.value = name;
-                opt.textContent = name; // Always real name for Individual section as per spec interpretation
+                opt.textContent = window.getDisplayName(name);
                 if(name === currentVal) opt.selected = true;
                 select.appendChild(opt);
             });
@@ -652,12 +654,16 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupCollabCustomDropdown({ wrapper, trigger, label, menu, currentValue, names, placeholder, onSelect }) {
     if (!wrapper || !trigger || !label || !menu) return;
 
-    label.textContent = currentValue || placeholder;
+    label.textContent = currentValue ? window.getDisplayName(currentValue) : placeholder;
     trigger.setAttribute('aria-expanded', 'false');
 
     function renderMenuItems(filter = '') {
         const query = filter.trim().toLowerCase();
-        const filteredNames = (names || []).filter(n => n.toLowerCase().includes(query));
+        const filteredNames = (names || []).filter(n => {
+            const disp = window.getDisplayName(n).toLowerCase();
+            const real = n.toLowerCase();
+            return disp.includes(query) || real.includes(query);
+        });
 
         let itemsHtml = '';
         
@@ -678,11 +684,12 @@ function setupCollabCustomDropdown({ wrapper, trigger, label, menu, currentValue
         } else {
             filteredNames.forEach(name => {
                 const isSelected = name === currentValue;
+                const dispName = window.getDisplayName(name);
                 itemsHtml += `
-                    <div class="collab-dropdown-item ${isSelected ? 'selected' : ''}" data-value="${name}" title="${name}">
+                    <div class="collab-dropdown-item ${isSelected ? 'selected' : ''}" data-value="${name}" title="${dispName}">
                         <div class="collab-item-left">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            <span>${name}</span>
+                            <span>${dispName}</span>
                         </div>
                         ${isSelected ? '<span class="collab-item-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
                     </div>
@@ -702,7 +709,7 @@ function setupCollabCustomDropdown({ wrapper, trigger, label, menu, currentValue
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const val = item.getAttribute('data-value') || '';
-                label.textContent = val || placeholder;
+                label.textContent = val ? window.getDisplayName(val) : placeholder;
                 wrapper.classList.remove('open');
                 trigger.setAttribute('aria-expanded', 'false');
                 onSelect(val);
@@ -827,11 +834,13 @@ async function openStatModal(editingStat = null) {
     if (indSelect) {
         const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
         indSelect.innerHTML = `<option value="">${placeholder}</option>`;
-        const names = Object.keys(window.appState.anonymousMap || {}).sort();
+        const names = Object.keys(window.appState.anonymousMap || {}).sort((a, b) => {
+            return window.getDisplayName(a).localeCompare(window.getDisplayName(b), undefined, { numeric: true });
+        });
         names.forEach(name => {
             const opt = document.createElement('option');
             opt.value = name;
-            opt.textContent = name;
+            opt.textContent = window.getDisplayName(name);
             indSelect.appendChild(opt);
         });
         const mainIndSelect = document.getElementById('individual-select');
@@ -1532,7 +1541,9 @@ async function renderIndividualStats() {
     const select = document.getElementById('individual-select');
     const employee = select ? select.value : '';
     const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
-    const names = Object.keys(window.appState.anonymousMap || {}).sort();
+    const names = Object.keys(window.appState.anonymousMap || {}).sort((a, b) => {
+        return window.getDisplayName(a).localeCompare(window.getDisplayName(b), undefined, { numeric: true });
+    });
 
     // Keep header custom dropdown updated
     const headerWrapper = document.getElementById('header-collab-dropdown-wrapper');
