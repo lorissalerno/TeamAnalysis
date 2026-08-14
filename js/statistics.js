@@ -1843,9 +1843,9 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
 
     const fallbackItems = items.length > 0 ? items : defaultItems;
 
-    const getActualForLabel = (itemKey, mappedMetrics) => {
+    const getActualForLabel = (itemKey, mappedMetrics, isCHF) => {
         const metricsToUse = mappedMetrics && mappedMetrics.length > 0 ? mappedMetrics : [itemKey];
-        return calcActualForMetric(metricsToUse, perfData, salesData, employee);
+        return calcActualForMetric(metricsToUse, perfData, salesData, employee, isCHF);
     };
 
     let allDates = [];
@@ -1875,7 +1875,7 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
         const monthlyTarget = customMonthlyTargets[item.key] ?? (annualTarget > 0 ? Math.round(annualTarget / 12) : 0);
 
         const mappedMetrics = Array.isArray(item.mappedMetrics) ? item.mappedMetrics : [];
-        let annualAchieved = getActualForLabel(item.label, mappedMetrics);
+        let annualAchieved = getActualForLabel(item.label, mappedMetrics, item.isCHF);
         
         const metricsToUse = mappedMetrics.length > 0 ? mappedMetrics : [item.label || item.key];
         const monthlySalesData = latestMonthStr
@@ -1884,7 +1884,7 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
         const monthlyPerfData = latestMonthStr
             ? perfData.filter(r => r.employee === employee && r.date && r.date.startsWith(latestMonthStr))
             : [];
-        let monthlyAchieved = calcActualForMetric(metricsToUse, monthlyPerfData, monthlySalesData, employee);
+        let monthlyAchieved = calcActualForMetric(metricsToUse, monthlyPerfData, monthlySalesData, employee, item.isCHF);
 
         const formatVal = (v) => {
             if (item.isCHF) return 'CHF ' + Math.round(v).toLocaleString('de-CH');
@@ -2048,7 +2048,7 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
             const metricsToUse = item.mappedMetrics && item.mappedMetrics.length > 0
                 ? item.mappedMetrics
                 : [item.label || item.key];
-            const val = calcActualForMetric(metricsToUse, monthPerf, monthSales, employee);
+            const val = calcActualForMetric(metricsToUse, monthPerf, monthSales, employee, item.isCHF);
             monthVals[mIdx] = val;
             total += val;
         }
@@ -4109,7 +4109,7 @@ function buildGoalLegendHTML() {
 /**
  * Calcola il valore realizzato per un collaboratore (o tutto il team) per una lista di metriche mappate.
  */
-function calcActualForMetric(mappedMetrics, perfData, salesData, employee) {
+function calcActualForMetric(mappedMetrics, perfData, salesData, employee, isCHF = undefined) {
     let total = 0;
     if (!mappedMetrics || mappedMetrics.length === 0) return total;
 
@@ -4118,6 +4118,10 @@ function calcActualForMetric(mappedMetrics, perfData, salesData, employee) {
         const rawKey = metric.replace(/^Performance:\s*/i, '').replace(/^Sales:\s*/i, '').trim();
         const normKey = normalizeGoalMetricKey(rawKey);
         const source = isPerf ? (perfData || []) : (salesData || []);
+
+        const wantsCHF = (isCHF !== undefined && isCHF !== null)
+            ? !!isCHF
+            : (normKey.includes('aoit') || normKey.includes('chf'));
 
         source.forEach(row => {
             if (employee && row.employee !== employee) return;
@@ -4135,13 +4139,17 @@ function calcActualForMetric(mappedMetrics, perfData, salesData, employee) {
 
                 if (isAOITMetric) {
                     if (isAOITRow) {
-                        val = parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0);
+                        val = wantsCHF
+                            ? parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0)
+                            : parseMetricValue(row.data.Quantity ?? row.data['Nb Events'] ?? 1);
                     } else if (rowProduct === rawKey || (normProduct && normProduct === normKey)) {
                         val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data[rawKey] ?? 0);
                     }
                 } else if (rowProduct && (rowProduct === rawKey || (normProduct && normProduct === normKey) || goalMetricMatches(rowProduct, rawKey))) {
                     if (isAOITRow) {
-                        val = parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0);
+                        val = wantsCHF
+                            ? parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0)
+                            : parseMetricValue(row.data.Quantity ?? row.data['Nb Events'] ?? 1);
                     } else {
                         val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data[rawKey] ?? row.data['Nb Events'] ?? 1);
                     }
@@ -4157,7 +4165,9 @@ function calcActualForMetric(mappedMetrics, perfData, salesData, employee) {
                     val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data['Nb Events'] ?? 1);
                 } else if (normKey.includes('security') && normProduct.includes('security')) {
                     if (isAOITRow) {
-                        val = parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0);
+                        val = wantsCHF
+                            ? parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0)
+                            : parseMetricValue(row.data.Quantity ?? row.data['Nb Events'] ?? 1);
                     } else {
                         val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? 1);
                     }
@@ -4264,7 +4274,7 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
         products.forEach(p => {
             const mappedMetrics = (Array.isArray(p.mappedMetrics) && p.mappedMetrics.length > 0) ? p.mappedMetrics
                 : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : [p.label || p.key]);
-            const actualVal = calcActualForMetric(mappedMetrics, perfData, salesData, emp);
+            const actualVal = calcActualForMetric(mappedMetrics, perfData, salesData, emp, p.isCHF);
 
             if (p.mode === 'team') {
                 const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
@@ -4298,7 +4308,7 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
     products.forEach(p => {
         const mappedMetrics = (Array.isArray(p.mappedMetrics) && p.mappedMetrics.length > 0) ? p.mappedMetrics
             : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : [p.label || p.key]);
-        const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
+        const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null, p.isCHF);
         if (p.mode === 'team') {
             const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
             const cellBg = goalCellStyle(actualTeam, teamTotal, p);
