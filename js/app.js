@@ -951,35 +951,47 @@ function setupSettings() {
             ? allSkills.map(skill => {
                 const checked = userSkills.includes(skill) ? 'checked' : '';
                 return `
-                    <label style="display:inline-flex; align-items:center; gap:4px; margin-right:6px; margin-bottom:4px; font-size:0.8rem; padding:3px 8px; background:var(--bg-base); border:1px solid var(--border); border-radius:12px; cursor:pointer;">
+                    <label class="collab-skill-tag ${checked ? 'active' : ''}">
                         <input type="checkbox" class="collab-skill-cb" value="${skill}" ${checked}>
-                        ${skill}
+                        <span>${skill}</span>
                     </label>
                 `;
             }).join('')
-            : '<span style="color:var(--text-muted); font-size:0.8rem;">Nessuna skill creata</span>';
+            : '<span class="collab-no-skills">Nessuna skill creata</span>';
 
         tr.innerHTML = `
             <td style="text-align:center;">
                 <input type="checkbox" class="collab-row-cb">
             </td>
             <td>
-                <input type="text" class="collab-name-input" value="${m.realName || ''}" placeholder="Nome collaboratore..." style="width:100%; padding:6px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                <input type="text" class="collab-name-input collab-input" value="${m.realName || ''}" placeholder="Nome collaboratore...">
             </td>
             <td>
-                <input type="number" class="anon-id-input" value="${m.anonId !== undefined ? m.anonId : fallbackAnonId}" style="width:100%; padding:6px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                <input type="number" class="anon-id-input collab-input text-center" value="${m.anonId !== undefined ? m.anonId : fallbackAnonId}">
             </td>
             <td>
-                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                <div class="collab-skills-container">
                     ${skillsHtml}
                 </div>
             </td>
             <td style="text-align:center;">
-                <button type="button" class="btn secondary remove-collab-btn" style="color:var(--danger, #ef4444); padding:4px 8px;" title="Elimina">&times;</button>
+                <button type="button" class="collab-delete-btn remove-collab-btn" title="Elimina collaboratore">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </td>
         `;
 
         tr.querySelector('.collab-row-cb').addEventListener('change', updateBulkToolbar);
+
+        tr.querySelectorAll('.collab-skill-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const tag = cb.closest('.collab-skill-tag');
+                if (tag) tag.classList.toggle('active', cb.checked);
+            });
+        });
 
         tr.querySelector('.remove-collab-btn').addEventListener('click', () => {
             if (m.id && typeof m.id === 'number' && m.id !== 'new') {
@@ -1008,7 +1020,11 @@ function setupSettings() {
             if (!skill) return;
             getSelectedRows().forEach(tr => {
                 const cb = tr.querySelector(`.collab-skill-cb[value="${skill}"]`);
-                if (cb) cb.checked = true;
+                if (cb) {
+                    cb.checked = true;
+                    const tag = cb.closest('.collab-skill-tag');
+                    if (tag) tag.classList.add('active');
+                }
             });
         });
     }
@@ -1020,7 +1036,11 @@ function setupSettings() {
             if (!skill) return;
             getSelectedRows().forEach(tr => {
                 const cb = tr.querySelector(`.collab-skill-cb[value="${skill}"]`);
-                if (cb) cb.checked = false;
+                if (cb) {
+                    cb.checked = false;
+                    const tag = cb.closest('.collab-skill-tag');
+                    if (tag) tag.classList.remove('active');
+                }
             });
         });
     }
@@ -1062,6 +1082,8 @@ function setupSettings() {
         });
         
         modal.classList.add('open');
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay) overlay.classList.add('open');
     });
 
     if (addCollabBtn) {
@@ -1077,7 +1099,11 @@ function setupSettings() {
     }
 
     if (closeBtn) {
-        closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('open');
+            const overlay = document.getElementById('modal-overlay');
+            if (overlay) overlay.classList.remove('open');
+        });
     }
     
     saveBtn.addEventListener('click', async () => {
@@ -1120,6 +1146,8 @@ function setupSettings() {
         transaction.oncomplete = async () => {
             await loadAnonymousMap();
             modal.classList.remove('open');
+            const overlay = document.getElementById('modal-overlay');
+            if (overlay) overlay.classList.remove('open');
             if (window.renderDashboard) window.renderDashboard();
             if (window.renderStatistics) window.renderStatistics();
         };
