@@ -499,6 +499,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // Global listener to close custom collaborator dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.collab-dropdown-wrapper')) {
+            document.querySelectorAll('.collab-dropdown-wrapper.open').forEach(w => {
+                w.classList.remove('open');
+                const trigger = w.querySelector('.collab-select-trigger');
+                if (trigger) trigger.setAttribute('aria-expanded', 'false');
+            });
+        }
+    });
     
     // We export a function to be called from app.js when year changes
     window.renderStatistics = async function() {
@@ -558,21 +569,48 @@ document.addEventListener('DOMContentLoaded', () => {
         // Populate individual select
         const select = document.getElementById('individual-select');
         const savedEmployee = await appDb.getSetting('stat_selected_employee', '');
-        const currentVal = select.value || savedEmployee;
+        const currentVal = select ? (select.value || savedEmployee) : savedEmployee;
         const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
-        select.innerHTML = `<option value="">${placeholder}</option>`;
+        if (select) {
+            select.innerHTML = `<option value="">${placeholder}</option>`;
+        }
         
         const names = Object.keys(window.appState.anonymousMap || {}).sort();
-        names.forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name; // Always real name for Individual section as per spec interpretation
-            if(name === currentVal) opt.selected = true;
-            select.appendChild(opt);
-        });
-        if (currentVal && names.includes(currentVal)) {
-            select.value = currentVal;
+        if (select) {
+            names.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name; // Always real name for Individual section as per spec interpretation
+                if(name === currentVal) opt.selected = true;
+                select.appendChild(opt);
+            });
+            if (currentVal && names.includes(currentVal)) {
+                select.value = currentVal;
+            } else if (currentVal && !names.includes(currentVal)) {
+                select.value = '';
+            }
         }
+
+        // Setup custom dropdown in header
+        const headerWrapper = document.getElementById('header-collab-dropdown-wrapper');
+        const headerTrigger = document.getElementById('header-collab-trigger');
+        const headerLabel = document.getElementById('header-collab-label');
+        const headerMenu = document.getElementById('header-collab-menu');
+
+        setupCollabCustomDropdown({
+            wrapper: headerWrapper,
+            trigger: headerTrigger,
+            label: headerLabel,
+            menu: headerMenu,
+            currentValue: select ? select.value : '',
+            names: names,
+            placeholder: placeholder,
+            onSelect: async (val) => {
+                if (select) select.value = val;
+                if (window.appDb) await appDb.setSetting('stat_selected_employee', val);
+                renderIndividualStats();
+            }
+        });
         
         await renderTeamStats();
         await renderIndividualStats();
@@ -581,6 +619,117 @@ document.addEventListener('DOMContentLoaded', () => {
     window.renderIndividualStats = renderIndividualStats;
     window.renderTeamStats = renderTeamStats;
 });
+
+function setupCollabCustomDropdown({ wrapper, trigger, label, menu, currentValue, names, placeholder, onSelect }) {
+    if (!wrapper || !trigger || !label || !menu) return;
+
+    label.textContent = currentValue || placeholder;
+    trigger.setAttribute('aria-expanded', 'false');
+
+    function renderMenuItems(filter = '') {
+        const query = filter.trim().toLowerCase();
+        const filteredNames = (names || []).filter(n => n.toLowerCase().includes(query));
+
+        let itemsHtml = '';
+        
+        // Reset / Empty option at top
+        const isResetSelected = !currentValue;
+        itemsHtml += `
+            <div class="collab-dropdown-item ${isResetSelected ? 'selected' : ''}" data-value="" title="${placeholder}">
+                <div class="collab-item-left">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                    <span style="font-style:italic; opacity:0.8;">${placeholder}</span>
+                </div>
+                ${isResetSelected ? '<span class="collab-item-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
+            </div>
+        `;
+
+        if (filteredNames.length === 0) {
+            itemsHtml += `<div class="collab-item-empty">Nessun collaboratore trovato</div>`;
+        } else {
+            filteredNames.forEach(name => {
+                const isSelected = name === currentValue;
+                itemsHtml += `
+                    <div class="collab-dropdown-item ${isSelected ? 'selected' : ''}" data-value="${name}" title="${name}">
+                        <div class="collab-item-left">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span>${name}</span>
+                        </div>
+                        ${isSelected ? '<span class="collab-item-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
+                    </div>
+                `;
+            });
+        }
+
+        const listEl = menu.querySelector('.collab-list');
+        if (listEl) {
+            listEl.innerHTML = itemsHtml;
+            attachItemListeners(listEl);
+        }
+    }
+
+    function attachItemListeners(listEl) {
+        listEl.querySelectorAll('.collab-dropdown-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const val = item.getAttribute('data-value') || '';
+                label.textContent = val || placeholder;
+                wrapper.classList.remove('open');
+                trigger.setAttribute('aria-expanded', 'false');
+                onSelect(val);
+            });
+        });
+    }
+
+    const showSearch = (names || []).length > 5;
+    menu.innerHTML = `
+        ${showSearch ? `
+            <div class="collab-search-box">
+                <span class="collab-search-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </span>
+                <input type="text" class="collab-search-input" placeholder="Cerca..." autocomplete="off">
+            </div>
+        ` : ''}
+        <div class="collab-list"></div>
+    `;
+
+    renderMenuItems('');
+
+    const searchInput = menu.querySelector('.collab-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            renderMenuItems(e.target.value);
+        });
+        searchInput.addEventListener('click', (e) => e.stopPropagation());
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                wrapper.classList.remove('open');
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    trigger.onclick = (e) => {
+        e.stopPropagation();
+        const wasOpen = wrapper.classList.contains('open');
+        document.querySelectorAll('.collab-dropdown-wrapper.open').forEach(w => {
+            w.classList.remove('open');
+            const tr = w.querySelector('.collab-select-trigger');
+            if (tr) tr.setAttribute('aria-expanded', 'false');
+        });
+
+        if (!wasOpen) {
+            wrapper.classList.add('open');
+            trigger.setAttribute('aria-expanded', 'true');
+            if (searchInput) {
+                searchInput.value = '';
+                renderMenuItems('');
+                setTimeout(() => searchInput.focus(), 50);
+            }
+        }
+    };
+}
 
 const DISTINCT_COLORS = [
     '#2563EB', '#10B981', '#8B5CF6', '#F97316', 
@@ -1353,16 +1502,33 @@ async function renderIndividualStats() {
     if (!container) return;
     const select = document.getElementById('individual-select');
     const employee = select ? select.value : '';
+    const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
+    const names = Object.keys(window.appState.anonymousMap || {}).sort();
+
+    // Keep header custom dropdown updated
+    const headerWrapper = document.getElementById('header-collab-dropdown-wrapper');
+    const headerTrigger = document.getElementById('header-collab-trigger');
+    const headerLabel = document.getElementById('header-collab-label');
+    const headerMenu = document.getElementById('header-collab-menu');
+    if (headerWrapper && headerTrigger && headerLabel && headerMenu) {
+        setupCollabCustomDropdown({
+            wrapper: headerWrapper,
+            trigger: headerTrigger,
+            label: headerLabel,
+            menu: headerMenu,
+            currentValue: employee,
+            names: names,
+            placeholder: placeholder,
+            onSelect: async (val) => {
+                if (select) select.value = val;
+                if (window.appDb) await appDb.setSetting('stat_selected_employee', val);
+                renderIndividualStats();
+            }
+        });
+    }
     
     if (!employee) {
         container.style.minHeight = '';
-        const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
-        const names = Object.keys(window.appState.anonymousMap || {}).sort();
-        let optionsHtml = `<option value="">${placeholder}</option>`;
-        names.forEach(name => {
-            optionsHtml += `<option value="${name}">${name}</option>`;
-        });
-
         container.innerHTML = `
             <div class="card" style="padding: 48px 24px; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; margin-top: 12px; grid-column: 1 / -1; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius);">
                 <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--bg-base); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--primary); margin: 0 auto;">
@@ -1372,33 +1538,40 @@ async function renderIndividualStats() {
                     </svg>
                 </div>
                 <div style="max-width: 440px;">
-                    <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">Nessun Collaboratore Selezionato</h3>
-                    <div style="position: relative; display: inline-flex; align-items: center;">
-                        <span style="position: absolute; left: 12px; pointer-events: none; color: var(--primary); display: flex; align-items: center;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        </span>
-                        <select id="center-individual-select" class="custom-select" style="padding-left: 36px; padding-right: 32px; height: 38px; border-radius: 8px; background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border); font-size: 0.88rem; font-weight: 500; cursor: pointer; outline: none; min-width: 240px; appearance: none; -webkit-appearance: none;">
-                            ${optionsHtml}
-                        </select>
-                        <span style="position: absolute; right: 12px; pointer-events: none; color: var(--text-muted); display: flex; align-items: center;">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </span>
+                    <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 12px;">Nessun Collaboratore Selezionato</h3>
+                    <div id="center-collab-dropdown-wrapper" class="collab-dropdown-wrapper center-variant">
+                        <button type="button" id="center-collab-trigger" class="collab-select-trigger large" aria-haspopup="listbox" aria-expanded="false" title="Seleziona Collaboratore">
+                            <span class="collab-trigger-left">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                <span id="center-collab-label" class="collab-label">${placeholder}</span>
+                            </span>
+                            <svg class="collab-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div id="center-collab-menu" class="collab-dropdown-menu"></div>
                     </div>
                 </div>
             </div>
         `;
 
-        const centerSelect = container.querySelector('#center-individual-select');
-        if (centerSelect) {
-            centerSelect.addEventListener('change', async (e) => {
-                const val = e.target.value;
-                if (select) {
-                    select.value = val;
-                }
+        const centerWrapper = container.querySelector('#center-collab-dropdown-wrapper');
+        const centerTrigger = container.querySelector('#center-collab-trigger');
+        const centerLabel = container.querySelector('#center-collab-label');
+        const centerMenu = container.querySelector('#center-collab-menu');
+
+        setupCollabCustomDropdown({
+            wrapper: centerWrapper,
+            trigger: centerTrigger,
+            label: centerLabel,
+            menu: centerMenu,
+            currentValue: '',
+            names: names,
+            placeholder: placeholder,
+            onSelect: async (val) => {
+                if (select) select.value = val;
                 if (window.appDb) await appDb.setSetting('stat_selected_employee', val);
                 renderIndividualStats();
-            });
-        }
+            }
+        });
         return;
     }
     
