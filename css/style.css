@@ -31,11 +31,11 @@
     --bg-base: #000000;
     --bg-surface: #0f1115;
     --bg-surface-hover: #171a20;
-    --sidebar-bg: #000000;
-    --sidebar-bg-hover: #121418;
+    --sidebar-bg: #0f1115;
+    --sidebar-bg-hover: #181b22;
     --sidebar-text: #e6edf3;
     --sidebar-text-muted: #8b949e;
-    --sidebar-border: #16181d;
+    --sidebar-border: #181b22;
     --text-main: #e6edf3;
     --text-muted: #8b949e;
     --primary: #3b82f6;
