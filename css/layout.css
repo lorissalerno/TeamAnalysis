@@ -521,7 +521,6 @@ html:not([data-theme="dark"]) #theme-toggle .moon-icon,
 .stat-card {
     position: relative;
     overflow: hidden;
-    border-left: 3px solid var(--primary);
 }
 
 .stat-card h3 {
