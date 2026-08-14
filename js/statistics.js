@@ -49,13 +49,15 @@ const fullWidthGoalPlugin = {
 
             ctx.save();
 
-            // Linea Obiettivo Viola
+            // Linea Obiettivo Viola / Magenta ad alta visibilità
             const yTarget = y.getPixelForValue(goalConfig.target);
             if (!isNaN(yTarget)) {
                 ctx.beginPath();
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#9333EA';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#D946EF';
+                ctx.lineWidth = 3;
+                ctx.shadowColor = 'rgba(217, 70, 239, 0.6)';
+                ctx.shadowBlur = 8;
                 ctx.moveTo(left, yTarget);
                 ctx.lineTo(right, yTarget);
                 ctx.stroke();
