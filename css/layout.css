@@ -1,8 +1,8 @@
 /* Sidebar */
 .sidebar {
     width: var(--sidebar-width);
-    background-color: var(--bg-surface);
-    border-right: 1px solid var(--border);
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -12,7 +12,7 @@
 
 .sidebar-header {
     padding: 16px 16px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--sidebar-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -34,7 +34,7 @@
     border-radius: 6px;
     object-fit: cover;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .sidebar-header h2 {
@@ -52,7 +52,7 @@
 .sidebar-toggle-btn {
     background: transparent;
     border: 1px solid transparent;
-    color: var(--text-muted);
+    color: var(--sidebar-text-muted);
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -66,9 +66,9 @@
 }
 
 .sidebar-toggle-btn:hover {
-    background-color: var(--bg-surface-hover);
-    color: var(--text-main);
-    border-color: var(--border);
+    background-color: var(--sidebar-bg-hover);
+    color: var(--sidebar-text);
+    border-color: var(--sidebar-border);
 }
 
 .nav-links {
@@ -88,7 +88,7 @@
     align-items: center;
     gap: 12px;
     padding: 9px 12px;
-    color: var(--text-muted);
+    color: var(--sidebar-text-muted);
     border-radius: 8px;
     font-weight: 500;
     font-size: 0.9rem;
@@ -100,19 +100,19 @@
 }
 
 .nav-links a:hover {
-    background-color: var(--bg-surface-hover);
-    color: var(--text-main);
+    background-color: var(--sidebar-bg-hover);
+    color: var(--sidebar-text);
 }
 
 .nav-links a.active {
     background-color: var(--accent-muted);
     color: var(--primary);
     font-weight: 600;
-    border-color: rgba(37, 99, 235, 0.18);
+    border-color: rgba(37, 99, 235, 0.25);
 }
 
 [data-theme="dark"] .nav-links a.active {
-    border-color: rgba(59, 130, 246, 0.22);
+    border-color: rgba(59, 130, 246, 0.3);
 }
 
 .nav-links .nav-icon {
@@ -133,7 +133,7 @@
 
 .sidebar-footer {
     padding: 14px 16px;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--sidebar-border);
     transition: padding 0.25s ease;
 }
 
@@ -227,6 +227,9 @@
     border-radius: 6px;
     cursor: pointer;
     line-height: 28px;
+    background-color: var(--sidebar-bg-hover);
+    color: var(--sidebar-text);
+    border: 1px solid var(--sidebar-border);
 }
 
 .controls {
@@ -236,14 +239,18 @@
     margin-bottom: 12px;
 }
 
+.controls .toggle-switch .label {
+    color: var(--sidebar-text-muted);
+}
+
 .controls #theme-toggle {
     width: 32px;
     height: 32px;
     padding: 0;
     border-radius: 6px;
-    border: 1px solid var(--border);
-    background-color: var(--bg-base);
-    color: var(--text-muted);
+    border: 1px solid var(--sidebar-border);
+    background-color: var(--sidebar-bg-hover);
+    color: var(--sidebar-text-muted);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -252,18 +259,18 @@
 }
 
 .controls #theme-toggle:hover {
-    background-color: var(--bg-surface-hover);
-    color: var(--text-main);
-    border-color: var(--text-muted);
+    background-color: var(--sidebar-bg-hover);
+    color: var(--sidebar-text);
+    border-color: var(--sidebar-text-muted);
 }
 
 .year-selector select {
     width: 100%;
     padding: 8px 12px;
     border-radius: 6px;
-    background: var(--bg-base);
-    color: var(--text-main);
-    border: 1px solid var(--border);
+    background-color: var(--sidebar-bg-hover);
+    color: var(--sidebar-text);
+    border: 1px solid var(--sidebar-border);
     font-family: var(--font-family);
     font-size: 0.85rem;
     font-weight: 600;
