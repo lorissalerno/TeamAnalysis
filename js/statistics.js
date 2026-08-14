@@ -1952,96 +1952,93 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
     section.className = 'card individual-monthly-types-card';
     section.style.cssText = 'margin-bottom: 24px; padding: 18px 20px; border-radius: var(--radius); background: var(--bg-surface); border: 1px solid var(--border);';
 
-    // 1. Raccogli tutti i tipi di vendita presenti nel DB per quest'anno
-    const allTypesSet = new Set();
-    const priorityOrder = ['AOIT', 'Nuovo Mobile', 'Nuovo Internet', 'Nuovo TV', 'Retention', 'My Service', 'My Security M + L'];
+    // 1. Recupera le skill del collaboratore
+    const employeeSkills = new Set((window.appState?.collaboratorSkills?.[employee] || [])
+        .map(skill => String(skill).trim())
+        .filter(Boolean));
 
-    (salesData || []).forEach(r => {
-        const t = (r.skill || r.data?.Product || '').trim();
-        if (t) allTypesSet.add(t);
+    // 2. Filtra le tabelle sales associate alle skill del collaboratore
+    const salesTablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+    const matchSkillTables = (salesTablesList || []).filter(table => {
+        if (!table || !table.skill || table.skill === 'ALL') return true;
+        if (employeeSkills.size === 0) return true;
+        return employeeSkills.has(table.skill);
     });
 
-    // Aggiungi anche eventuali prodotti configurati nelle tabelle sales
-    try {
-        const salesTablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
-        for (const table of salesTablesList || []) {
-            const prods = await appDb.getSetting(`sales_table_products_${table.id}`, []);
-            (prods || []).forEach(p => {
-                if (p.label && p.label.trim()) allTypesSet.add(p.label.trim());
-                if (p.key && p.key.trim() && !p.key.startsWith('Obiettivo_')) allTypesSet.add(p.key.trim());
+    const items = [];
+    for (const table of matchSkillTables) {
+        const products = await appDb.getSetting(`sales_table_products_${table.id}`, []);
+        for (const product of products || []) {
+            const label = product.label || product.key || 'Obiettivo';
+            const mappedMetrics = Array.isArray(product.mappedMetrics)
+                ? product.mappedMetrics
+                : (product.mappedMetric ? product.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+
+            items.push({
+                key: label,
+                label,
+                isCHF: !!product.isCHF,
+                skill: table.skill && table.skill !== 'ALL' ? table.skill : null,
+                mappedMetrics
             });
         }
-    } catch (e) {
-        console.error('Error fetching sales table products:', e);
     }
 
-    if (allTypesSet.size === 0) {
-        ['AOIT', 'Nuovo Mobile', 'Nuovo Internet', 'Nuovo TV', 'Retention'].forEach(t => allTypesSet.add(t));
-    }
+    const defaultItems = [
+        { key: 'AOIT (CHF)', label: 'AOIT (CHF)', isCHF: true, mappedMetrics: ['AOIT'] },
+        { key: 'Retention', label: 'Retention', isCHF: false, mappedMetrics: ['Retention'] },
+        { key: 'Internet', label: 'Internet', isCHF: false, mappedMetrics: ['Internet'] },
+        { key: 'TV', label: 'TV', isCHF: false, mappedMetrics: ['TV'] },
+        { key: 'Mobile', label: 'Mobile', isCHF: false, mappedMetrics: ['Mobile'] }
+    ];
 
-    // Ordinamento: tipi prioritari in ordine prestabilito, seguiti dagli altri in ordine alfabetico
-    const typesList = Array.from(allTypesSet).sort((a, b) => {
-        const idxA = priorityOrder.indexOf(a);
-        const idxB = priorityOrder.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1;
-        if (idxB !== -1) return 1;
-        return a.localeCompare(b);
-    });
+    const targetItems = items.length > 0 ? items : defaultItems;
 
     const monthShortNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     const monthFullNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
-    // 2. Matrice valori per questo collaboratore: matrix[type][monthIdx 0..11]
-    const matrix = {};
-    const typeTotals = {};
-    const isCHFFlag = {};
+    // 3. Matrice valori per ogni riga/prodotto per i 12 mesi
+    const matrix = [];
+    const rowTotals = [];
 
-    typesList.forEach(t => {
-        matrix[t] = new Array(12).fill(0);
-        typeTotals[t] = 0;
-        const norm = t.toUpperCase();
-        isCHFFlag[t] = norm.includes('AOIT') || norm.includes('CHF') || norm.includes('GEW');
-    });
+    targetItems.forEach((item, idx) => {
+        const monthVals = new Array(12).fill(0);
+        let total = 0;
 
-    const empSales = (salesData || []).filter(r => r.employee === employee);
+        for (let mIdx = 0; mIdx < 12; mIdx++) {
+            const monthSales = (salesData || []).filter(r => {
+                if (r.employee !== employee || !r.date) return false;
+                const p = r.date.split('-');
+                return p.length >= 2 && (parseInt(p[1], 10) - 1) === mIdx;
+            });
+            const monthPerf = (perfData || []).filter(r => {
+                if (r.employee !== employee || !r.date) return false;
+                const p = r.date.split('-');
+                return p.length >= 2 && (parseInt(p[1], 10) - 1) === mIdx;
+            });
 
-    empSales.forEach(r => {
-        if (!r.date) return;
-        const parts = r.date.split('-');
-        if (parts.length < 2) return;
-        const mIdx = parseInt(parts[1], 10) - 1;
-        if (mIdx < 0 || mIdx > 11 || isNaN(mIdx)) return;
-
-        let rawType = (r.skill || r.data?.Product || 'AOIT').trim();
-        let matchedType = typesList.find(t => t.toLowerCase() === rawType.toLowerCase());
-        if (!matchedType) {
-            matchedType = rawType;
-            typesList.push(matchedType);
-            matrix[matchedType] = new Array(12).fill(0);
-            typeTotals[matchedType] = 0;
-            const norm = matchedType.toUpperCase();
-            isCHFFlag[matchedType] = norm.includes('AOIT') || norm.includes('CHF') || norm.includes('GEW');
-        }
-
-        // Estrazione valore numerico
-        let val = 0;
-        if (r.data && typeof r.data === 'object') {
-            if (r.data['AOIT'] !== undefined) val = r.data['AOIT'];
-            else if (r.data['AOIT gew'] !== undefined) val = r.data['AOIT gew'];
-            else if (r.data['Value'] !== undefined) val = r.data['Value'];
-            else if (r.data['W- Value ACQ'] !== undefined) val = r.data['W- Value ACQ'];
-            else if (r.data['Nb Events'] !== undefined) val = r.data['Nb Events'];
-            else {
-                const keys = Object.keys(r.data).filter(k => k !== 'Product');
-                if (keys.length > 0 && r.data[keys[0]] !== undefined) {
-                    val = r.data[keys[0]];
-                }
+            let val = 0;
+            if (item.mappedMetrics && item.mappedMetrics.length > 0) {
+                val = calcActualForMetric(item.mappedMetrics, monthPerf, monthSales, employee);
+            } else {
+                const normalized = normalizeGoalMetricKey(item.label || item.key);
+                monthSales.forEach(r => {
+                    if (!r.data) return;
+                    const data = r.data || {};
+                    if (normalized.includes('aoit')) val += parseMetricValue(data['AOIT'] ?? data['AOIT (CHF)'] ?? data['AOIT gew'] ?? data.Value ?? 0);
+                    else if (normalized.includes('retention')) val += parseMetricValue(data['Retention'] ?? data.Value ?? 0);
+                    else if (normalized.includes('internet')) val += parseMetricValue(data['Internet'] ?? data['Nuovo Internet'] ?? data.Value ?? 0);
+                    else if (normalized.includes('tv')) val += parseMetricValue(data['TV'] ?? data['Nuovo TV'] ?? data.Value ?? 0);
+                    else if (normalized.includes('mobile')) val += parseMetricValue(data['Mobile'] ?? data['Nuovo Mobile'] ?? data.Value ?? 0);
+                    else val += parseMetricValue(data[item.label] ?? data.Value ?? 0);
+                });
             }
+            monthVals[mIdx] = val;
+            total += val;
         }
-        const num = typeof val === 'number' ? val : (parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0);
-        matrix[matchedType][mIdx] += num;
-        typeTotals[matchedType] += num;
+
+        matrix.push(monthVals);
+        rowTotals.push(total);
     });
 
     // Funzioni formattazione
@@ -2062,20 +2059,22 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
     };
 
     let tableRowsHtml = '';
-    typesList.forEach(t => {
-        const isCHF = isCHFFlag[t];
-        const rowTotal = typeTotals[t];
+    targetItems.forEach((item, idx) => {
+        const isCHF = item.isCHF;
+        const rowTotal = rowTotals[idx];
+        const rowVals = matrix[idx];
 
         tableRowsHtml += `
             <tr>
                 <td style="font-weight: 600; white-space: nowrap;">
                     <div class="ind-monthly-table-type-badge">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${isCHF ? '#3b82f6' : '#10b981'}; flex-shrink:0;"></span>
-                        <span style="color:var(--text-main);">${t}</span>
+                        <span style="color:var(--text-main);">${item.label}</span>
                         ${isCHF ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:500;">(CHF)</span>` : ''}
+                        ${item.skill ? `<span style="font-size:10px; font-weight:500; padding:1px 6px; border-radius:10px; background:var(--bg-base); color:var(--text-muted); border:1px solid var(--border); margin-left:4px;">${item.skill}</span>` : ''}
                     </div>
                 </td>
-                ${matrix[t].map(val => `
+                ${rowVals.map(val => `
                     <td style="text-align: center; ${val > 0 ? 'background: rgba(59,130,246,0.04);' : ''}">
                         ${formatCellValue(val, isCHF)}
                     </td>
