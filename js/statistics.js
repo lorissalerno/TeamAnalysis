@@ -8,6 +8,30 @@ const legendMarginPlugin = {
     }
 };
 
+// Plugin per mostrare un testo al centro dell'anello della torta (totale o % obiettivo)
+const donutCenterTextPlugin = {
+    id: 'donutCenterTextPlugin',
+    afterDraw(chart) {
+        try {
+            const cfg = chart.options && chart.options.plugins && chart.options.plugins.centerText;
+            if (!cfg || !cfg.text) return;
+            const ctx = chart.ctx;
+            const area = chart.chartArea;
+            const cx = (area.left + area.right) / 2;
+            const cy = (area.top + area.bottom) / 2;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = cfg.color || '#e2e8f0';
+            ctx.font = `700 ${cfg.size || 20}px system-ui, -apple-system, sans-serif`;
+            ctx.fillText(cfg.text, cx, cy);
+            ctx.restore();
+        } catch (e) {
+            console.error('Donut center text plugin error:', e);
+        }
+    }
+};
+
 // Plugin globale per estendere la linea dell'obiettivo viola da estremo a estremo (sinistra a destra)
 const fullWidthGoalPlugin = {
     id: 'fullWidthGoalPlugin',
@@ -43,6 +67,13 @@ const fullWidthGoalPlugin = {
         }
     }
 };
+
+// Register plugins globally for Chart.js v3+
+if (typeof Chart !== 'undefined' && Chart.register) {
+    Chart.register(donutCenterTextPlugin);
+    Chart.register(legendMarginPlugin);
+    Chart.register(fullWidthGoalPlugin);
+}
 
 // Helper for templates
 // Helper for templates
@@ -785,9 +816,9 @@ async function openStatModal(editingStat = null) {
         const pieModeHint = document.getElementById('pie-mode-hint');
         if (pieModeSel && pieModeHint) {
             const perfMetric = (selectedMetricsList[0] || '').startsWith('Performance: ');
-            const showHint = type === 'pie' && pieModeSel.value === 'pacchetti' && perfMetric;
+            const showHint = type === 'pie' && pieModeSel.value !== 'collaboratori' && perfMetric;
             pieModeHint.style.display = showHint ? 'block' : 'none';
-            pieModeHint.textContent = showHint ? 'La modalità Pacchetti funziona solo con i dati Sales: seleziona una metrica Sales oppure torna a "Prezzo totale per ogni Collaboratore".' : '';
+            pieModeHint.textContent = showHint ? 'Le modalità Pacchetti e Doppia Torta funzionano solo con i dati Sales: seleziona una metrica Sales oppure torna a "Prezzo totale per ogni Collaboratore".' : '';
         }
 
         if (isGoalsTable) {
@@ -829,6 +860,7 @@ async function openStatModal(editingStat = null) {
             type: type,
             goalsTableId: goalsTableId,
             pieMode: document.getElementById('stat-pie-mode')?.value || 'collaboratori',
+            pieGoalCenter: document.getElementById('pie-goal-center')?.checked || false,
             title: isGoalsTable ? 'Tabella Obiettivi Vendita' : (selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', '')),
             yMax: customYMax,
             y2Max: customY2Max
@@ -923,6 +955,8 @@ async function openStatModal(editingStat = null) {
         if (y2MaxInput) y2MaxInput.value = editingStat.y2Max || '';
         const pieModeSelect = document.getElementById('stat-pie-mode');
         if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
+        const pieGoalCenterCb = document.getElementById('pie-goal-center');
+        if (pieGoalCenterCb) pieGoalCenterCb.checked = !!editingStat.pieGoalCenter;
         applyTypeUI(editingStat.type || 'bar');
     }
 
@@ -936,6 +970,8 @@ async function openStatModal(editingStat = null) {
     if (goalsTableIdSelect) goalsTableIdSelect.addEventListener('change', schedulePreview);
     const pieModeSelect2 = document.getElementById('stat-pie-mode');
     if (pieModeSelect2) pieModeSelect2.addEventListener('change', schedulePreview);
+    const pieGoalCenterCb2 = document.getElementById('pie-goal-center');
+    if (pieGoalCenterCb2) pieGoalCenterCb2.addEventListener('change', schedulePreview);
 
     function updatePreviewAvgToggleVisibility() {
         const previewAvgLabel = modal.querySelector('#preview-show-team-avg-label');
@@ -1041,7 +1077,13 @@ function createStatModalHTML() {
                     <select id="stat-pie-mode" style="width:100%; padding:8px;">
                         <option value="collaboratori">Prezzo totale per ogni Collaboratore</option>
                         <option value="pacchetti">Nomi Pacchetti con Quantità (intero Team)</option>
+                        <option value="doppia">Doppia Torta: Prezzo Pacchetti (Team) + Collaboratori</option>
                     </select>
+                    <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; margin-top:10px;">
+                        <input type="checkbox" id="pie-goal-center">
+                        <span class="slider"></span>
+                        <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra % Obiettivo al Centro</span>
+                    </label>
                     <div id="pie-mode-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px; display:none;"></div>
                 </div>
 
@@ -1180,6 +1222,7 @@ async function saveNewStat() {
     const yMaxVal = parseFloat(document.getElementById('stat-y-max')?.value);
     const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
     const pieModeVal = document.getElementById('stat-pie-mode')?.value || 'collaboratori';
+    const pieGoalCenterVal = document.getElementById('pie-goal-center')?.checked || false;
 
     if (currentEditingStatId) {
         const allStats = await appDb.getAll('custom_stats');
@@ -1193,6 +1236,7 @@ async function saveNewStat() {
             existing.type = type;
             existing.product = product;
             existing.pieMode = pieModeVal;
+            existing.pieGoalCenter = pieGoalCenterVal;
             existing.yMax = !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null;
             existing.y2Max = !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null;
             existing.groupId = groupId || null;
@@ -1212,6 +1256,7 @@ async function saveNewStat() {
             colors: selectedColors,
             skill, type, product,
             pieMode: pieModeVal,
+            pieGoalCenter: pieGoalCenterVal,
             yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
             y2Max: !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null,
             groupId: groupId || null,
@@ -1818,6 +1863,57 @@ function hslToHex(hue, sat, light) {
     return '#' + toHex(r) + toHex(g) + toHex(b);
 }
 
+function hexToHsl(hex) {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const r = parseInt(h.substring(0, 2), 16) / 255;
+    const g = parseInt(h.substring(2, 4), 16) / 255;
+    const b = parseInt(h.substring(4, 6), 16) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let hue = 0;
+    let sat = 0;
+    if (max !== min) {
+        const d = max - min;
+        sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: hue = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
+            case g: hue = ((b - r) / d + 2) * 60; break;
+            case b: hue = ((r - g) / d + 4) * 60; break;
+        }
+    }
+    return { h: hue, s: sat, l: l };
+}
+
+// Genera N colori armonici attorno al colore di base, con tonalità vicine
+// (es. blu → blu, viola, ciano) e alternando chiaro/scuro per contrasto.
+// Il colore esatto scelto dall'utente rimane al centro della scala.
+function generateHarmoniousColors(hex, count) {
+    if (!count || count <= 0) return [];
+    if (count === 1) return [hex];
+    const hsl = hexToHsl(hex);
+    const baseHue = hsl.h;
+    const sat = Math.min(Math.max(hsl.s, 0.5), 0.9);
+    const hueSpread = 45;
+    const center = (count - 1) / 2;
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+        const ratio = count === 1 ? 0 : (i - center) / center;
+        const hue = ((baseHue + ratio * hueSpread) % 360 + 360) % 360;
+        const isLight = i % 2 === 0;
+        let light;
+        if (isLight) {
+            light = 0.78 - Math.abs(ratio) * 0.08;
+        } else {
+            light = 0.42 + Math.abs(ratio) * 0.05;
+        }
+        light = Math.min(Math.max(light, 0.12), 0.88);
+        colors.push(hslToHex(hue, sat, light));
+    }
+    return colors;
+}
+
 async function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false, isPreview = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
@@ -2287,16 +2383,258 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         }
     } else if (statConfig.type === 'pie') {
         // --- Grafico a Torta ---
-        const canvas = document.createElement('canvas');
-        canvasContainer.style.height = '360px';
-        canvasContainer.appendChild(canvas);
-
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
         const pieMode = statConfig.pieMode || 'collaboratori';
+        const pieGoalCenter = !!statConfig.pieGoalCenter;
+        const isPieMulti = metricsList.length > 1;
         let pieEntries = [];
-        let pieEntriesInvalid = false;
 
-        if (metricsList.length > 1) {
+        // Prezzo totale di un pacchetto per un record Sales (esclude Product e Nb Events)
+        const getRecordPrice = (row) => {
+            let price = 0;
+            Object.keys(row.data || {}).forEach(k => {
+                if (k === 'Product' || k === 'Nb Events') return;
+                price += parseMetricValue(row.data[k]);
+            });
+            return price;
+        };
+
+        const isSalesRowMatching = (row) => {
+            if (!row || !row.data) return false;
+            if (statConfig.skill && statConfig.skill !== 'ALL' && row.skill && row.skill !== statConfig.skill) return false;
+            if (row.data[rawKey] !== undefined && row.data[rawKey] !== null) return true;
+            if (row.skill === rawKey) return true;
+            if (rawKey.toLowerCase() === 'aoit') {
+                return (row.skill && row.skill.toLowerCase() === 'aoit') || row.data['AOIT'] !== undefined;
+            }
+            if (row.category && row.category !== 'sales') return false;
+            return false;
+        };
+
+        // Totale pacchetti (prezzo) per l'intero team
+        const buildPackagePriceEntries = () => {
+            const prodTotals = {};
+            salesData.forEach(row => {
+                if (!isSalesRowMatching(row)) return;
+                const prod = row.data && row.data.Product;
+                if (!prod) return;
+                const price = (row.data[rawKey] !== undefined) ? parseMetricValue(row.data[rawKey]) : getRecordPrice(row);
+                if (price <= 0) return;
+                if (!prodTotals[prod]) prodTotals[prod] = 0;
+                prodTotals[prod] += price;
+            });
+            return Object.entries(prodTotals).sort((a, b) => b[1] - a[1]);
+        };
+
+        // Totale per collaboratore della metrica selezionata
+        const buildCollaboratorEntries = () => {
+            const empTotals = {};
+            employees.forEach(emp => {
+                let total = 0;
+                labels.forEach(date => {
+                    if (datesWithData.has(date) && empDateMap[emp] && empDateMap[emp][date] !== undefined) {
+                        total += empDateMap[emp][date];
+                    }
+                });
+                if (total > 0) empTotals[emp] = total;
+            });
+            return Object.entries(empTotals).map(([e, v]) => [window.getDisplayName(e), v]).sort((a, b) => b[1] - a[1]);
+        };
+
+        // Quantità per pacchetto, intero team
+        const buildPackageQtyEntries = () => {
+            const prodTotals = {};
+            salesData.forEach(row => {
+                if (!isSalesRowMatching(row)) return;
+                const prod = row.data && row.data.Product;
+                if (!prod) return;
+                const qty = Math.round(parseMetricValue(row.data['Nb Events'])) || 1;
+                if (!prodTotals[prod]) prodTotals[prod] = 0;
+                prodTotals[prod] += qty;
+            });
+            return Object.entries(prodTotals).sort((a, b) => b[1] - a[1]);
+        };
+
+        // Obiettivo rilevante per questa metrica (team o individuale, da store o da tabelle vendite)
+        let relevantGoalTarget = null;
+        const metricKey = statConfig.metric || '';
+        const rawMetricKey = rawKey;
+
+        const matchesGoalMetric = (g) => {
+            if (!g) return false;
+            const gMetric = g.metric || '';
+            const gRaw = gMetric.replace('Performance: ', '').replace('Sales: ', '');
+            if (gMetric === metricKey || gRaw === rawMetricKey || gMetric === rawMetricKey || gRaw === metricKey) return true;
+            if (Array.isArray(g.mappedMetrics) && (g.mappedMetrics.includes(metricKey) || g.mappedMetrics.includes(rawMetricKey) || g.mappedMetrics.some(m => m.replace('Performance: ', '').replace('Sales: ', '') === rawMetricKey))) return true;
+            if (g.id && (g.id.endsWith('_' + rawMetricKey) || g.id.includes('_' + rawMetricKey + '_') || g.id.includes('_' + rawMetricKey))) return true;
+            return false;
+        };
+
+        const matchesGoalSkill = (g) => {
+            if (!statConfig.skill || statConfig.skill === 'ALL') return true;
+            if (!g.skill || g.skill === 'ALL') return true;
+            return g.skill === statConfig.skill;
+        };
+
+        const matchingGoals = (goals || []).filter(g => matchesGoalMetric(g) && matchesGoalSkill(g));
+
+        if (isIndividual && employeeName) {
+            const indGoal = matchingGoals.find(g => g.employee === employeeName);
+            if (indGoal && parseFloat(indGoal.target) > 0) {
+                relevantGoalTarget = parseFloat(indGoal.target);
+            } else {
+                const teamGoal = matchingGoals.find(g => !g.employee);
+                if (teamGoal && parseFloat(teamGoal.target) > 0) relevantGoalTarget = parseFloat(teamGoal.target);
+            }
+        } else {
+            const teamGoal = matchingGoals.find(g => !g.employee);
+            if (teamGoal && parseFloat(teamGoal.target) > 0) {
+                relevantGoalTarget = parseFloat(teamGoal.target);
+            } else {
+                const indGoals = matchingGoals.filter(g => Boolean(g.employee));
+                if (indGoals.length > 0) {
+                    const empMap = {};
+                    indGoals.forEach(g => {
+                        if (g.employee && !empMap[g.employee]) {
+                            empMap[g.employee] = parseFloat(g.target) || 0;
+                        }
+                    });
+                    const sum = Object.values(empMap).reduce((s, v) => s + v, 0);
+                    if (sum > 0) relevantGoalTarget = sum;
+                }
+            }
+        }
+
+        // Se non ancora trovato nello store goals, verifica nelle impostazioni delle tabelle obiettivi
+        if (!relevantGoalTarget) {
+            try {
+                const yr = window.appState?.activeYear || new Date().getFullYear().toString();
+                const tablesList = await appDb.getSetting(`sales_tables_list_${yr}`, []);
+                for (const t of (tablesList || [])) {
+                    if (statConfig.skill && statConfig.skill !== 'ALL' && t.skill && t.skill !== 'ALL' && t.skill !== statConfig.skill) continue;
+                    const products = await appDb.getSetting(`sales_table_products_${t.id}`, []);
+                    const matchingProd = (products || []).find(p => {
+                        if (p.key === rawMetricKey || p.label === rawMetricKey || p.label === metricKey) return true;
+                        if (p.mappedMetric === metricKey || p.mappedMetric === rawMetricKey) return true;
+                        if (Array.isArray(p.mappedMetrics) && (p.mappedMetrics.includes(metricKey) || p.mappedMetrics.includes(rawMetricKey))) return true;
+                        return false;
+                    });
+                    if (matchingProd) {
+                        const savedTargets = await appDb.getSetting(`sales_table_targets_${yr}_${t.id}`, {});
+                        if (savedTargets) {
+                            if (isIndividual && employeeName) {
+                                const indivTotal = Number(savedTargets['INDIV_TOTAL_' + matchingProd.key] || 0);
+                                if (indivTotal > 0) {
+                                    const collabWorkPcts = await appDb.getSetting('collab_work_pcts', {});
+                                    let totalWork = 0;
+                                    Object.values(collabWorkPcts).forEach(v => totalWork += (v ?? 100));
+                                    const empWorkPct = collabWorkPcts[employeeName] ?? 100;
+                                    relevantGoalTarget = totalWork > 0 ? Math.round(indivTotal * (empWorkPct / totalWork)) : 0;
+                                    break;
+                                }
+                                const teamTgt = Number(savedTargets['TEAM_' + matchingProd.key] || 0);
+                                if (teamTgt > 0) { relevantGoalTarget = teamTgt; break; }
+                            } else {
+                                const teamTgt = Number(savedTargets['TEAM_' + matchingProd.key] || 0);
+                                if (teamTgt > 0) { relevantGoalTarget = teamTgt; break; }
+                                const indivTotal = Number(savedTargets['INDIV_TOTAL_' + matchingProd.key] || 0);
+                                if (indivTotal > 0) { relevantGoalTarget = indivTotal; break; }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching sales table targets for pie chart:', e);
+            }
+        }
+
+        // Colore base: quello scelto dall'utente (primo colore della configurazione)
+        const baseColor = (statConfig.colors && statConfig.colors.length > 0) ? statConfig.colors[0] : '#2563EB';
+        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
+        const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#1e2130';
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#9333EA';
+
+        // Crea il testo al centro dell'anello: % obiettivo (se attivata e presente) altrimenti totale
+        const getCenterText = (entries) => {
+            const total = entries.reduce((sum, [, v]) => sum + v, 0);
+            if (pieGoalCenter && relevantGoalTarget && relevantGoalTarget > 0) {
+                const pct = Math.round((total / relevantGoalTarget) * 100);
+                return { text: pct + '%', color: primaryColor, size: 24 };
+            }
+            return { text: Math.round(total).toLocaleString('it-CH'), color: textColor, size: 18 };
+        };
+
+        // Renderizza una singola torta dentro un contenitore
+        const renderDonut = (container, entries, labelSuffix = null, titleText = null) => {
+            if (entries.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                return;
+            }
+            const canvas = document.createElement('canvas');
+            container.appendChild(canvas);
+            const total = entries.reduce((sum, [, v]) => sum + v, 0);
+            const pieShades = generateColorShades(baseColor, entries.length);
+            const center = getCenterText(entries);
+            const labels = entries.map(([label, v]) => {
+                const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+                return labelSuffix ? `${label} (${labelSuffix(v, pct)})` : `${label} (${pct}%)`;
+            });
+
+            const legendLabels = {
+                color: textColor,
+                font: { size: 12 },
+                padding: 12,
+                boxWidth: 14
+            };
+
+            if (titleText) {
+                legendLabels.generateLabels = function(chart) {
+                    const defaultLabels = Chart.overrides.doughnut.plugins.legend.labels.generateLabels.call(this, chart);
+                    defaultLabels.unshift({
+                        text: titleText,
+                        fillStyle: 'transparent',
+                        strokeStyle: 'transparent',
+                        backgroundColor: 'transparent',
+                        hidden: false,
+                        index: -1,
+                        disabled: true,
+                        font: { weight: 'bold', size: 11 }
+                    });
+                    return defaultLabels;
+                };
+                legendLabels.onClick = function(e, legendItem, legend) {
+                    if (legendItem.index === -1) return;
+                    Chart.defaults.plugins.legend.onClick.call(this, e, legendItem, legend);
+                };
+            }
+
+            new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: entries.map(([, v]) => v),
+                        backgroundColor: pieShades,
+                        borderWidth: 2,
+                        borderColor: surfaceColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        centerText: center,
+                        legend: {
+                            position: 'right',
+                            labels: legendLabels
+                        }
+                    }
+                }
+            });
+        };
+
+        if (isPieMulti) {
             // Se multi-metrica, la torta confronta le metriche totali
             const metricTotals = {};
             metricsList.forEach(m => {
@@ -2311,78 +2649,66 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 metricTotals[rKey] = sum;
             });
             pieEntries = Object.entries(metricTotals);
+            renderDonut(canvasContainer, pieEntries);
+        } else if (pieMode === 'doppia') {
+            // Doppia Torta: pacchetti con prezzo totale (team) + totale per collaboratore
+            const isPiePerf = statConfig.metric.startsWith('Performance: ');
+            if (isPiePerf) {
+                canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Doppia Torta è disponibile solo con dati Sales.</p>';
+            } else {
+                const pkgPriceEntries = buildPackagePriceEntries();
+                const collabEntries = buildCollaboratorEntries();
+                if (pkgPriceEntries.length === 0 && collabEntries.length === 0) {
+                    canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                } else {
+                    canvasContainer.style.height = '420px';
+                    const wrapper = document.createElement('div');
+                    wrapper.style.cssText = 'display:flex; gap:16px; height:100%; width:100%; flex-wrap:wrap;';
+                    const fmtPrice = (v) => 'CHF ' + Math.round(v).toLocaleString('de-CH');
+                     if (collabEntries.length > 0) {
+                         const box1 = document.createElement('div');
+                         box1.style.cssText = 'flex:1 1 280px; display:flex; flex-direction:column; gap:6px; min-width:0;';
+                         const c1 = document.createElement('div');
+                         c1.style.cssText = 'flex:1; position:relative; min-height:280px;';
+                         box1.appendChild(c1);
+                         wrapper.appendChild(box1);
+                         renderDonut(c1, collabEntries, null, 'Totale per Collaboratore');
+                     }
+                     if (pkgPriceEntries.length > 0) {
+                         const box2 = document.createElement('div');
+                         box2.style.cssText = 'flex:1 1 280px; display:flex; flex-direction:column; gap:6px; min-width:0;';
+                         const c2 = document.createElement('div');
+                         c2.style.cssText = 'flex:1; position:relative; min-height:280px;';
+                         box2.appendChild(c2);
+                         wrapper.appendChild(box2);
+                         renderDonut(c2, pkgPriceEntries, (v, pct) => 'CHF ' + Math.round(v).toLocaleString('de-CH') + ' · ' + pct + '%', 'Pacchetti — Prezzo Totale (Team)');
+                     }
+                    canvasContainer.appendChild(wrapper);
+                }
+            }
         } else if (pieMode === 'pacchetti') {
             // Modalità Pacchetti: quantità per nome pacchetto, intero team (solo dati Sales)
             const isPiePerf = statConfig.metric.startsWith('Performance: ');
             if (isPiePerf) {
-                pieEntriesInvalid = true;
+                canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Pacchetti è disponibile solo con dati Sales.</p>';
             } else {
-                const prodTotals = {};
-                salesData.forEach(row => {
-                    const prod = row.data && row.data.Product;
-                    if (!prod) return;
-                    const qty = Math.round(parseMetricValue(row.data['Nb Events'])) || 1;
-                    if (!prodTotals[prod]) prodTotals[prod] = 0;
-                    prodTotals[prod] += qty;
-                });
-                pieEntries = Object.entries(prodTotals).sort((a, b) => b[1] - a[1]);
+                pieEntries = buildPackageQtyEntries();
+                if (pieEntries.length === 0) {
+                    canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                } else {
+                    renderDonut(canvasContainer, pieEntries, (v, pct) => Math.round(v) + ' pz · ' + pct + '%');
+                }
             }
         } else {
             // Modalità Collaboratori: prezzo totale per ogni collaboratore
-            const empTotals = {};
-            employees.forEach(emp => {
-                let total = 0;
-                labels.forEach(date => {
-                    if (datesWithData.has(date) && empDateMap[emp] && empDateMap[emp][date] !== undefined) {
-                        total += empDateMap[emp][date];
-                    }
-                });
-                if (total > 0) empTotals[emp] = total;
-            });
-            pieEntries = Object.entries(empTotals).map(([e, v]) => [window.getDisplayName(e), v]).sort((a,b) => b[1]-a[1]);
+            pieEntries = buildCollaboratorEntries();
+            if (pieEntries.length === 0) {
+                canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+            } else {
+                renderDonut(canvasContainer, pieEntries);
+            }
         }
-
-        // Colore base: quello scelto dall'utente (primo colore della configurazione)
-        const baseColor = (statConfig.colors && statConfig.colors.length > 0) ? statConfig.colors[0] : '#2563EB';
-
-        if (pieEntriesInvalid) {
-            canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Pacchetti è disponibile solo con dati Sales.</p>';
-        } else if (pieEntries.length === 0) {
-            canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
-        } else {
-            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
-            const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#1e2130';
-            const pieShades = generateColorShades(baseColor, pieEntries.length);
-            const showQtyInLabels = pieMode === 'pacchetti';
-            new Chart(canvas, {
-                type: 'doughnut',
-                data: {
-                    labels: pieEntries.map(([label, v]) => showQtyInLabels ? `${label} (${Math.round(v)})` : label),
-                    datasets: [{
-                        data: pieEntries.map(([,v]) => v),
-                        backgroundColor: pieShades,
-                        borderWidth: 2,
-                        borderColor: surfaceColor
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: textColor,
-                                font: { size: 12 },
-                                padding: 12,
-                                boxWidth: 14
-                            }
-                        }
-                    }
-                }
-            });
-        }
+        if (!canvasContainer.style.height) canvasContainer.style.height = '360px';
     } else {
         const canvas = document.createElement('canvas');
         canvasContainer.appendChild(canvas);
@@ -2422,7 +2748,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                         borderWidth: isBar ? 1 : 1.8,
                         borderRadius: isBar ? 4 : 0,
                         minBarLength: isBar ? 4 : 0,
-                        pointRadius: 0,
+                        pointRadius: isBar ? 0 : 2,
                         pointHoverRadius: isBar ? 0 : 5,
                         pointBackgroundColor: color,
                         tension: 0.35,
@@ -2446,7 +2772,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                                 backgroundColor: baseColor,
                                 borderWidth: 2.5,
                                 borderDash: [6, 4],
-                                pointRadius: 0,
+                                pointRadius: isBar ? 0 : 2,
                                 pointHoverRadius: 5,
                                 pointBackgroundColor: baseColor,
                                 pointBorderColor: '#ffffff',
@@ -2465,7 +2791,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             backgroundColor: '#F59E0B',
                             borderWidth: 3.5,
                             borderDash: [6, 4],
-                            pointRadius: 0,
+                            pointRadius: isBar ? 0 : 2,
                             pointHoverRadius: 5,
                             pointBackgroundColor: '#F59E0B',
                             pointBorderColor: '#ffffff',
@@ -2497,8 +2823,10 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
 
                     const baseColor = colorsList[idx % colorsList.length];
                     const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
+                    const metricShades = generateColorShades(baseColor, employees.length);
 
-                    employees.forEach((emp) => {
+                    employees.forEach((emp, empIdx) => {
+                        const empColor = metricShades[empIdx] || baseColor;
                         const pts = labels.map(l => datesWithData.has(l) ? ((empMap[emp] && empMap[emp][l] !== undefined) ? empMap[emp][l] : 0) : null);
                         const empName = window.getDisplayName(emp);
                         const labelText = `${empName} (${rKey})`;
@@ -2508,12 +2836,12 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             data: pts,
                             type: isBar ? 'bar' : 'line',
                             yAxisID: yAxisID,
-                            backgroundColor: isBar ? hexToRgba(baseColor, 0.85) : hexToRgba(baseColor, 0.15),
-                            borderColor: baseColor,
+                            backgroundColor: isBar ? hexToRgba(empColor, 0.85) : hexToRgba(empColor, 0.15),
+                            borderColor: empColor,
                             borderWidth: isBar ? 1 : 1.8,
                             borderRadius: isBar ? 4 : 0,
                             minBarLength: isBar ? 4 : 0,
-                            pointRadius: 0,
+                            pointRadius: isBar ? 0 : 2,
                             pointHoverRadius: isBar ? 0 : 5,
                             pointBackgroundColor: baseColor,
                             tension: 0.35,
@@ -2523,16 +2851,17 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 });
             }
         } else if (isIndividual) {
+            const indColor = colorsList[0];
             datasets.push({
                 label: employeeName ? window.getDisplayName(employeeName) : statConfig.title,
                 data: dataPts,
                 type: isBar ? 'bar' : 'line',
-                backgroundColor: isBar ? hexToRgba('#2563EB', 0.8) : 'rgba(37, 99, 235, 0.15)',
-                borderColor: '#2563EB',
+                backgroundColor: isBar ? hexToRgba(indColor, 0.8) : hexToRgba(indColor, 0.15),
+                borderColor: indColor,
                 borderWidth: isBar ? 1 : 1.8,
                 borderRadius: isBar ? 4 : 0,
                 minBarLength: isBar ? 4 : 0,
-                pointRadius: 0,
+                pointRadius: isBar ? 0 : 2,
                 pointHoverRadius: isBar ? 0 : 5,
                 tension: 0.35,
                 order: 2
@@ -2547,7 +2876,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     backgroundColor: '#F59E0B',
                     borderWidth: 3.5,
                     borderDash: [6, 4],
-                    pointRadius: 0,
+                    pointRadius: isBar ? 0 : 2,
                     pointHoverRadius: 5,
                     pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
@@ -2575,7 +2904,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                         borderWidth: isBar ? 1 : 3.5,
                         borderRadius: isBar ? 4 : 0,
                         minBarLength: isBar ? 4 : 0,
-                        pointRadius: 0,
+                        pointRadius: isBar ? 0 : 2,
                         pointHoverRadius: isBar ? 0 : 5,
                         pointBackgroundColor: baseColor,
                         pointBorderColor: '#ffffff',
@@ -2595,7 +2924,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     borderWidth: isBar ? 1 : 3.5,
                     borderRadius: isBar ? 4 : 0,
                     minBarLength: isBar ? 4 : 0,
-                    pointRadius: 0,
+                    pointRadius: isBar ? 0 : 2,
                     pointHoverRadius: isBar ? 0 : 5,
                     pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
@@ -2606,8 +2935,10 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 });
             }
         } else {
+            const teamBaseColor = colorsList[0];
+            const teamShades = generateColorShades(teamBaseColor, employees.length);
             employees.forEach((emp, idx) => {
-                const color = DISTINCT_COLORS[idx % DISTINCT_COLORS.length];
+                const color = teamShades[idx] || teamBaseColor;
                 const empPts = labels.map(date => {
                     if (!datesWithData.has(date)) return null;
                     return (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
@@ -2621,7 +2952,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     borderWidth: isBar ? 1 : 1.8,
                     borderRadius: isBar ? 4 : 0,
                     minBarLength: isBar ? 4 : 0,
-                    pointRadius: 0,
+                    pointRadius: isBar ? 0 : 2,
                     pointHoverRadius: isBar ? 0 : 5,
                     pointBackgroundColor: color,
                     tension: 0.35,
@@ -2638,7 +2969,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     backgroundColor: '#F59E0B',
                     borderWidth: 3.5,
                     borderDash: [6, 4],
-                    pointRadius: 0,
+                    pointRadius: isBar ? 0 : 2,
                     pointHoverRadius: 5,
                     pointBackgroundColor: '#F59E0B',
                     pointBorderColor: '#ffffff',
@@ -2698,15 +3029,13 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             if (val === 0) return 0;
             const absVal = Math.abs(val);
             if (absVal >= 1) return Math.ceil(val);
-            const order = Math.pow(10, Math.floor(Math.log10(absVal)));
-            return Math.ceil(val / order) * order;
+            return Math.ceil(val * 100) / 100;
         }
         function niceRoundDown(val) {
             if (val === 0) return 0;
             const absVal = Math.abs(val);
             if (absVal >= 1) return Math.floor(val);
-            const order = Math.pow(10, Math.floor(Math.log10(absVal)));
-            return Math.floor(val / order) * order;
+            return Math.floor(val * 100) / 100;
         }
 
         let yScalesConfig = {};
@@ -2733,6 +3062,8 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         }
 
         const isMultiMetrics = metricsList.length > 1;
+        // Precisione dei tick: per valori sotto 1 (es. percentuali) mostra 2 decimali
+        const yTickPrecision = allVals.length > 0 && Math.max(...allVals.map(v => Math.abs(v))) < 1 ? 2 : undefined;
         const scalesConfig = {
             x: {
                 grid: {
@@ -2741,6 +3072,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             },
             y: {
                 ...yScalesConfig,
+                ticks: yTickPrecision !== undefined ? { precision: yTickPrecision } : undefined,
                 grid: {
                     color: 'rgba(128, 128, 128, 0.15)'
                 }
@@ -2769,9 +3101,11 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             } else {
                 y2ScalesConfig = { beginAtZero: true };
             }
+            const y2TickPrecision = allY2Vals.length > 0 && Math.max(...allY2Vals.map(v => Math.abs(v))) < 1 ? 2 : undefined;
             scalesConfig.y2 = {
                 position: 'right',
                 ...y2ScalesConfig,
+                ticks: y2TickPrecision !== undefined ? { precision: y2TickPrecision } : undefined,
                 grid: { drawOnChartArea: false }
             };
         }
@@ -2782,7 +3116,6 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 labels: displayLabels,
                 datasets: datasets
             },
-            plugins: [fullWidthGoalPlugin, legendMarginPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,

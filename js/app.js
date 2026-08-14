@@ -974,7 +974,7 @@ function setupSettings() {
         tr.querySelector('.collab-row-cb').addEventListener('change', updateBulkToolbar);
 
         tr.querySelector('.remove-collab-btn').addEventListener('click', () => {
-            if (m.id && m.id !== 'new') {
+            if (m.id && typeof m.id === 'number' && m.id !== 'new') {
                 deletedIds.push(m.id);
             }
             tr.remove();
@@ -1026,7 +1026,10 @@ function setupSettings() {
             selected.forEach(tr => {
                 const dataId = tr.getAttribute('data-id');
                 if (dataId && dataId !== 'new') {
-                    deletedIds.push(parseInt(dataId));
+                    const parsedId = parseInt(dataId);
+                    if (!isNaN(parsedId)) {
+                        deletedIds.push(parsedId);
+                    }
                 }
                 tr.remove();
             });
