@@ -2202,6 +2202,16 @@ function hexToHsl(hex) {
     return { h: hue, s: sat, l: l };
 }
 
+function getMediaTeamLineColor(hex) {
+    if (!hex) return '#F59E0B';
+    const hsl = hexToHsl(hex);
+    // Variazione elegante di luminosità e saturazione per differenziare la linea di media dalle barre
+    const newLight = hsl.l >= 0.5 ? Math.max(hsl.l - 0.16, 0.28) : Math.min(hsl.l + 0.22, 0.82);
+    const newSat = Math.min(Math.max(hsl.s + 0.12, 0.65), 1);
+    const newHue = (hsl.h + 8) % 360;
+    return hslToHex(newHue, newSat, newLight);
+}
+
 // Genera N colori armonici attorno al colore di base, con tonalità vicine
 // (es. blu → blu, viola, ciano) e alternando chiaro/scuro per contrasto.
 // Il colore esatto scelto dall'utente rimane al centro della scala.
@@ -3126,19 +3136,20 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
                             const avgPts = getTeamAvgPtsForMetric(m);
                             const baseColor = colorsList[idx % colorsList.length];
+                            const lineColor = getMediaTeamLineColor(baseColor);
                             const yAxisID = idx > 0 ? 'y2' : 'y';
                             datasets.push({
                                 label: `Media Team (${rKey})`,
                                 data: avgPts,
                                 type: 'line',
                                 yAxisID: yAxisID,
-                                borderColor: baseColor,
-                                backgroundColor: baseColor,
+                                borderColor: lineColor,
+                                backgroundColor: lineColor,
                                 borderWidth: 2.5,
                                 borderDash: [6, 4],
                                 pointRadius: 0,
                                 pointHoverRadius: 5,
-                                pointBackgroundColor: baseColor,
+                                pointBackgroundColor: lineColor,
                                 pointBorderColor: '#ffffff',
                                 pointBorderWidth: 2,
                                 fill: false,
@@ -3147,17 +3158,19 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             });
                         });
                     } else {
+                        const baseColor = colorsList[0] || '#F59E0B';
+                        const lineColor = getMediaTeamLineColor(baseColor);
                         datasets.push({
                             label: 'Media Team',
                             data: teamAvgPts,
                             type: 'line',
-                            borderColor: '#F59E0B',
-                            backgroundColor: '#F59E0B',
+                            borderColor: lineColor,
+                            backgroundColor: lineColor,
                             borderWidth: 3.5,
                             borderDash: [6, 4],
                             pointRadius: 0,
                             pointHoverRadius: 5,
-                            pointBackgroundColor: '#F59E0B',
+                            pointBackgroundColor: lineColor,
                             pointBorderColor: '#ffffff',
                             pointBorderWidth: 2,
                             fill: false,
@@ -3219,19 +3232,20 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                         const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
                         const avgPts = getTeamAvgPtsForMetric(m);
                         const baseColor = colorsList[idx % colorsList.length];
+                        const lineColor = getMediaTeamLineColor(baseColor);
                         const yAxisID = idx > 0 ? 'y2' : 'y';
                         datasets.push({
                             label: `Media Team (${rKey})`,
                             data: avgPts,
                             type: 'line',
                             yAxisID: yAxisID,
-                            borderColor: baseColor,
-                            backgroundColor: baseColor,
+                            borderColor: lineColor,
+                            backgroundColor: lineColor,
                             borderWidth: 2.5,
                             borderDash: [6, 4],
                             pointRadius: 0,
                             pointHoverRadius: 5,
-                            pointBackgroundColor: baseColor,
+                            pointBackgroundColor: lineColor,
                             pointBorderColor: '#ffffff',
                             pointBorderWidth: 2,
                             fill: false,
@@ -3259,17 +3273,18 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             });
 
             if (showTeamAvg) {
+                const lineColor = getMediaTeamLineColor(indColor);
                 datasets.push({
                     label: 'Media Team',
                     data: teamAvgPts,
                     type: 'line',
-                    borderColor: '#F59E0B',
-                    backgroundColor: '#F59E0B',
+                    borderColor: lineColor,
+                    backgroundColor: lineColor,
                     borderWidth: 3.5,
                     borderDash: [6, 4],
                     pointRadius: 0,
                     pointHoverRadius: 5,
-                    pointBackgroundColor: '#F59E0B',
+                    pointBackgroundColor: lineColor,
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
                     fill: false,
