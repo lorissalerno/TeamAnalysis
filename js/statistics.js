@@ -2572,21 +2572,12 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             return { text: Math.round(total).toLocaleString('it-CH'), color: textColor, size: 18 };
         };
 
-        // Renderizza una singola torta dentro un contenitore
+        // Renderizza una singola torta dentro un contenitore con spaziatura uniforme
         const renderDonut = (container, entries, labelSuffix = null, titleText = null) => {
             if (entries.length === 0) {
                 container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
                 return;
             }
-            let target = container;
-            if (container === canvasContainer) {
-                const singleBox = document.createElement('div');
-                singleBox.style.cssText = 'max-width:580px; width:100%; height:100%; position:relative;';
-                container.appendChild(singleBox);
-                target = singleBox;
-            }
-            const canvas = document.createElement('canvas');
-            target.appendChild(canvas);
             const total = entries.reduce((sum, [, v]) => sum + v, 0);
             const pieShades = generateColorShades(baseColor, entries.length);
             const center = getCenterText(entries);
@@ -2595,28 +2586,37 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 return labelSuffix ? `${label} (${labelSuffix(v, pct)})` : `${label} (${pct}%)`;
             });
 
-            const legendConfig = {
-                position: 'right',
-                labels: {
-                    color: textColor,
-                    font: { size: 12 },
-                    padding: 12,
-                    boxWidth: 14
-                }
-            };
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'display:flex; align-items:center; gap:20px; height:100%; width:100%; min-width:0;';
 
+            const canvasWrap = document.createElement('div');
+            canvasWrap.style.cssText = 'width:260px; height:260px; min-width:260px; min-height:260px; position:relative; flex-shrink:0;';
+            const canvas = document.createElement('canvas');
+            canvasWrap.appendChild(canvas);
+            wrap.appendChild(canvasWrap);
+
+            const legendEl = document.createElement('div');
+            legendEl.style.cssText = 'display:flex; flex-direction:column; gap:8px; min-width:0; justify-content:center;';
             if (titleText) {
-                legendConfig.title = {
-                    display: true,
-                    text: titleText,
-                    position: 'start',
-                    color: textColor,
-                    font: { weight: '600', size: 14 },
-                    padding: { bottom: 10 }
-                };
+                const tEl = document.createElement('div');
+                tEl.style.cssText = 'font-size:14px; font-weight:600; color:var(--text-main); margin-bottom:4px; white-space:nowrap;';
+                tEl.textContent = titleText;
+                legendEl.appendChild(tEl);
             }
 
-            new Chart(canvas, {
+            entries.forEach(([, v], idx) => {
+                const item = document.createElement('div');
+                item.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-main); cursor:pointer; user-select:none; transition:opacity 0.2s;';
+                item.innerHTML = `
+                    <span style="width:12px; height:12px; border-radius:2px; background:${pieShades[idx]}; flex-shrink:0; display:inline-block;"></span>
+                    <span class="donut-item-label" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${labels[idx]}</span>
+                `;
+                legendEl.appendChild(item);
+            });
+            wrap.appendChild(legendEl);
+            container.appendChild(wrap);
+
+            const chart = new Chart(canvas, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
@@ -2633,9 +2633,19 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     cutout: '62%',
                     plugins: {
                         centerText: center,
-                        legend: legendConfig
+                        legend: { display: false }
                     }
                 }
+            });
+
+            legendEl.querySelectorAll('div[style*="cursor:pointer"]').forEach((itemEl, idx) => {
+                itemEl.addEventListener('click', () => {
+                    chart.toggleDataVisibility(idx);
+                    chart.update();
+                    const isHidden = !chart.getDataVisibility(idx);
+                    itemEl.style.textDecoration = isHidden ? 'line-through' : 'none';
+                    itemEl.style.opacity = isHidden ? '0.35' : '1';
+                });
             });
         };
 
@@ -2675,28 +2685,22 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 if (pkgPriceEntries.length === 0 && collabEntries.length === 0) {
                     canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
                 } else {
-                    canvasContainer.style.height = '420px';
+                    canvasContainer.style.height = '360px';
                     const wrapper = document.createElement('div');
-                    wrapper.style.cssText = 'display:flex; gap:16px; height:100%; width:100%; flex-wrap:wrap;';
+                    wrapper.style.cssText = 'display:flex; gap:32px; height:100%; width:100%; flex-wrap:wrap; align-items:center;';
                     const fmtPrice = (v) => 'CHF ' + Math.round(v).toLocaleString('de-CH');
-                     if (collabEntries.length > 0) {
-                         const box1 = document.createElement('div');
-                         box1.style.cssText = 'flex:1 1 280px; display:flex; flex-direction:column; gap:6px; min-width:0;';
-                         const c1 = document.createElement('div');
-                         c1.style.cssText = 'flex:1; position:relative; min-height:280px;';
-                         box1.appendChild(c1);
-                         wrapper.appendChild(box1);
-                         renderDonut(c1, collabEntries, null, 'Totale per Collaboratore');
-                     }
-                     if (pkgPriceEntries.length > 0) {
-                         const box2 = document.createElement('div');
-                         box2.style.cssText = 'flex:1 1 280px; display:flex; flex-direction:column; gap:6px; min-width:0;';
-                         const c2 = document.createElement('div');
-                         c2.style.cssText = 'flex:1; position:relative; min-height:280px;';
-                         box2.appendChild(c2);
-                         wrapper.appendChild(box2);
-                         renderDonut(c2, pkgPriceEntries, (v, pct) => 'CHF ' + Math.round(v).toLocaleString('de-CH') + ' · ' + pct + '%', 'Pacchetti — Prezzo Totale (Team)');
-                     }
+                    if (collabEntries.length > 0) {
+                        const box1 = document.createElement('div');
+                        box1.style.cssText = 'flex:1 1 340px; display:flex; min-width:0;';
+                        wrapper.appendChild(box1);
+                        renderDonut(box1, collabEntries, null, 'Totale per Collaboratore');
+                    }
+                    if (pkgPriceEntries.length > 0) {
+                        const box2 = document.createElement('div');
+                        box2.style.cssText = 'flex:1 1 340px; display:flex; min-width:0;';
+                        wrapper.appendChild(box2);
+                        renderDonut(box2, pkgPriceEntries, (v, pct) => 'CHF ' + Math.round(v).toLocaleString('de-CH') + ' · ' + pct + '%', 'Pacchetti — Prezzo Totale (Team)');
+                    }
                     canvasContainer.appendChild(wrapper);
                 }
             }
