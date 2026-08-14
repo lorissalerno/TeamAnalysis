@@ -268,7 +268,7 @@ input:checked + .slider:before {
 
 /* Mapping Modal (Gestione Collaboratori) */
 #mapping-modal {
-    max-width: 1000px;
+    max-width: 1350px;
     width: 95%;
     max-height: 88vh;
     border-radius: 12px;
