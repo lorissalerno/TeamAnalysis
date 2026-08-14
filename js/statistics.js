@@ -565,6 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Restore active sub-tab (stat-team vs stat-individual)
         const savedSubTab = await appDb.getSetting('stat_sub_tab', 'stat-team');
+        const savedEmployee = await appDb.getSetting('stat_selected_employee', '');
         const teamTabBtn = document.querySelector('.tab-btn[data-target="stat-team"]');
         const indTabBtn = document.querySelector('.tab-btn[data-target="stat-individual"]');
         const teamContent = document.getElementById('stat-team');
@@ -596,7 +597,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Populate individual select
         const select = document.getElementById('individual-select');
-        const savedEmployee = await appDb.getSetting('stat_selected_employee', '');
         const currentVal = select ? (select.value || savedEmployee) : savedEmployee;
         const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
         if (select) {
