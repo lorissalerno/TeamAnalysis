@@ -2109,6 +2109,58 @@ function generateColorShades(hex, count) {
     return colors;
 }
 
+function generateBarColorShades(hex, count) {
+    if (!count || count <= 0) return [];
+    if (!hex || typeof hex !== 'string') hex = '#2563EB';
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const r = parseInt(h.substring(0, 2), 16) / 255;
+    const g = parseInt(h.substring(2, 4), 16) / 255;
+    const b = parseInt(h.substring(4, 6), 16) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const baseLight = (max + min) / 2;
+    let hue = 0;
+    let sat = 0;
+    if (max !== min) {
+        const d = max - min;
+        sat = baseLight > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: hue = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
+            case g: hue = ((b - r) / d + 2) * 60; break;
+            case b: hue = ((r - g) / d + 4) * 60; break;
+        }
+    }
+    if (count === 1) return ['#' + h];
+
+    const maxDelta = 0.07;
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+        const norm = count > 1 ? (i / (count - 1)) * 2 - 1 : 0;
+        const delta = norm * maxDelta;
+        const curLight = Math.min(Math.max(baseLight + delta, 0.15), 0.88);
+        colors.push(hslToHex(hue, sat, curLight));
+    }
+
+    if (count > 2) {
+        const interleaved = [];
+        let left = 0;
+        let right = count - 1;
+        let toggle = true;
+        while (left <= right) {
+            if (toggle) {
+                interleaved.push(colors[left++]);
+            } else {
+                interleaved.push(colors[right--]);
+            }
+            toggle = !toggle;
+        }
+        return interleaved;
+    }
+
+    return colors;
+}
+
 function hslToHex(hue, sat, light) {
     const h = ((hue % 360) + 360) % 360;
     const s = Math.min(Math.max(sat, 0), 1);
@@ -3135,7 +3187,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
 
                     const baseColor = colorsList[idx % colorsList.length];
                     const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
-                    const metricShades = generateColorShades(baseColor, employees.length);
+                    const metricShades = isBar ? generateBarColorShades(baseColor, employees.length) : generateColorShades(baseColor, employees.length);
 
                     employees.forEach((emp, empIdx) => {
                         const empColor = metricShades[empIdx] || baseColor;
@@ -3248,7 +3300,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             }
         } else {
             const teamBaseColor = colorsList[0];
-            const teamShades = generateColorShades(teamBaseColor, employees.length);
+            const teamShades = isBar ? generateBarColorShades(teamBaseColor, employees.length) : generateColorShades(teamBaseColor, employees.length);
             employees.forEach((emp, idx) => {
                 const color = teamShades[idx] || teamBaseColor;
                 const empPts = labels.map(date => {
