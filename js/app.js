@@ -27,19 +27,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         dbSort: { column: 'date', direction: 'desc' }
     };
 
-    // Theme helpers & tooltips
+    // Theme helpers & tooltips (Default: dark -> light -> dim -> dark)
     const themeCycle = {
-        'dark': 'dim',
-        'dim': 'light',
-        'light': 'dark'
+        'dark': 'light',
+        'light': 'dim',
+        'dim': 'dark'
     };
     function updateThemeTooltip(theme) {
         const themeBtn = document.getElementById('theme-toggle');
         if (!themeBtn) return;
         const tooltips = {
-            'dark': 'Passa al Tema Intermedio (Grigio)',
-            'dim': 'Passa al Tema Chiaro',
-            'light': 'Passa al Tema Scuro (Nero)'
+            'dark': 'Passa al Tema Chiaro',
+            'light': 'Passa al Tema Intermedio (Grigio)',
+            'dim': 'Passa al Tema Scuro (Nero)'
         };
         const tip = tooltips[theme] || 'Cambia Tema';
         themeBtn.title = tip;
@@ -47,8 +47,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Load Settings
-    const savedTheme = await appDb.getSetting('theme', 'dark');
+    const savedTheme = (await appDb.getSetting('theme', null)) || localStorage.getItem('teamanalysis_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
+    try { localStorage.setItem('teamanalysis_theme', savedTheme); } catch(e) {}
     updateThemeTooltip(savedTheme);
 
     const savedAnon = await appDb.getSetting('isAnonymous', false);
@@ -166,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const next = themeCycle[current] || 'dark';
         document.documentElement.setAttribute('data-theme', next);
         await appDb.setSetting('theme', next);
+        try { localStorage.setItem('teamanalysis_theme', next); } catch(e) {}
         updateThemeTooltip(next);
         if (window.renderStatistics) {
             window.renderStatistics();
