@@ -2602,9 +2602,10 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 legendConfig.title = {
                     display: true,
                     text: titleText,
+                    position: 'start',
                     color: textColor,
-                    font: { weight: 'bold', size: 12 },
-                    padding: { bottom: 8 }
+                    font: { weight: '600', size: 14 },
+                    padding: { bottom: 10 }
                 };
             }
 
