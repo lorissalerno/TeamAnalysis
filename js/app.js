@@ -113,6 +113,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (tc) tc.style.display = 'flex';
                 if (ic) ic.style.display = 'none';
                 if (cc) cc.style.display = 'flex';
+                if (window.renderTeamStats) {
+                    window.renderTeamStats();
+                }
             } else if (targetId === 'stat-individual') {
                 const tc = document.getElementById('team-header-controls');
                 const ic = document.getElementById('individual-header-controls');
@@ -120,6 +123,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (tc) tc.style.display = 'none';
                 if (ic) ic.style.display = 'flex';
                 if (cc) cc.style.display = 'none';
+                if (window.renderIndividualStats) {
+                    window.renderIndividualStats();
+                }
             }
         });
     });

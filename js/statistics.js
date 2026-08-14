@@ -540,8 +540,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         await renderTeamStats();
-        if (currentVal) await renderIndividualStats();
+        await renderIndividualStats();
     };
+
+    window.renderIndividualStats = renderIndividualStats;
+    window.renderTeamStats = renderTeamStats;
 });
 
 const DISTINCT_COLORS = [
@@ -1313,24 +1316,48 @@ async function renderTeamStats() {
 async function renderIndividualStats() {
     const container = document.getElementById('individual-stats-container');
     if (!container) return;
-    const employee = document.getElementById('individual-select').value;
+    const select = document.getElementById('individual-select');
+    const employee = select ? select.value : '';
     
     if (!employee) {
         container.style.minHeight = '';
+        const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
+        const names = Object.keys(window.appState.anonymousMap || {}).sort();
+        let optionsHtml = `<option value="">${placeholder}</option>`;
+        names.forEach(name => {
+            optionsHtml += `<option value="${name}">${name}</option>`;
+        });
+
         container.innerHTML = `
-            <div class="card" style="padding: 40px 20px; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-top: 12px;">
-                <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-base); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); margin: 0 auto;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <div class="card" style="padding: 48px 24px; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; margin-top: 12px; grid-column: 1 / -1; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius);">
+                <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--bg-base); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--primary); margin: 0 auto;">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </div>
-                <div>
-                    <h3 style="font-size: 1.05rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Seleziona un Collaboratore</h3>
-                    <p style="font-size: 0.85rem;">Seleziona un collaboratore dal menu in alto per visualizzare le sue statistiche e gli obiettivi di vendita.</p>
+                <div style="max-width: 440px;">
+                    <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">Nessun Collaboratore Selezionato</h3>
+                    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">Seleziona un collaboratore dal menu in alto o qui sotto per visualizzare le sue statistiche e il monitoraggio degli obiettivi.</p>
+                    <div style="display: inline-flex; align-items: center; justify-content: center;">
+                        <select id="center-individual-select" style="padding: 6px 12px; height: 36px; border-radius: 6px; background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border); font-size: 0.85rem; cursor: pointer; outline: none; min-width: 220px;">
+                            ${optionsHtml}
+                        </select>
+                    </div>
                 </div>
             </div>
         `;
+
+        const centerSelect = container.querySelector('#center-individual-select');
+        if (centerSelect) {
+            centerSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (select) {
+                    select.value = val;
+                }
+                renderIndividualStats();
+            });
+        }
         return;
     }
     
