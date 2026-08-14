@@ -1968,12 +1968,56 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
         }
     }
 
+    const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
+    const totalWork = Object.values(collabWorkPcts).reduce((sum, val) => sum + (Number(val) || 0), 0) || 1;
+    const empWorkPct = Number(collabWorkPcts[employee] || 100);
+
+    const customConfig = (await appDb.getSetting('ind_goals_config_' + employee, null)) || {
+        hidden: {},
+        targets: {},
+        monthlyTargets: {}
+    };
+
+    const items = [];
+    for (const table of matchSkillTables) {
+        const products = await appDb.getSetting(`sales_table_products_${table.id}`, []);
+        const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${table.id}`, {})) || {};
+
+        for (const product of products || []) {
+            const label = product.label || product.key || 'Obiettivo';
+            const mappedMetrics = Array.isArray(product.mappedMetrics)
+                ? product.mappedMetrics
+                : (product.mappedMetric ? product.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+
+            let target = 0;
+            if (product.mode === 'team') {
+                target = Number(savedTargets['TEAM_' + product.key] || 0);
+            } else {
+                const indivTotal = Number(savedTargets['INDIV_TOTAL_' + product.key] || 0);
+                target = totalWork > 0 ? Math.round(indivTotal * (empWorkPct / totalWork)) : 0;
+            }
+
+            if (customConfig.targets && customConfig.targets[label] !== undefined) {
+                target = Number(customConfig.targets[label]);
+            }
+
+            items.push({
+                key: label,
+                label,
+                isCHF: !!product.isCHF,
+                skill: table.skill && table.skill !== 'ALL' ? table.skill : null,
+                mappedMetrics,
+                target
+            });
+        }
+    }
+
     const defaultItems = [
-        { key: 'AOIT (CHF)', label: 'AOIT (CHF)', isCHF: true, mappedMetrics: ['AOIT'] },
-        { key: 'Retention', label: 'Retention', isCHF: false, mappedMetrics: ['Retention'] },
-        { key: 'Internet', label: 'Internet', isCHF: false, mappedMetrics: ['Internet'] },
-        { key: 'TV', label: 'TV', isCHF: false, mappedMetrics: ['TV'] },
-        { key: 'Mobile', label: 'Mobile', isCHF: false, mappedMetrics: ['Mobile'] }
+        { key: 'AOIT (CHF)', label: 'AOIT (CHF)', isCHF: true, mappedMetrics: ['AOIT'], target: customConfig.targets?.['AOIT (CHF)'] ?? 5000 },
+        { key: 'Retention', label: 'Retention', isCHF: false, mappedMetrics: ['Retention'], target: customConfig.targets?.['Retention'] ?? 12 },
+        { key: 'Internet', label: 'Internet', isCHF: false, mappedMetrics: ['Internet'], target: customConfig.targets?.['Internet'] ?? 12 },
+        { key: 'TV', label: 'TV', isCHF: false, mappedMetrics: ['TV'], target: customConfig.targets?.['TV'] ?? 12 },
+        { key: 'Mobile', label: 'Mobile', isCHF: false, mappedMetrics: ['Mobile'], target: customConfig.targets?.['Mobile'] ?? 12 }
     ];
 
     const targetItems = items.length > 0 ? items : defaultItems;
@@ -2030,11 +2074,38 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
         return `<span style="font-weight:800; color:var(--primary); font-family:monospace;">${Math.round(num)}</span>`;
     };
 
+    const formatTargetValue = (num, isCHF) => {
+        if (!num || num === 0) return `<span style="color:var(--text-muted); opacity:0.4;">—</span>`;
+        if (isCHF) {
+            return `<span style="font-weight:700; color:var(--text-muted); font-family:monospace;">CHF ${Math.round(num).toLocaleString('de-CH')}</span>`;
+        }
+        return `<span style="font-weight:700; color:var(--text-muted); font-family:monospace;">${Math.round(num)}</span>`;
+    };
+
+    const formatPctBadge = (pct) => {
+        if (pct === null || pct === undefined) return `<span style="color:var(--text-muted); opacity:0.4;">—</span>`;
+        let bg = 'rgba(239, 68, 68, 0.15)';
+        let color = '#ef4444';
+        if (pct >= 100) {
+            bg = 'rgba(16, 185, 129, 0.15)';
+            color = '#10b981';
+        } else if (pct >= 80) {
+            bg = 'rgba(59, 130, 246, 0.15)';
+            color = '#3b82f6';
+        } else if (pct >= 50) {
+            bg = 'rgba(245, 158, 11, 0.15)';
+            color = '#f59e0b';
+        }
+        return `<span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700; font-family:monospace; background:${bg}; color:${color};">${pct}%</span>`;
+    };
+
     let tableRowsHtml = '';
     targetItems.forEach((item, idx) => {
         const isCHF = item.isCHF;
         const rowTotal = rowTotals[idx];
         const rowVals = matrix[idx];
+        const target = item.target || 0;
+        const pct = target > 0 ? Math.round((rowTotal / target) * 100) : null;
 
         tableRowsHtml += `
             <tr>
@@ -2053,6 +2124,12 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
                 `).join('')}
                 <td style="text-align: right; background: var(--bg-base); font-weight: 700;">
                     ${formatTotalValue(rowTotal, isCHF)}
+                </td>
+                <td style="text-align: right; background: var(--bg-base); font-weight: 700;">
+                    ${formatTargetValue(target, isCHF)}
+                </td>
+                <td style="text-align: center; background: var(--bg-base); font-weight: 700;">
+                    ${formatPctBadge(pct)}
                 </td>
             </tr>
         `;
@@ -2081,7 +2158,9 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
                         ${monthShortNames.map((m, idx) => `
                             <th title="${monthFullNames[idx]}" style="text-align:center; min-width:55px;">${m}</th>
                         `).join('')}
-                        <th style="text-align:right; min-width:95px; color:var(--primary);">Totale</th>
+                        <th style="text-align:right; min-width:90px; color:var(--primary);">Totale</th>
+                        <th style="text-align:right; min-width:90px; color:var(--text-muted);">Obiettivo</th>
+                        <th style="text-align:center; min-width:65px; color:var(--text-muted);">%</th>
                     </tr>
                 </thead>
                 <tbody>
