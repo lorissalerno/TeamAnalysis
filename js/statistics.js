@@ -1831,7 +1831,8 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
                 isCHF: !!product.isCHF,
                 defaultTarget,
                 color: ['#3b82f6', '#059669', '#d97706', '#8b5cf6', '#ec4899'][items.length % 5],
-                skill: table.skill && table.skill !== 'ALL' ? table.skill : null
+                skill: table.skill && table.skill !== 'ALL' ? table.skill : null,
+                mappedMetrics
             };
 
             if (defaultTarget > 0 || mappedMetrics.length > 0) {
@@ -1843,22 +1844,8 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
     const fallbackItems = items.length > 0 ? items : defaultItems;
 
     const getActualForLabel = (itemKey, mappedMetrics) => {
-        if (mappedMetrics && mappedMetrics.length > 0) {
-            return calcActualForMetric(mappedMetrics, perfData, salesData, employee);
-        }
-        const normalized = normalizeGoalMetricKey(itemKey);
-        let annualAchieved = 0;
-        salesData.forEach(r => {
-            if (r.employee !== employee || !r.data) return;
-            const data = r.data || {};
-            if (normalized.includes('aoit')) annualAchieved += parseMetricValue(data['AOIT'] ?? data['AOIT (CHF)'] ?? data['AOIT gew'] ?? data.Value ?? 0);
-            else if (normalized.includes('retention')) annualAchieved += parseMetricValue(data['Retention'] ?? data.Value ?? 0);
-            else if (normalized.includes('internet')) annualAchieved += parseMetricValue(data['Internet'] ?? data.Value ?? 0);
-            else if (normalized.includes('tv')) annualAchieved += parseMetricValue(data['TV'] ?? data.Value ?? 0);
-            else if (normalized.includes('mobile')) annualAchieved += parseMetricValue(data['Mobile'] ?? data.Value ?? 0);
-            else annualAchieved += parseMetricValue(data[itemKey] ?? data.Value ?? 0);
-        });
-        return annualAchieved;
+        const metricsToUse = mappedMetrics && mappedMetrics.length > 0 ? mappedMetrics : [itemKey];
+        return calcActualForMetric(metricsToUse, perfData, salesData, employee);
     };
 
     let allDates = [];
@@ -1889,29 +1876,15 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
 
         const mappedMetrics = Array.isArray(item.mappedMetrics) ? item.mappedMetrics : [];
         let annualAchieved = getActualForLabel(item.label, mappedMetrics);
-        let monthlyAchieved = 0;
-
-        salesData.forEach(r => {
-            if (r.employee !== employee || !r.data || !latestMonthStr || !r.date || !r.date.startsWith(latestMonthStr)) return;
-            if (mappedMetrics.length > 0) {
-                monthlyAchieved += calcActualForMetric(mappedMetrics, perfData, salesData, employee) - 0;
-                return;
-            }
-            const data = r.data || {};
-            const normalized = normalizeGoalMetricKey(item.label);
-            if (normalized.includes('aoit')) monthlyAchieved += parseMetricValue(data['AOIT'] ?? data['AOIT (CHF)'] ?? data['AOIT gew'] ?? data.Value ?? 0);
-            else if (normalized.includes('retention')) monthlyAchieved += parseMetricValue(data['Retention'] ?? data.Value ?? 0);
-            else if (normalized.includes('internet')) monthlyAchieved += parseMetricValue(data['Internet'] ?? data.Value ?? 0);
-            else if (normalized.includes('tv')) monthlyAchieved += parseMetricValue(data['TV'] ?? data.Value ?? 0);
-            else if (normalized.includes('mobile')) monthlyAchieved += parseMetricValue(data['Mobile'] ?? data.Value ?? 0);
-            else monthlyAchieved += parseMetricValue(data[item.label] ?? data.Value ?? 0);
-        });
-
-        if (mappedMetrics.length > 0 && latestMonthStr) {
-            monthlyAchieved = salesData
-                .filter(r => r.employee === employee && r.date && r.date.startsWith(latestMonthStr))
-                .reduce((sum, row) => sum + calcActualForMetric(mappedMetrics, perfData, [row], employee), 0);
-        }
+        
+        const metricsToUse = mappedMetrics.length > 0 ? mappedMetrics : [item.label || item.key];
+        const monthlySalesData = latestMonthStr
+            ? salesData.filter(r => r.employee === employee && r.date && r.date.startsWith(latestMonthStr))
+            : [];
+        const monthlyPerfData = latestMonthStr
+            ? perfData.filter(r => r.employee === employee && r.date && r.date.startsWith(latestMonthStr))
+            : [];
+        let monthlyAchieved = calcActualForMetric(metricsToUse, monthlyPerfData, monthlySalesData, employee);
 
         const formatVal = (v) => {
             if (item.isCHF) return 'CHF ' + Math.round(v).toLocaleString('de-CH');
@@ -2028,22 +2001,10 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
                 return p.length >= 2 && (parseInt(p[1], 10) - 1) === mIdx;
             });
 
-            let val = 0;
-            if (item.mappedMetrics && item.mappedMetrics.length > 0) {
-                val = calcActualForMetric(item.mappedMetrics, monthPerf, monthSales, employee);
-            } else {
-                const normalized = normalizeGoalMetricKey(item.label || item.key);
-                monthSales.forEach(r => {
-                    if (!r.data) return;
-                    const data = r.data || {};
-                    if (normalized.includes('aoit')) val += parseMetricValue(data['AOIT'] ?? data['AOIT (CHF)'] ?? data['AOIT gew'] ?? data.Value ?? 0);
-                    else if (normalized.includes('retention')) val += parseMetricValue(data['Retention'] ?? data.Value ?? 0);
-                    else if (normalized.includes('internet')) val += parseMetricValue(data['Internet'] ?? data['Nuovo Internet'] ?? data.Value ?? 0);
-                    else if (normalized.includes('tv')) val += parseMetricValue(data['TV'] ?? data['Nuovo TV'] ?? data.Value ?? 0);
-                    else if (normalized.includes('mobile')) val += parseMetricValue(data['Mobile'] ?? data['Nuovo Mobile'] ?? data.Value ?? 0);
-                    else val += parseMetricValue(data[item.label] ?? data.Value ?? 0);
-                });
-            }
+            const metricsToUse = item.mappedMetrics && item.mappedMetrics.length > 0
+                ? item.mappedMetrics
+                : [item.label || item.key];
+            const val = calcActualForMetric(metricsToUse, monthPerf, monthSales, employee);
             monthVals[mIdx] = val;
             total += val;
         }
@@ -4075,20 +4036,53 @@ function calcActualForMetric(mappedMetrics, perfData, salesData, employee) {
 
     mappedMetrics.forEach(metric => {
         const isPerf = metric.startsWith('Performance: ');
-        const rawKey = metric.replace('Performance: ', '').replace('Sales: ', '');
-        const source = isPerf ? perfData : salesData;
+        const rawKey = metric.replace(/^Performance:\s*/i, '').replace(/^Sales:\s*/i, '').trim();
+        const normKey = normalizeGoalMetricKey(rawKey);
+        const source = isPerf ? (perfData || []) : (salesData || []);
+
         source.forEach(row => {
             if (employee && row.employee !== employee) return;
+            if (!row.data) return;
+
             let val = 0;
-            if (!isPerf && row.data && row.data.Product) {
-                // record sales con campo Product (nuovi abo)
-                if (row.data.Product === rawKey) {
-                    val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data[rawKey] ?? 0);
-                } else {
-                    val = parseMetricValue(row.data[rawKey] ?? 0);
-                }
-            } else if (row.data) {
+            if (isPerf) {
                 val = parseMetricValue(row.data[rawKey] ?? 0);
+            } else {
+                // Sales data
+                const rowProduct = row.data.Product || '';
+                const normProduct = normalizeGoalMetricKey(rowProduct);
+                const isAOITMetric = normKey.includes('aoit') || normKey === 'aoit';
+                const isAOITRow = row.skill === 'AOIT' || row.category === 'sales_aoit' || row.data.AOIT !== undefined || row.data['AOIT (CHF)'] !== undefined || row.data['AOIT gew'] !== undefined;
+
+                if (isAOITMetric) {
+                    if (isAOITRow) {
+                        val = parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0);
+                    } else if (rowProduct === rawKey || (normProduct && normProduct === normKey)) {
+                        val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data[rawKey] ?? 0);
+                    }
+                } else if (rowProduct && (rowProduct === rawKey || (normProduct && normProduct === normKey) || goalMetricMatches(rowProduct, rawKey))) {
+                    if (isAOITRow) {
+                        val = parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0);
+                    } else {
+                        val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data[rawKey] ?? row.data['Nb Events'] ?? 1);
+                    }
+                } else if (row.data[rawKey] !== undefined) {
+                    val = parseMetricValue(row.data[rawKey]);
+                } else if (normKey.includes('internet') && (normProduct.includes('internet') || normProduct.includes('bb acq'))) {
+                    val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data['Nb Events'] ?? 1);
+                } else if (normKey.includes('tv') && normProduct.includes('tv')) {
+                    val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data['Nb Events'] ?? 1);
+                } else if (normKey.includes('mobile') && normProduct.includes('mobile')) {
+                    val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data['Nb Events'] ?? 1);
+                } else if (normKey.includes('retention') && (normProduct.includes('retention') || normProduct.includes('ret'))) {
+                    val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data['Nb Events'] ?? 1);
+                } else if (normKey.includes('security') && normProduct.includes('security')) {
+                    if (isAOITRow) {
+                        val = parseMetricValue(row.data.AOIT ?? row.data['AOIT (CHF)'] ?? row.data['AOIT gew'] ?? row.data.Value ?? 0);
+                    } else {
+                        val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? 1);
+                    }
+                }
             }
             total += val;
         });
@@ -4189,8 +4183,8 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
             <td style="padding:8px 6px; text-align:center; border-right:1px solid var(--border); color:var(--text-muted); font-weight:600;">${empWorkPct}%</td>`;
 
         products.forEach(p => {
-            const mappedMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics
-                : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+            const mappedMetrics = (Array.isArray(p.mappedMetrics) && p.mappedMetrics.length > 0) ? p.mappedMetrics
+                : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : [p.label || p.key]);
             const actualVal = calcActualForMetric(mappedMetrics, perfData, salesData, emp);
 
             if (p.mode === 'team') {
@@ -4223,8 +4217,8 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
         <td style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); font-weight:800;"></td>`;
 
     products.forEach(p => {
-        const mappedMetrics = Array.isArray(p.mappedMetrics) ? p.mappedMetrics
-            : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+        const mappedMetrics = (Array.isArray(p.mappedMetrics) && p.mappedMetrics.length > 0) ? p.mappedMetrics
+            : (p.mappedMetric ? p.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : [p.label || p.key]);
         const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
         if (p.mode === 'team') {
             const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
