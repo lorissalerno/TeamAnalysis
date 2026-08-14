@@ -1338,11 +1338,16 @@ async function renderIndividualStats() {
                 </div>
                 <div style="max-width: 440px;">
                     <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 6px;">Nessun Collaboratore Selezionato</h3>
-                    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">Seleziona un collaboratore dal menu in alto o qui sotto per visualizzare le sue statistiche e il monitoraggio degli obiettivi.</p>
-                    <div style="display: inline-flex; align-items: center; justify-content: center;">
-                        <select id="center-individual-select" style="padding: 6px 12px; height: 36px; border-radius: 6px; background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border); font-size: 0.85rem; cursor: pointer; outline: none; min-width: 220px;">
+                    <div style="position: relative; display: inline-flex; align-items: center;">
+                        <span style="position: absolute; left: 12px; pointer-events: none; color: var(--primary); display: flex; align-items: center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </span>
+                        <select id="center-individual-select" class="custom-select" style="padding-left: 36px; padding-right: 32px; height: 38px; border-radius: 8px; background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border); font-size: 0.88rem; font-weight: 500; cursor: pointer; outline: none; min-width: 240px; appearance: none; -webkit-appearance: none;">
                             ${optionsHtml}
                         </select>
+                        <span style="position: absolute; right: 12px; pointer-events: none; color: var(--text-muted); display: flex; align-items: center;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </span>
                     </div>
                 </div>
             </div>

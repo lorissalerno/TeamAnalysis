@@ -496,3 +496,19 @@ select option {
     border: 1px solid rgba(59, 130, 246, 0.4);
 }
 
+/* Custom Select Styling */
+.custom-select {
+    transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition);
+}
+
+.custom-select:hover {
+    border-color: var(--primary) !important;
+    background-color: var(--bg-surface-hover) !important;
+}
+
+.custom-select:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    outline: none !important;
+}
+
