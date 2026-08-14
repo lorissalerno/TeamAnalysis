@@ -114,37 +114,82 @@
             </div>
 
             <!-- List of Imported Data -->
-            <div class="card" style="margin-top: 24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-                    <div>
-                        <h2 style="margin:0;">Dati Importati nel Database</h2>
-                        <span id="db-active-year-label" style="font-size:0.85rem; color:var(--text-muted);"></span>
+            <div class="card db-manager-card" style="margin-top: 24px;">
+                <div class="db-card-header">
+                    <div class="db-title-group">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary); flex-shrink:0;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                            <h2 style="margin:0; font-size:1.15rem; font-weight:700;">Dati Importati nel Database</h2>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                            <span id="db-active-year-label" class="badge" style="font-size:0.75rem; font-weight:600;"></span>
+                            <span id="db-records-counter" style="font-size:0.8rem; color:var(--text-muted);"></span>
+                        </div>
                     </div>
-                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                        <select id="db-filter-skill" style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
-                            <option value="ALL">Tutte le fonti (Performance & Sales)</option>
-                            <option value="SALES">Solo Sales</option>
-                        </select>
-                        <input type="text" id="db-search-input" placeholder="Cerca collaboratore, metrica..." style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); width:220px;">
-                        <button class="btn secondary" id="clear-filtered-db-btn" style="padding:6px 12px; font-size:0.85rem;" title="Elimina dati filtrati per l'anno corrente">Elimina Dati Filtrati</button>
+
+                    <div class="db-actions-toolbar">
+                        <div class="db-search-wrapper">
+                            <svg class="db-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="db-search-input" placeholder="Cerca collaboratore, metrica, data..." class="db-search-field">
+                            <button type="button" id="db-search-clear" class="db-search-clear-btn" title="Cancella ricerca" style="display:none;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
                         <button class="btn primary" id="add-manual-data-btn" style="padding:6px 12px; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            Aggiungi Dato Manuale
+                            Aggiungi Dato
+                        </button>
+                        <button class="btn secondary danger-hover-btn" id="clear-filtered-db-btn" style="padding:6px 12px; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;" title="Elimina dati filtrati per l'anno selezionato">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Elimina Dati Filtrati
                         </button>
                     </div>
                 </div>
 
-                <div id="db-summary-badges" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;"></div>
+                <!-- Interactive Filter Badges Bar -->
+                <div class="db-filter-bar" style="margin-top:14px; margin-bottom:14px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:inline-flex; align-items:center; gap:5px; margin-right:4px;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                        Filtra per fonte:
+                    </div>
+                    <div id="db-summary-badges" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;"></div>
+                </div>
 
-                <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
-                    <table class="data-table" id="db-imported-table">
+                <!-- Data Table -->
+                <div class="db-table-scroll-container">
+                    <table class="data-table db-table-interactive" id="db-imported-table">
                         <thead>
                             <tr>
-                                <th>Data</th>
-                                <th>Collaboratore</th>
-                                <th>Tipo / Skill</th>
-                                <th>Metrica / Prodotto</th>
-                                <th style="text-align:center;">Valore</th>
+                                <th class="db-sortable-th" data-sort="date" title="Clicca per ordinare per data">
+                                    <div class="th-sort-inner">
+                                        <span>Data</span>
+                                        <span class="sort-icon-slot" data-sort-for="date"></span>
+                                    </div>
+                                </th>
+                                <th class="db-sortable-th" data-sort="employee" id="db-th-employee" title="Clicca per ordinare per collaboratore">
+                                    <div class="th-sort-inner">
+                                        <span id="db-th-employee-label">Collaboratore</span>
+                                        <span class="sort-icon-slot" data-sort-for="employee"></span>
+                                    </div>
+                                </th>
+                                <th class="db-sortable-th" data-sort="skill" title="Clicca per ordinare per tipo / skill">
+                                    <div class="th-sort-inner">
+                                        <span>Tipo / Skill</span>
+                                        <span class="sort-icon-slot" data-sort-for="skill"></span>
+                                    </div>
+                                </th>
+                                <th class="db-sortable-th" data-sort="metric" title="Clicca per ordinare per metrica / prodotto">
+                                    <div class="th-sort-inner">
+                                        <span>Metrica / Prodotto</span>
+                                        <span class="sort-icon-slot" data-sort-for="metric"></span>
+                                    </div>
+                                </th>
+                                <th class="db-sortable-th" data-sort="value" title="Clicca per ordinare per valore" style="text-align:center;">
+                                    <div class="th-sort-inner" style="justify-content:center;">
+                                        <span>Valore</span>
+                                        <span class="sort-icon-slot" data-sort-for="value"></span>
+                                    </div>
+                                </th>
                                 <th style="width:90px; text-align:center;">Azione</th>
                             </tr>
                         </thead>

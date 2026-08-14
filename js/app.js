@@ -22,7 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.appState = {
         isAnonymous: false,
         activeYear: new Date().getFullYear().toString(),
-        anonymousMap: {} // { "Loris Salerno": 1, ... }
+        anonymousMap: {}, // { "Loris Salerno": 1, ... }
+        dbCategoryFilters: null,
+        dbSort: { column: 'date', direction: 'desc' }
     };
 
     // Load Settings
@@ -371,8 +373,8 @@ function setupImports() {
     const perfInput = document.getElementById('perf-file');
     const salesInput = document.getElementById('sales-file');
     const addSkillBtn = document.getElementById('add-skill-btn');
-    const filterSelect = document.getElementById('db-filter-skill');
     const searchInput = document.getElementById('db-search-input');
+    const searchClearBtn = document.getElementById('db-search-clear');
     const clearFilteredBtn = document.getElementById('clear-filtered-db-btn');
 
     setupSkillsModal();
@@ -397,48 +399,87 @@ function setupImports() {
         });
     }
 
-    if (filterSelect) {
-        filterSelect.addEventListener('change', () => renderImportedData());
-    }
-
     if (searchInput) {
         searchInput.addEventListener('input', () => renderImportedData());
     }
 
+    if (searchClearBtn && searchInput) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            renderImportedData();
+        });
+    }
+
+    // Gestione clic sulle intestazioni di colonna per ordinamento
+    document.querySelectorAll('.db-sortable-th').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.getAttribute('data-sort');
+            if (!col) return;
+            if (window.appState.dbSort && window.appState.dbSort.column === col) {
+                window.appState.dbSort.direction = (window.appState.dbSort.direction === 'asc' ? 'desc' : 'asc');
+            } else {
+                window.appState.dbSort = {
+                    column: col,
+                    direction: (col === 'date' || col === 'value') ? 'desc' : 'asc'
+                };
+            }
+            renderImportedData();
+        });
+    });
+
     if (clearFilteredBtn) {
         clearFilteredBtn.addEventListener('click', async () => {
-            const filterValue = document.getElementById('db-filter-skill').value;
             const activeYear = window.appState.activeYear;
+            const activeFilters = window.appState.dbCategoryFilters;
 
+            if (!activeFilters || activeFilters.size === 0) {
+                alert("Nessuna fonte attualmente selezionata.");
+                return;
+            }
+
+            const perfRecords = await appDb.getAll('performance', 'year', activeYear);
+            const salesRecords = await appDb.getAll('sales', 'year', activeYear);
+
+            const allCategories = [];
+            perfRecords.forEach(r => {
+                const sk = r.skill || 'Performance (Generale)';
+                if (!allCategories.includes(sk)) allCategories.push(sk);
+            });
+            if (salesRecords.length > 0) allCategories.push('Sales');
+
+            const isAll = allCategories.length > 0 && allCategories.every(cat => activeFilters.has(cat));
             let confirmMsg = "";
-            if (filterValue === 'ALL') {
+            if (isAll) {
                 confirmMsg = `Sei sicuro di voler eliminare TUTTI i dati (Performance e Sales) per l'anno ${activeYear}?`;
-            } else if (filterValue === 'SALES') {
-                confirmMsg = `Sei sicuro di voler eliminare tutti i dati Sales per l'anno ${activeYear}?`;
             } else {
-                confirmMsg = `Sei sicuro di voler eliminare tutti i dati della Skill "${filterValue}" per l'anno ${activeYear}?`;
+                const activeList = Array.from(activeFilters).join(', ');
+                confirmMsg = `Sei sicuro di voler eliminare tutti i dati delle fonti attive (${activeList}) per l'anno ${activeYear}?`;
             }
 
             if (!confirm(confirmMsg)) return;
 
-            if (filterValue === 'ALL') {
-                const perf = await appDb.getAll('performance', 'year', activeYear);
-                const sales = await appDb.getAll('sales', 'year', activeYear);
-                for (const r of perf) await appDb.deleteRecord('performance', r.id);
-                for (const r of sales) await appDb.deleteRecord('sales', r.id);
+            if (isAll) {
+                for (const r of perfRecords) await appDb.deleteRecord('performance', r.id);
+                for (const r of salesRecords) await appDb.deleteRecord('sales', r.id);
                 logImport(`Eliminati tutti i dati per l'anno ${activeYear}.`);
-            } else if (filterValue === 'SALES') {
-                const sales = await appDb.getAll('sales', 'year', activeYear);
-                for (const r of sales) await appDb.deleteRecord('sales', r.id);
-                logImport(`Eliminati tutti i dati Sales per l'anno ${activeYear}.`);
             } else {
-                await appDb.deleteBySkill('performance', filterValue, activeYear);
-                logImport(`Eliminati tutti i dati della Skill "${filterValue}" per l'anno ${activeYear}.`);
+                if (activeFilters.has('Sales')) {
+                    for (const r of salesRecords) await appDb.deleteRecord('sales', r.id);
+                    logImport(`Eliminati tutti i dati Sales per l'anno ${activeYear}.`);
+                }
+                for (const cat of activeFilters) {
+                    if (cat !== 'Sales') {
+                        await appDb.deleteBySkill('performance', cat, activeYear);
+                        logImport(`Eliminati tutti i dati della Skill "${cat}" per l'anno ${activeYear}.`);
+                    }
+                }
             }
 
             await refreshYearsList();
             await renderImportedData();
             if (window.renderStatistics) window.renderStatistics();
+            if (window.renderGoals) renderGoals();
+            if (window.renderDashboard) renderDashboard();
         });
     }
 
@@ -629,6 +670,7 @@ async function renderSkillsModalList() {
 // --- RENDER IMPORTED DATABASE DATA (SINGLE ROW PER METRIC) ---
 async function renderImportedData() {
     const activeYearLabel = document.getElementById('db-active-year-label');
+    const recordsCounter = document.getElementById('db-records-counter');
     const tbody = document.getElementById('db-imported-tbody');
     const badgesContainer = document.getElementById('db-summary-badges');
     
@@ -640,12 +682,14 @@ async function renderImportedData() {
     const perfRecords = await appDb.getAll('performance', 'year', activeYear);
     const salesRecords = await appDb.getAll('sales', 'year', activeYear);
     
-    const filterSelect = document.getElementById('db-filter-skill');
-    const filterValue = filterSelect ? filterSelect.value : 'ALL';
     const searchInput = document.getElementById('db-search-input');
+    const searchClearBtn = document.getElementById('db-search-clear');
     const searchTerm = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    if (searchClearBtn) {
+        searchClearBtn.style.display = searchTerm ? 'flex' : 'none';
+    }
 
-    // Summary badges calculation
+    // Calcolo conteggi per ciascuna fonte
     const skillCounts = {};
     let totalPerf = 0;
     let totalSales = 0;
@@ -659,21 +703,110 @@ async function renderImportedData() {
         totalSales++;
     });
 
-    let badgesHtml = `<span style="padding:4px 10px; border-radius:12px; background:var(--secondary); font-size:0.8rem; font-weight:500;">Totale Anno: ${totalPerf + totalSales} importazioni</span>`;
-    for (const [sk, count] of Object.entries(skillCounts)) {
-        badgesHtml += `<span style="padding:4px 10px; border-radius:12px; background:var(--primary); color:#fff; font-size:0.8rem; font-weight:500;">${sk}: ${count}</span>`;
-    }
+    const totalImportazioni = totalPerf + totalSales;
+
+    // Categorie disponibili per l'anno corrente
+    const availableCategories = Object.keys(skillCounts);
     if (totalSales > 0) {
-        badgesHtml += `<span style="padding:4px 10px; border-radius:12px; background:#10b981; color:#fff; font-size:0.8rem; font-weight:500;">Sales: ${totalSales}</span>`;
-    }
-    badgesContainer.innerHTML = badgesHtml;
-
-    const dbColHeader = document.querySelector('#db-imported-table th:nth-child(2)');
-    if (dbColHeader) {
-        dbColHeader.textContent = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
+        availableCategories.push('Sales');
     }
 
-    // Explode records into single rows (1 row per metric key-value)
+    // Inizializzazione o sincronizzazione del set di filtri categoria
+    if (!window.appState.dbCategoryFilters || window.appState._dbCategoryYear !== activeYear) {
+        window.appState.dbCategoryFilters = new Set(availableCategories);
+        window.appState._dbCategoryYear = activeYear;
+    }
+
+    // Render delle chip / pulsanti interattivi di attivazione/disattivazione
+    if (badgesContainer) {
+        badgesContainer.innerHTML = '';
+
+        // Tasto "Totale Anno" / Reset filtri
+        const isAllActive = availableCategories.length > 0 && availableCategories.every(cat => window.appState.dbCategoryFilters.has(cat));
+        const allChip = document.createElement('button');
+        allChip.type = 'button';
+        allChip.className = `db-filter-chip chip-all ${isAllActive ? 'active' : 'inactive'}`;
+        allChip.title = isAllActive ? 'Tutte le fonti sono visualizzate' : 'Clicca per mostrare tutte le fonti';
+        allChip.innerHTML = `
+            <span class="chip-state-icon">
+                ${isAllActive 
+                    ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+                    : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>'
+                }
+            </span>
+            <span>Totale Anno</span>
+            <span class="chip-count">${totalImportazioni}</span>
+        `;
+        allChip.addEventListener('click', () => {
+            window.appState.dbCategoryFilters = new Set(availableCategories);
+            renderImportedData();
+        });
+        badgesContainer.appendChild(allChip);
+
+        // Chip per ciascun Skill di Performance
+        for (const [sk, count] of Object.entries(skillCounts)) {
+            const isActive = window.appState.dbCategoryFilters.has(sk);
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = `db-filter-chip chip-skill ${isActive ? 'active' : 'inactive'}`;
+            chip.title = isActive ? `Disattiva visualizzazione "${sk}"` : `Attiva visualizzazione "${sk}"`;
+            chip.innerHTML = `
+                <span class="chip-state-icon">
+                    ${isActive 
+                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' 
+                        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+                    }
+                </span>
+                <span>${sk}</span>
+                <span class="chip-count">${count}</span>
+            `;
+            chip.addEventListener('click', () => {
+                if (window.appState.dbCategoryFilters.has(sk)) {
+                    window.appState.dbCategoryFilters.delete(sk);
+                } else {
+                    window.appState.dbCategoryFilters.add(sk);
+                }
+                renderImportedData();
+            });
+            badgesContainer.appendChild(chip);
+        }
+
+        // Chip per Sales
+        if (totalSales > 0) {
+            const isSalesActive = window.appState.dbCategoryFilters.has('Sales');
+            const salesChip = document.createElement('button');
+            salesChip.type = 'button';
+            salesChip.className = `db-filter-chip chip-sales ${isSalesActive ? 'active' : 'inactive'}`;
+            salesChip.title = isSalesActive ? 'Disattiva visualizzazione Sales' : 'Attiva visualizzazione Sales';
+            salesChip.innerHTML = `
+                <span class="chip-state-icon">
+                    ${isSalesActive 
+                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' 
+                        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+                    }
+                </span>
+                <span>Sales</span>
+                <span class="chip-count">${totalSales}</span>
+            `;
+            salesChip.addEventListener('click', () => {
+                if (window.appState.dbCategoryFilters.has('Sales')) {
+                    window.appState.dbCategoryFilters.delete('Sales');
+                } else {
+                    window.appState.dbCategoryFilters.add('Sales');
+                }
+                renderImportedData();
+            });
+            badgesContainer.appendChild(salesChip);
+        }
+    }
+
+    // Aggiornamento etichetta intestazione Collaboratore (rispetta anonimo)
+    const empHeaderLabel = document.getElementById('db-th-employee-label');
+    if (empHeaderLabel) {
+        empHeaderLabel.textContent = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
+    }
+
+    // Espansione record in singole righe (1 riga per coppia metrica-valore)
     let singleRows = [];
 
     perfRecords.forEach(r => {
@@ -687,6 +820,7 @@ async function renderImportedData() {
                     employee: r.employee,
                     type: 'Performance',
                     skill: skillName,
+                    filterCategory: skillName,
                     metric: metricName,
                     qty: '-',
                     value: val
@@ -698,7 +832,6 @@ async function renderImportedData() {
     salesRecords.forEach(r => {
         const skillName = r.skill || (r.data && r.data.Product === 'Nuovi Abo' ? 'Nuovi Abo' : 'AOIT');
         let productName = (r.data && r.data.Product) ? r.data.Product : 'AOIT';
-        // Normalize AOIT product naming: hide variants like "AOIT gew" and similar
         if (typeof productName === 'string' && productName.toLowerCase().includes('aoit')) {
             productName = 'AOIT';
         }
@@ -710,7 +843,6 @@ async function renderImportedData() {
                 value = r.data['AOIT'];
                 metricKeyForRecord = 'AOIT';
             } else if (r.data['AOIT gew'] !== undefined) {
-                // backward compatibility for older imports
                 value = r.data['AOIT gew'];
                 metricKeyForRecord = 'AOIT';
             } else if (r.data['Value'] !== undefined) {
@@ -736,47 +868,130 @@ async function renderImportedData() {
             qty = r.data['Nb Events'];
         }
 
-            singleRows.push({
+        singleRows.push({
             recordId: r.id,
             store: 'sales',
             date: r.date,
             employee: r.employee,
             type: 'Sales',
-                skill: skillName,
-                metric: (metricKeyForRecord && metricKeyForRecord !== 'AOIT' && metricKeyForRecord !== 'Nb Events') ? metricKeyForRecord : productName,
+            skill: skillName,
+            filterCategory: 'Sales',
+            metric: (metricKeyForRecord && metricKeyForRecord !== 'AOIT' && metricKeyForRecord !== 'Nb Events') ? metricKeyForRecord : productName,
             metricKey: metricKeyForRecord,
             qty: qty,
-                value: Math.round(value)
+            value: Math.round(value)
         });
     });
 
-    // Apply Filter by Skill / Sales
-    if (filterValue === 'SALES') {
-        singleRows = singleRows.filter(r => r.store === 'sales');
-    } else if (filterValue !== 'ALL') {
-        singleRows = singleRows.filter(r => r.store === 'performance' && r.skill === filterValue);
-    }
+    const totalRawRows = singleRows.length;
 
-    // Apply Search Filter across all fields
+    // Filtra per categorie attivate tramite i pulsanti/chip
+    singleRows = singleRows.filter(r => window.appState.dbCategoryFilters.has(r.filterCategory));
+
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+    // Filtra per testo di ricerca
     if (searchTerm) {
         singleRows = singleRows.filter(r => {
             const dispName = window.getDisplayName(r.employee).toLowerCase();
-            const realName = r.employee.toLowerCase();
-            const metric = r.metric.toLowerCase();
-            const skill = r.skill.toLowerCase();
+            const realName = (r.employee || '').toLowerCase();
+            const metric = (r.metric || '').toLowerCase();
+            const skill = (r.skill || '').toLowerCase();
             const date = (r.date || '').toLowerCase();
+            let monthName = '';
+            if (r.date && r.date.includes('-')) {
+                const m = parseInt(r.date.split('-')[1], 10);
+                if (m >= 1 && m <= 12) monthName = monthNames[m - 1].toLowerCase();
+            }
             const val = String(r.value).toLowerCase();
-            return dispName.includes(searchTerm) || realName.includes(searchTerm) || metric.includes(searchTerm) || skill.includes(searchTerm) || date.includes(searchTerm) || val.includes(searchTerm);
+            return dispName.includes(searchTerm) || realName.includes(searchTerm) || metric.includes(searchTerm) || skill.includes(searchTerm) || date.includes(searchTerm) || monthName.includes(searchTerm) || val.includes(searchTerm);
         });
     }
 
-    // Sort by date desc, then employee asc, then metric asc
-    singleRows.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.employee.localeCompare(b.employee) || a.metric.localeCompare(b.metric));
+    // Ordinamento colonne (A-Z, Z-A, Data cronologica, Valore numerico)
+    const sort = window.appState.dbSort || { column: 'date', direction: 'desc' };
+    singleRows.sort((a, b) => {
+        let cmp = 0;
+        if (sort.column === 'date') {
+            cmp = (a.date || '').localeCompare(b.date || '');
+        } else if (sort.column === 'employee') {
+            const nameA = window.getDisplayName(a.employee);
+            const nameB = window.getDisplayName(b.employee);
+            cmp = nameA.localeCompare(nameB, 'it', { sensitivity: 'base', numeric: true });
+        } else if (sort.column === 'skill') {
+            cmp = (a.skill || '').localeCompare(b.skill || '', 'it', { sensitivity: 'base' });
+        } else if (sort.column === 'metric') {
+            cmp = (a.metric || '').localeCompare(b.metric || '', 'it', { sensitivity: 'base' });
+        } else if (sort.column === 'value') {
+            const numA = typeof a.value === 'number' ? a.value : (parseFloat(a.value) || 0);
+            const numB = typeof b.value === 'number' ? b.value : (parseFloat(b.value) || 0);
+            cmp = numA - numB;
+        }
+
+        if (cmp === 0) {
+            // Criterio secondario in caso di parità
+            if (sort.column !== 'date') {
+                cmp = (b.date || '').localeCompare(a.date || '');
+            } else {
+                const nameA = window.getDisplayName(a.employee);
+                const nameB = window.getDisplayName(b.employee);
+                cmp = nameA.localeCompare(nameB, 'it', { sensitivity: 'base' });
+            }
+        }
+
+        return sort.direction === 'desc' ? -cmp : cmp;
+    });
+
+    // Aggiornamento icone ed evidenziazione intestazioni tabella
+    document.querySelectorAll('.db-sortable-th').forEach(th => {
+        const col = th.getAttribute('data-sort');
+        const iconSlot = th.querySelector('.sort-icon-slot');
+        if (col === sort.column) {
+            th.classList.add('sorted');
+            if (iconSlot) {
+                iconSlot.innerHTML = sort.direction === 'asc'
+                    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>'
+                    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>';
+            }
+        } else {
+            th.classList.remove('sorted');
+            if (iconSlot) {
+                iconSlot.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35;"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg>';
+            }
+        }
+    });
+
+    // Aggiornamento contatore record
+    if (recordsCounter) {
+        if (singleRows.length === totalRawRows) {
+            recordsCounter.textContent = `${totalRawRows} record totali`;
+        } else {
+            recordsCounter.textContent = `${singleRows.length} di ${totalRawRows} record`;
+        }
+    }
 
     tbody.innerHTML = '';
 
     if (singleRows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">Nessuna riga trovata nel database per l'anno ${activeYear}.</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center; padding:48px 16px; color:var(--text-muted);">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.5;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <span style="font-weight:500;">Nessun dato trovato per i filtri selezionati.</span>
+                        <button type="button" class="btn secondary" id="db-reset-filters-btn" style="padding:4px 12px; font-size:0.8rem; margin-top:4px;">Reimposta Filtri</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        const resetBtn = document.getElementById('db-reset-filters-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                if (searchInput) searchInput.value = '';
+                window.appState.dbCategoryFilters = new Set(availableCategories);
+                renderImportedData();
+            });
+        }
         return;
     }
 
@@ -789,7 +1004,6 @@ async function renderImportedData() {
             ? `<span style="padding:3px 8px; border-radius:4px; background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`
             : `<span style="padding:3px 8px; border-radius:4px; background:#10b981; color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`;
 
-        const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
         let displayDate = r.date || '-';
         if (r.date && r.date.includes('-')) {
             const parts = r.date.split('-');
@@ -805,10 +1019,10 @@ async function renderImportedData() {
             <td style="font-weight:600; text-align:center;">${r.value}</td>
             <td style="text-align:center; white-space:nowrap;">
                 <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px; display:inline-flex; align-items:center; justify-content:center;">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
                 <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px; display:inline-flex; align-items:center; justify-content:center;">
-                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
             </td>
         `;
