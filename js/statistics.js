@@ -2205,12 +2205,12 @@ function hexToHsl(hex) {
 }
 
 function getMediaTeamLineColor(hex) {
-    if (!hex) return '#F59E0B';
+    if (!hex) return '#38BDF8';
     const hsl = hexToHsl(hex);
-    // Variazione elegante di luminosità e saturazione per differenziare la linea di media dalle barre
-    const newLight = hsl.l >= 0.5 ? Math.max(hsl.l - 0.16, 0.28) : Math.min(hsl.l + 0.22, 0.82);
-    const newSat = Math.min(Math.max(hsl.s + 0.12, 0.65), 1);
-    const newHue = (hsl.h + 8) % 360;
+    // Tonalità brillante, ad alta luminosità e saturazione per staccare nettamente dalle barre scure
+    const newLight = 0.74;
+    const newSat = 0.95;
+    const newHue = (hsl.h + 20) % 360;
     return hslToHex(newHue, newSat, newLight);
 }
 
@@ -3147,20 +3147,20 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                                 yAxisID: yAxisID,
                                 borderColor: lineColor,
                                 backgroundColor: lineColor,
-                                borderWidth: 2.5,
-                                borderDash: [6, 4],
-                                pointRadius: 0,
-                                pointHoverRadius: 5,
-                                pointBackgroundColor: lineColor,
-                                pointBorderColor: '#ffffff',
+                                borderWidth: 3.5,
+                                borderDash: [6, 3],
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: '#ffffff',
+                                pointBorderColor: lineColor,
                                 pointBorderWidth: 2,
                                 fill: false,
                                 tension: 0.35,
-                                order: 1
+                                order: 0
                             });
                         });
                     } else {
-                        const baseColor = colorsList[0] || '#F59E0B';
+                        const baseColor = colorsList[0] || '#2563EB';
                         const lineColor = getMediaTeamLineColor(baseColor);
                         datasets.push({
                             label: 'Media Team',
@@ -3169,15 +3169,15 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             borderColor: lineColor,
                             backgroundColor: lineColor,
                             borderWidth: 3.5,
-                            borderDash: [6, 4],
-                            pointRadius: 0,
-                            pointHoverRadius: 5,
-                            pointBackgroundColor: lineColor,
-                            pointBorderColor: '#ffffff',
+                            borderDash: [6, 3],
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: lineColor,
                             pointBorderWidth: 2,
                             fill: false,
                             tension: 0.35,
-                            order: 1
+                            order: 0
                         });
                     }
                 }
@@ -3243,16 +3243,16 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             yAxisID: yAxisID,
                             borderColor: lineColor,
                             backgroundColor: lineColor,
-                            borderWidth: 2.5,
-                            borderDash: [6, 4],
-                            pointRadius: 0,
-                            pointHoverRadius: 5,
-                            pointBackgroundColor: lineColor,
-                            pointBorderColor: '#ffffff',
+                            borderWidth: 3.5,
+                            borderDash: [6, 3],
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: lineColor,
                             pointBorderWidth: 2,
                             fill: false,
                             tension: 0.35,
-                            order: 1
+                            order: 0
                         });
                     });
                 }
@@ -3283,15 +3283,15 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     borderColor: lineColor,
                     backgroundColor: lineColor,
                     borderWidth: 3.5,
-                    borderDash: [6, 4],
-                    pointRadius: 0,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: lineColor,
-                    pointBorderColor: '#ffffff',
+                    borderDash: [6, 3],
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: lineColor,
                     pointBorderWidth: 2,
                     fill: false,
                     tension: 0.35,
-                    order: 1
+                    order: 0
                 });
             }
         } else if (teamAvgOnly) {
@@ -3379,15 +3379,15 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     borderColor: lineColor,
                     backgroundColor: lineColor,
                     borderWidth: 3.5,
-                    borderDash: [6, 4],
-                    pointRadius: 0,
-                    pointHoverRadius: 5,
-                    pointBackgroundColor: lineColor,
-                    pointBorderColor: '#ffffff',
+                    borderDash: [6, 3],
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: lineColor,
                     pointBorderWidth: 2,
                     fill: false,
                     tension: 0.35,
-                    order: 1
+                    order: 0
                 });
             }
         }
