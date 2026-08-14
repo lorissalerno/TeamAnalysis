@@ -1341,3 +1341,35 @@ select option {
     gap: 6px;
     font-weight: 600;
 }
+
+.ind-col-month {
+    width: 1%;
+    min-width: 44px;
+    text-align: center;
+    padding: 8px 4px !important;
+}
+
+.ind-col-total {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
+
+.ind-col-target {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
+
+.ind-col-pct {
+    width: 1%;
+    white-space: nowrap;
+    text-align: center;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+

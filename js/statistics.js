@@ -2099,17 +2099,17 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
                     </div>
                 </td>
                 ${rowVals.map(val => `
-                    <td style="text-align: center; ${val > 0 ? 'background: rgba(59,130,246,0.04);' : ''}">
+                    <td class="ind-col-month" style="${val > 0 ? 'background: rgba(59,130,246,0.04);' : ''}">
                         ${formatCellValue(val, isCHF)}
                     </td>
                 `).join('')}
-                <td style="text-align: right; background: var(--bg-base); font-weight: 700;">
+                <td class="ind-col-total" style="background: var(--bg-base); font-weight: 700;">
                     ${formatTotalValue(rowTotal, isCHF)}
                 </td>
-                <td style="text-align: right; background: var(--bg-base); font-weight: 700;">
+                <td class="ind-col-target" style="background: var(--bg-base); font-weight: 700;">
                     ${formatTargetValue(target, isCHF)}
                 </td>
-                <td style="text-align: center; background: var(--bg-base); font-weight: 700;">
+                <td class="ind-col-pct" style="background: var(--bg-base); font-weight: 700;">
                     ${formatPctBadge(pct)}
                 </td>
             </tr>
@@ -2135,13 +2135,13 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
             <table class="ind-monthly-table">
                 <thead>
                     <tr>
-                        <th style="min-width:160px;">Tipo</th>
+                        <th style="min-width:140px;">Tipo</th>
                         ${monthShortNames.map((m, idx) => `
-                            <th title="${monthFullNames[idx]}" style="text-align:center; min-width:55px;">${m}</th>
+                            <th title="${monthFullNames[idx]}" class="ind-col-month">${m}</th>
                         `).join('')}
-                        <th style="text-align:right; min-width:90px; color:var(--primary);">Totale</th>
-                        <th style="text-align:right; min-width:90px; color:var(--text-muted);">Obiettivo</th>
-                        <th style="text-align:center; min-width:65px; color:var(--text-muted);">%</th>
+                        <th class="ind-col-total" style="color:var(--primary);">Totale</th>
+                        <th class="ind-col-target" style="color:var(--text-muted);">Obiettivo</th>
+                        <th class="ind-col-pct" style="color:var(--text-muted);">%</th>
                     </tr>
                 </thead>
                 <tbody>
