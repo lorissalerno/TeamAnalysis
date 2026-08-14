@@ -2416,11 +2416,12 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             return false;
         };
 
-        // Totale pacchetti (prezzo) per l'intero team
-        const buildPackagePriceEntries = () => {
+        // Totale pacchetti (prezzo)
+        const buildPackagePriceEntries = (targetEmp = null) => {
             const prodTotals = {};
             salesData.forEach(row => {
                 if (!isSalesRowMatching(row)) return;
+                if (targetEmp && row.employee !== targetEmp) return;
                 const prod = row.data && row.data.Product;
                 if (!prod) return;
                 const price = getRecordPrice(row);
@@ -2432,9 +2433,10 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         };
 
         // Totale per collaboratore della metrica selezionata
-        const buildCollaboratorEntries = () => {
+        const buildCollaboratorEntries = (targetEmp = null) => {
             const empTotals = {};
-            employees.forEach(emp => {
+            const empList = targetEmp ? [targetEmp] : employees;
+            empList.forEach(emp => {
                 let total = 0;
                 labels.forEach(date => {
                     if (datesWithData.has(date) && empDateMap[emp] && empDateMap[emp][date] !== undefined) {
@@ -2446,11 +2448,12 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             return Object.entries(empTotals).map(([e, v]) => [window.getDisplayName(e), v]).sort((a, b) => b[1] - a[1]);
         };
 
-        // Quantità per pacchetto, intero team
-        const buildPackageQtyEntries = () => {
+        // Quantità per pacchetto
+        const buildPackageQtyEntries = (targetEmp = null) => {
             const prodTotals = {};
             salesData.forEach(row => {
                 if (!isSalesRowMatching(row)) return;
+                if (targetEmp && row.employee !== targetEmp) return;
                 const prod = row.data && row.data.Product;
                 if (!prod) return;
                 const qty = Math.round(parseMetricValue(row.data['Nb Events'])) || 1;
@@ -2648,6 +2651,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 const sData = isP ? perfData : salesData;
                 let sum = 0;
                 sData.forEach(row => {
+                    if (isIndividual && employeeName && row.employee !== employeeName) return;
                     if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
                     sum += parseMetricValue(row.data[rKey]);
                 });
@@ -2656,10 +2660,18 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             pieEntries = Object.entries(metricTotals);
             renderDonut(canvasContainer, pieEntries);
         } else if (pieMode === 'doppia') {
-            // Doppia Torta: pacchetti con prezzo totale (team) + totale per collaboratore
+            // Doppia Torta: pacchetti con prezzo totale + totale per collaboratore (per il team)
             const isPiePerf = statConfig.metric.startsWith('Performance: ');
             if (isPiePerf) {
                 canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Doppia Torta è disponibile solo con dati Sales.</p>';
+            } else if (isIndividual && employeeName) {
+                // In visuale singolo collaboratore: la torta collaboratori scompare e mostra solo i pacchetti del collaboratore
+                const pkgPriceEntries = buildPackagePriceEntries(employeeName);
+                if (pkgPriceEntries.length === 0) {
+                    canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                } else {
+                    renderDonut(canvasContainer, pkgPriceEntries, (v, pct) => 'CHF ' + Math.round(v).toLocaleString('de-CH') + ' · ' + pct + '%', 'Pacchetti — Prezzo Totale');
+                }
             } else {
                 const pkgPriceEntries = buildPackagePriceEntries();
                 const collabEntries = buildCollaboratorEntries();
@@ -2692,12 +2704,13 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 }
             }
         } else if (pieMode === 'pacchetti') {
-            // Modalità Pacchetti: quantità per nome pacchetto, intero team (solo dati Sales)
+            // Modalità Pacchetti: quantità per nome pacchetto
             const isPiePerf = statConfig.metric.startsWith('Performance: ');
             if (isPiePerf) {
                 canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Pacchetti è disponibile solo con dati Sales.</p>';
             } else {
-                pieEntries = buildPackageQtyEntries();
+                const targetEmp = (isIndividual && employeeName) ? employeeName : null;
+                pieEntries = buildPackageQtyEntries(targetEmp);
                 if (pieEntries.length === 0) {
                     canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
                 } else {
@@ -2705,12 +2718,31 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 }
             }
         } else {
-            // Modalità Collaboratori: prezzo totale per ogni collaboratore
-            pieEntries = buildCollaboratorEntries();
-            if (pieEntries.length === 0) {
-                canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+            // Modalità Collaboratori: prezzo totale per ogni collaboratore (o pacchetti del singolo se in visuale individuale)
+            const isPiePerf = statConfig.metric.startsWith('Performance: ');
+            if (isIndividual && employeeName) {
+                if (!isPiePerf) {
+                    pieEntries = buildPackagePriceEntries(employeeName);
+                    if (pieEntries.length === 0) {
+                        canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                    } else {
+                        renderDonut(canvasContainer, pieEntries, (v, pct) => 'CHF ' + Math.round(v).toLocaleString('de-CH') + ' · ' + pct + '%', 'Pacchetti — Prezzo Totale');
+                    }
+                } else {
+                    pieEntries = buildCollaboratorEntries(employeeName);
+                    if (pieEntries.length === 0) {
+                        canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                    } else {
+                        renderDonut(canvasContainer, pieEntries);
+                    }
+                }
             } else {
-                renderDonut(canvasContainer, pieEntries);
+                pieEntries = buildCollaboratorEntries();
+                if (pieEntries.length === 0) {
+                    canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                } else {
+                    renderDonut(canvasContainer, pieEntries);
+                }
             }
         }
         if (!canvasContainer.style.height) canvasContainer.style.height = '360px';
