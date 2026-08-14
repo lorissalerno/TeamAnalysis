@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Sub-navigation tabs (Statistics)
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             const tabBtn = e.target.closest('.tab-btn');
             if (!tabBtn) return;
             const targetId = tabBtn.getAttribute('data-target');
@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tabBtn.classList.add('active');
 
             if (targetId === 'stat-team') {
+                if (window.appDb) await appDb.setSetting('stat_sub_tab', 'stat-team');
                 const tc = document.getElementById('team-header-controls');
                 const ic = document.getElementById('individual-header-controls');
                 const cc = document.getElementById('stats-center-controls');
@@ -117,6 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.renderTeamStats();
                 }
             } else if (targetId === 'stat-individual') {
+                if (window.appDb) await appDb.setSetting('stat_sub_tab', 'stat-individual');
                 const tc = document.getElementById('team-header-controls');
                 const ic = document.getElementById('individual-header-controls');
                 const cc = document.getElementById('stats-center-controls');

@@ -413,7 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup Individual Select change listener
     const indSelect = document.getElementById('individual-select');
     if(indSelect) {
-        indSelect.addEventListener('change', renderIndividualStats);
+        indSelect.addEventListener('change', async () => {
+            if (window.appDb) await appDb.setSetting('stat_selected_employee', indSelect.value);
+            renderIndividualStats();
+        });
     }
 
     const indAvgToggle = document.getElementById('show-team-avg-individual-toggle');
@@ -524,9 +527,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateMainTeamAvgToggleVisibility();
 
+        // Restore active sub-tab (stat-team vs stat-individual)
+        const savedSubTab = await appDb.getSetting('stat_sub_tab', 'stat-team');
+        const teamTabBtn = document.querySelector('.tab-btn[data-target="stat-team"]');
+        const indTabBtn = document.querySelector('.tab-btn[data-target="stat-individual"]');
+        const teamContent = document.getElementById('stat-team');
+        const indContent = document.getElementById('stat-individual');
+        const tc = document.getElementById('team-header-controls');
+        const ic = document.getElementById('individual-header-controls');
+        const cc = document.getElementById('stats-center-controls');
+
+        if (savedSubTab === 'stat-individual') {
+            if (teamTabBtn) teamTabBtn.classList.remove('active');
+            if (indTabBtn) indTabBtn.classList.add('active');
+            if (teamContent) teamContent.classList.remove('active');
+            if (indContent) indContent.classList.add('active');
+            if (tc) tc.style.display = 'none';
+            if (ic) ic.style.display = 'flex';
+            if (cc) cc.style.display = 'none';
+        } else {
+            if (teamTabBtn) teamTabBtn.classList.add('active');
+            if (indTabBtn) indTabBtn.classList.remove('active');
+            if (teamContent) teamContent.classList.add('active');
+            if (indContent) indContent.classList.remove('active');
+            if (tc) tc.style.display = 'flex';
+            if (ic) ic.style.display = 'none';
+            if (cc) cc.style.display = 'flex';
+        }
+
         // Populate individual select
         const select = document.getElementById('individual-select');
-        const currentVal = select.value;
+        const savedEmployee = await appDb.getSetting('stat_selected_employee', '');
+        const currentVal = select.value || savedEmployee;
         const placeholder = window.appState.isAnonymous ? 'Seleziona Collab...' : 'Seleziona Collaboratore...';
         select.innerHTML = `<option value="">${placeholder}</option>`;
         
@@ -538,6 +570,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if(name === currentVal) opt.selected = true;
             select.appendChild(opt);
         });
+        if (currentVal && names.includes(currentVal)) {
+            select.value = currentVal;
+        }
         
         await renderTeamStats();
         await renderIndividualStats();
@@ -1355,11 +1390,12 @@ async function renderIndividualStats() {
 
         const centerSelect = container.querySelector('#center-individual-select');
         if (centerSelect) {
-            centerSelect.addEventListener('change', (e) => {
+            centerSelect.addEventListener('change', async (e) => {
                 const val = e.target.value;
                 if (select) {
                     select.value = val;
                 }
+                if (window.appDb) await appDb.setSetting('stat_selected_employee', val);
                 renderIndividualStats();
             });
         }
