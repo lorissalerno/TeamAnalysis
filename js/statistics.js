@@ -2588,31 +2588,23 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 return labelSuffix ? `${label} (${labelSuffix(v, pct)})` : `${label} (${pct}%)`;
             });
 
-            const legendLabels = {
-                color: textColor,
-                font: { size: 12 },
-                padding: 12,
-                boxWidth: 14
+            const legendConfig = {
+                position: 'right',
+                labels: {
+                    color: textColor,
+                    font: { size: 12 },
+                    padding: 12,
+                    boxWidth: 14
+                }
             };
 
             if (titleText) {
-                legendLabels.generateLabels = function(chart) {
-                    const defaultLabels = Chart.overrides.doughnut.plugins.legend.labels.generateLabels.call(this, chart);
-                    defaultLabels.unshift({
-                        text: titleText,
-                        fillStyle: 'transparent',
-                        strokeStyle: 'transparent',
-                        backgroundColor: 'transparent',
-                        hidden: false,
-                        index: -1,
-                        disabled: true,
-                        font: { weight: 'bold', size: 11 }
-                    });
-                    return defaultLabels;
-                };
-                legendLabels.onClick = function(e, legendItem, legend) {
-                    if (legendItem.index === -1) return;
-                    Chart.defaults.plugins.legend.onClick.call(this, e, legendItem, legend);
+                legendConfig.title = {
+                    display: true,
+                    text: titleText,
+                    color: textColor,
+                    font: { weight: 'bold', size: 12 },
+                    padding: { bottom: 8 }
                 };
             }
 
@@ -2633,10 +2625,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                     cutout: '62%',
                     plugins: {
                         centerText: center,
-                        legend: {
-                            position: 'right',
-                            labels: legendLabels
-                        }
+                        legend: legendConfig
                     }
                 }
             });
