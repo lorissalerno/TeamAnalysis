@@ -777,8 +777,25 @@ async function openStatModal(editingStat = null) {
         const selectedColorsList = getSelectedColors();
         const skill = document.getElementById('stat-skill').value;
         const type = document.getElementById('stat-type').value;
+        const isGoalsTable = type === 'goals_table';
+        const goalsTableId = isGoalsTable ? (document.getElementById('stat-goals-table-id')?.value || '') : '';
 
-        if (selectedMetricsList.length === 0) {
+        // Suggerimento quando la modalità Pacchetti è incompatibile con i dati Performance
+        const pieModeSel = document.getElementById('stat-pie-mode');
+        const pieModeHint = document.getElementById('pie-mode-hint');
+        if (pieModeSel && pieModeHint) {
+            const perfMetric = (selectedMetricsList[0] || '').startsWith('Performance: ');
+            const showHint = type === 'pie' && pieModeSel.value === 'pacchetti' && perfMetric;
+            pieModeHint.style.display = showHint ? 'block' : 'none';
+            pieModeHint.textContent = showHint ? 'La modalità Pacchetti funziona solo con i dati Sales: seleziona una metrica Sales oppure torna a "Prezzo totale per ogni Collaboratore".' : '';
+        }
+
+        if (isGoalsTable) {
+            if (!goalsTableId) {
+                container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Seleziona una tabella obiettivi per vedere l\'anteprima</span>';
+                return;
+            }
+        } else if (selectedMetricsList.length === 0) {
             container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Seleziona almeno un dato/metrica per vedere l\'anteprima</span>';
             return;
         }
@@ -810,7 +827,9 @@ async function openStatModal(editingStat = null) {
             colors: selectedColorsList,
             skill: skill,
             type: type,
-            title: selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', ''),
+            goalsTableId: goalsTableId,
+            pieMode: document.getElementById('stat-pie-mode')?.value || 'collaboratori',
+            title: isGoalsTable ? 'Tabella Obiettivi Vendita' : (selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', '')),
             yMax: customYMax,
             y2Max: customY2Max
         };
@@ -884,6 +903,7 @@ async function openStatModal(editingStat = null) {
 
     function applyTypeUI(typeVal) {
         const isGoalsTable = typeVal === 'goals_table';
+        const isPie = typeVal === 'pie';
         if (goalsTableSelectorGroup) goalsTableSelectorGroup.style.display = isGoalsTable ? 'block' : 'none';
         if (metricsContainer2) metricsContainer2.style.display = isGoalsTable ? 'none' : '';
         if (addMetricBtn2) addMetricBtn2.style.display = isGoalsTable ? 'none' : '';
@@ -891,7 +911,9 @@ async function openStatModal(editingStat = null) {
         const skillLabel = skillSelect ? skillSelect.previousElementSibling : null;
         if (skillSelect) skillSelect.style.display = isGoalsTable ? 'none' : '';
         if (skillLabel && skillLabel.tagName === 'LABEL') skillLabel.style.display = isGoalsTable ? 'none' : '';
-        if (yScaleGroup) yScaleGroup.style.display = isGoalsTable ? 'none' : '';
+        if (yScaleGroup) yScaleGroup.style.display = (isGoalsTable || isPie) ? 'none' : '';
+        const pieModeGroup = document.getElementById('pie-mode-group');
+        if (pieModeGroup) pieModeGroup.style.display = isPie ? 'block' : 'none';
     }
 
     if (editingStat) {
@@ -899,6 +921,8 @@ async function openStatModal(editingStat = null) {
         if (editingStat.type) typeSelect.value = editingStat.type;
         if (yMaxInput) yMaxInput.value = editingStat.yMax || '';
         if (y2MaxInput) y2MaxInput.value = editingStat.y2Max || '';
+        const pieModeSelect = document.getElementById('stat-pie-mode');
+        if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
         applyTypeUI(editingStat.type || 'bar');
     }
 
@@ -909,6 +933,9 @@ async function openStatModal(editingStat = null) {
     skillSelect.addEventListener('change', schedulePreview);
     if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
     if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
+    if (goalsTableIdSelect) goalsTableIdSelect.addEventListener('change', schedulePreview);
+    const pieModeSelect2 = document.getElementById('stat-pie-mode');
+    if (pieModeSelect2) pieModeSelect2.addEventListener('change', schedulePreview);
 
     function updatePreviewAvgToggleVisibility() {
         const previewAvgLabel = modal.querySelector('#preview-show-team-avg-label');
@@ -1008,6 +1035,15 @@ function createStatModalHTML() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Aggiungi dati
                 </button>
+
+                <div id="pie-mode-group" style="display:none; margin-bottom:16px;">
+                    <label style="font-weight:700;">Contenuto della Torta:</label>
+                    <select id="stat-pie-mode" style="width:100%; padding:8px;">
+                        <option value="collaboratori">Prezzo totale per ogni Collaboratore</option>
+                        <option value="pacchetti">Nomi Pacchetti con Quantità (intero Team)</option>
+                    </select>
+                    <div id="pie-mode-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px; display:none;"></div>
+                </div>
 
                 <div id="stat-skill-group">
                     <label>Filtro Skill Performance (opzionale):</label>
@@ -1143,6 +1179,7 @@ async function saveNewStat() {
 
     const yMaxVal = parseFloat(document.getElementById('stat-y-max')?.value);
     const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
+    const pieModeVal = document.getElementById('stat-pie-mode')?.value || 'collaboratori';
 
     if (currentEditingStatId) {
         const allStats = await appDb.getAll('custom_stats');
@@ -1155,6 +1192,7 @@ async function saveNewStat() {
             existing.skill = skill;
             existing.type = type;
             existing.product = product;
+            existing.pieMode = pieModeVal;
             existing.yMax = !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null;
             existing.y2Max = !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null;
             existing.groupId = groupId || null;
@@ -1173,6 +1211,7 @@ async function saveNewStat() {
             metrics: selectedMetrics,
             colors: selectedColors,
             skill, type, product,
+            pieMode: pieModeVal,
             yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
             y2Max: !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null,
             groupId: groupId || null,
@@ -1308,7 +1347,7 @@ async function renderIndividualStats() {
     }
 
     // 2. Sezione Obiettivi di Vendita (Stile LolloData Dashboard)
-    const goalCardsHtml = buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig);
+    const goalCardsHtml = await buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig);
     if (goalCardsHtml) {
         const goalsSection = document.createElement('div');
         goalsSection.style.cssText = 'margin-bottom: 24px;';
@@ -1346,10 +1385,45 @@ async function renderIndividualStats() {
     container.style.minHeight = '';
 }
 
-function buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig) {
+function normalizeGoalMetricKey(value = '') {
+    return String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/^sales:\s*/i, '')
+        .replace(/^performance:\s*/i, '')
+        .replace(/[()]/g, '')
+        .replace(/[+\-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/aoit\s*gew|aoit\s*chf|aoit\s*g/gi, 'aoit')
+        .replace(/my\s*security\s*m\s*\+\s*l/gi, 'my security m+l')
+        .trim();
+}
+
+function isSalesGoalMetric(metric = '') {
+    const text = String(metric || '').trim();
+    if (!text) return false;
+    if (/^sales:/i.test(text)) return true;
+    const normalized = normalizeGoalMetricKey(text);
+    return /(aoit|retention|internet|tv|mobile|my security|my service)/i.test(normalized);
+}
+
+function goalMetricMatches(left, right) {
+    const leftKey = normalizeGoalMetricKey(left);
+    const rightKey = normalizeGoalMetricKey(right);
+    if (!leftKey || !rightKey) return false;
+    if (leftKey === rightKey) return true;
+    if (leftKey.includes('aoit') && rightKey.includes('aoit')) return true;
+    if (leftKey.includes('my security') && rightKey.includes('my security')) return true;
+    return false;
+}
+
+async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig) {
     const hiddenMap = customConfig.hidden || {};
     const customTargets = customConfig.targets || {};
     const customMonthlyTargets = customConfig.monthlyTargets || {};
+    const employeeSkills = new Set((window.appState?.collaboratorSkills?.[employee] || [])
+        .map(skill => String(skill).trim())
+        .filter(Boolean));
 
     const defaultItems = [
         { key: 'AOIT (CHF)', label: 'AOIT (CHF)', isCHF: true, defaultTarget: 5000, color: '#3b82f6' },
@@ -1359,27 +1433,73 @@ function buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData
         { key: 'Mobile', label: 'Mobile', isCHF: false, defaultTarget: 12, color: '#ec4899' }
     ];
 
-    // Integrazione eventuali obiettivi definiti nel DB per questo collaboratore o team
-    goals.forEach(g => {
-        if (!g.employee || g.employee === employee) {
-            const cleanKey = g.metric.replace(/^Sales:\s*/i, '').replace(/^Performance:\s*/i, '');
-            const existing = defaultItems.find(i => i.key.toLowerCase() === cleanKey.toLowerCase());
-            if (!existing) {
-                defaultItems.push({
-                    key: cleanKey,
-                    label: cleanKey,
-                    isCHF: cleanKey.toLowerCase().includes('chf') || cleanKey.toLowerCase().includes('aoit'),
-                    defaultTarget: g.target || 10,
-                    color: '#3b82f6',
-                    skill: g.skill && g.skill !== 'ALL' ? g.skill : null
-                });
-            } else if (g.target) {
-                existing.defaultTarget = g.target;
-            }
-        }
+    const salesTablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+    const matchSkillTables = (salesTablesList || []).filter(table => {
+        if (!table || !table.skill || table.skill === 'ALL') return true;
+        if (employeeSkills.size === 0) return true;
+        return employeeSkills.has(table.skill);
     });
 
-    // Trova l'ultimo mese presente nei dati
+    const items = [];
+
+    for (const table of matchSkillTables) {
+        const products = await appDb.getSetting(`sales_table_products_${table.id}`, []);
+        const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${table.id}`, {})) || {};
+        const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
+        const totalWork = Object.values(collabWorkPcts).reduce((sum, val) => sum + (Number(val) || 0), 0) || 1;
+        const empWorkPct = Number(collabWorkPcts[employee] || 100);
+
+        for (const product of products || []) {
+            const label = product.label || product.key || 'Obiettivo';
+            let defaultTarget = 0;
+
+            if (product.mode === 'team') {
+                defaultTarget = Number(savedTargets['TEAM_' + product.key] || 0);
+            } else {
+                const indivTotal = Number(savedTargets['INDIV_TOTAL_' + product.key] || 0);
+                defaultTarget = totalWork > 0 ? Math.round(indivTotal * (empWorkPct / totalWork)) : 0;
+            }
+
+            const mappedMetrics = Array.isArray(product.mappedMetrics)
+                ? product.mappedMetrics
+                : (product.mappedMetric ? product.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+
+            const item = {
+                key: label,
+                label,
+                isCHF: !!product.isCHF,
+                defaultTarget,
+                color: ['#3b82f6', '#059669', '#d97706', '#8b5cf6', '#ec4899'][items.length % 5],
+                skill: table.skill && table.skill !== 'ALL' ? table.skill : null
+            };
+
+            if (defaultTarget > 0 || mappedMetrics.length > 0) {
+                items.push(item);
+            }
+        }
+    }
+
+    const fallbackItems = items.length > 0 ? items : defaultItems;
+
+    const getActualForLabel = (itemKey, mappedMetrics) => {
+        if (mappedMetrics && mappedMetrics.length > 0) {
+            return calcActualForMetric(mappedMetrics, perfData, salesData, employee);
+        }
+        const normalized = normalizeGoalMetricKey(itemKey);
+        let annualAchieved = 0;
+        salesData.forEach(r => {
+            if (r.employee !== employee || !r.data) return;
+            const data = r.data || {};
+            if (normalized.includes('aoit')) annualAchieved += parseMetricValue(data['AOIT'] ?? data['AOIT (CHF)'] ?? data['AOIT gew'] ?? data.Value ?? 0);
+            else if (normalized.includes('retention')) annualAchieved += parseMetricValue(data['Retention'] ?? data.Value ?? 0);
+            else if (normalized.includes('internet')) annualAchieved += parseMetricValue(data['Internet'] ?? data.Value ?? 0);
+            else if (normalized.includes('tv')) annualAchieved += parseMetricValue(data['TV'] ?? data.Value ?? 0);
+            else if (normalized.includes('mobile')) annualAchieved += parseMetricValue(data['Mobile'] ?? data.Value ?? 0);
+            else annualAchieved += parseMetricValue(data[itemKey] ?? data.Value ?? 0);
+        });
+        return annualAchieved;
+    };
+
     let allDates = [];
     salesData.forEach(d => { if (d.date) allDates.push(d.date); });
     perfData.forEach(d => { if (d.date) allDates.push(d.date); });
@@ -1400,58 +1520,41 @@ function buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData
 
     let cardsHtml = '';
 
-    defaultItems.forEach(item => {
+    fallbackItems.forEach(item => {
         if (hiddenMap[item.key]) return;
 
         const annualTarget = customTargets[item.key] ?? item.defaultTarget;
         const monthlyTarget = customMonthlyTargets[item.key] ?? (annualTarget > 0 ? Math.round(annualTarget / 12) : 0);
 
+        const mappedMetrics = Array.isArray(item.mappedMetrics) ? item.mappedMetrics : [];
+        let annualAchieved = getActualForLabel(item.label, mappedMetrics);
         let monthlyAchieved = 0;
-        let annualAchieved = 0;
 
-        const keyLower = item.key.toLowerCase();
-        
         salesData.forEach(r => {
-            if (r.employee !== employee || !r.data) return;
-            let val = 0;
-            if (keyLower.includes('aoit')) {
-                val = parseMetricValue(r.data['AOIT gew'] ?? r.data['AOIT (CHF)'] ?? r.data['AOIT'] ?? (r.data.Product === 'AOIT gew' ? r.data.Value : 0));
-            } else if (keyLower.includes('retention')) {
-                val = parseMetricValue(r.data['Retention'] ?? (r.data.Product === 'Retention' ? r.data.Value : 0));
-            } else if (keyLower.includes('internet')) {
-                val = parseMetricValue(r.data['Internet'] ?? (r.data.Product === 'Internet' ? r.data.Value : 0));
-            } else if (keyLower.includes('tv')) {
-                val = parseMetricValue(r.data['TV'] ?? (r.data.Product === 'TV' ? r.data.Value : 0));
-            } else if (keyLower.includes('mobile')) {
-                val = parseMetricValue(r.data['Mobile'] ?? (r.data.Product === 'Mobile' ? r.data.Value : 0));
-            } else {
-                val = parseMetricValue(r.data[item.key] ?? 0);
+            if (r.employee !== employee || !r.data || !latestMonthStr || !r.date || !r.date.startsWith(latestMonthStr)) return;
+            if (mappedMetrics.length > 0) {
+                monthlyAchieved += calcActualForMetric(mappedMetrics, perfData, salesData, employee) - 0;
+                return;
             }
-
-            if (val) {
-                annualAchieved += val;
-                if (latestMonthStr && r.date && r.date.startsWith(latestMonthStr)) {
-                    monthlyAchieved += val;
-                }
-            }
+            const data = r.data || {};
+            const normalized = normalizeGoalMetricKey(item.label);
+            if (normalized.includes('aoit')) monthlyAchieved += parseMetricValue(data['AOIT'] ?? data['AOIT (CHF)'] ?? data['AOIT gew'] ?? data.Value ?? 0);
+            else if (normalized.includes('retention')) monthlyAchieved += parseMetricValue(data['Retention'] ?? data.Value ?? 0);
+            else if (normalized.includes('internet')) monthlyAchieved += parseMetricValue(data['Internet'] ?? data.Value ?? 0);
+            else if (normalized.includes('tv')) monthlyAchieved += parseMetricValue(data['TV'] ?? data.Value ?? 0);
+            else if (normalized.includes('mobile')) monthlyAchieved += parseMetricValue(data['Mobile'] ?? data.Value ?? 0);
+            else monthlyAchieved += parseMetricValue(data[item.label] ?? data.Value ?? 0);
         });
 
-        if (annualAchieved === 0) {
-            perfData.forEach(r => {
-                if (r.employee !== employee || !r.data) return;
-                const val = parseMetricValue(r.data[item.key] ?? 0);
-                if (val) {
-                    annualAchieved += val;
-                    if (latestMonthStr && r.date && r.date.startsWith(latestMonthStr)) {
-                        monthlyAchieved += val;
-                    }
-                }
-            });
+        if (mappedMetrics.length > 0 && latestMonthStr) {
+            monthlyAchieved = salesData
+                .filter(r => r.employee === employee && r.date && r.date.startsWith(latestMonthStr))
+                .reduce((sum, row) => sum + calcActualForMetric(mappedMetrics, perfData, [row], employee), 0);
         }
 
         const formatVal = (v) => {
             if (item.isCHF) return 'CHF ' + Math.round(v).toLocaleString('de-CH');
-            return Number.isInteger(v) ? v.toString() : v.toFixed(1);
+            return Math.round(v).toString();
         };
 
         const monthPct = monthlyTarget > 0 ? Math.round((monthlyAchieved / monthlyTarget) * 100) : 0;
@@ -1659,6 +1762,62 @@ function hexToRgba(hex, opacity) {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
+// Genera N tonalità (chiaro/scuro) dello stesso colore di base, alternando
+// il chiaro e lo scuro per distinguere le fette adiacenti della torta.
+function generateColorShades(hex, count) {
+    if (!count || count <= 0) return [];
+    if (!hex || typeof hex !== 'string') hex = '#2563EB';
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const r = parseInt(h.substring(0, 2), 16) / 255;
+    const g = parseInt(h.substring(2, 4), 16) / 255;
+    const b = parseInt(h.substring(4, 6), 16) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const baseLight = (max + min) / 2;
+    let hue = 0;
+    let sat = 0;
+    if (max !== min) {
+        const d = max - min;
+        sat = baseLight > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: hue = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
+            case g: hue = ((b - r) / d + 2) * 60; break;
+            case b: hue = ((r - g) / d + 4) * 60; break;
+        }
+    }
+    if (count === 1) return ['#' + h];
+    // Scala di luminosità dal più chiaro al più scuro
+    const steps = [];
+    for (let i = 0; i < count; i++) steps.push(0.8 - (i * 0.42) / (count - 1));
+    // Il colore esatto scelto dall'utente resta al centro della scala
+    steps[Math.floor(count / 2)] = Math.min(Math.max(baseLight, 0.12), 0.88);
+    // Alterna chiaro/scuro per il contrasto tra fette adiacenti
+    const ordered = [];
+    for (let i = 0; i < count; i++) {
+        ordered.push(i % 2 === 0 ? steps[Math.floor(i / 2)] : steps[count - 1 - Math.floor(i / 2)]);
+    }
+    return ordered.map(light => hslToHex(hue, sat, light));
+}
+
+function hslToHex(hue, sat, light) {
+    const h = ((hue % 360) + 360) % 360;
+    const s = Math.min(Math.max(sat, 0), 1);
+    const l = Math.min(Math.max(light, 0), 1);
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; }
+    else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; }
+    else { r = c; b = x; }
+    const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+    return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
 async function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false, isPreview = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
@@ -1685,6 +1844,16 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             editBtn.title = 'Modifica statistica';
             editBtn.onclick = async () => { await openStatModal(statConfig); };
             actionsDiv.appendChild(editBtn);
+
+            const thresholdsBtn = document.createElement('button');
+            thresholdsBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>';
+            thresholdsBtn.className = 'btn secondary';
+            thresholdsBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
+            thresholdsBtn.title = 'Soglie colori realizzato';
+            thresholdsBtn.onclick = async () => {
+                await openGoalThresholdsModal(window.appState.activeYear, statConfig.goalsTableId);
+            };
+            actionsDiv.appendChild(thresholdsBtn);
 
             const deleteBtn = document.createElement('button');
             deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
@@ -1809,13 +1978,23 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
     const canvasContainer = document.createElement('div');
     canvasContainer.style.width = '100%';
     canvasContainer.style.marginTop = isPreview ? '0' : '8px';
-    if (statConfig.type === 'table') {
+    if (statConfig.type === 'table' || statConfig.type === 'goals_table') {
         canvasContainer.style.height = 'auto';
         canvasContainer.style.overflowX = 'auto';
+        if (isPreview) {
+            canvasContainer.style.maxHeight = '52vh';
+            canvasContainer.style.overflowY = 'auto';
+        }
     } else {
-        canvasContainer.style.height = isPreview ? '100%' : '360px';
-        canvasContainer.style.minHeight = isPreview ? '200px' : '0';
-        if (isPreview) canvasContainer.style.flex = '1';
+        if (isPreview) {
+            canvasContainer.style.height = '0';
+            canvasContainer.style.flex = '1 1 auto';
+            canvasContainer.style.minHeight = '320px';
+            canvasContainer.style.maxHeight = '560px';
+            canvasContainer.style.overflow = 'hidden';
+        } else {
+            canvasContainer.style.height = '360px';
+        }
     }
     card.appendChild(canvasContainer);
     
@@ -1826,15 +2005,24 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
     const datesSet = new Set();
     const datesWithData = new Set();
 
-    // Always include all 12 months of the active year
+    // Always include all 12 months of the active year (use YYYY-MM keys)
     for (let m = 1; m <= 12; m++) {
         const monthStr = String(m).padStart(2, '0');
-        datesSet.add(`${activeYr}-${monthStr}-01`);
+        datesSet.add(`${activeYr}-${monthStr}`);
     }
     
     const empSet = new Set();
     const empDateMap = {};
     const aggregatedByDate = {};
+
+    // Helper to render a cell value as HTML: zero values appear muted
+    const renderCellHtml = (v, defaultColor = null) => {
+        if (v === null || v === undefined || v === '') return '';
+        const n = Number(v);
+        if (!isNaN(n) && n === 0) return `<span style="color:var(--text-muted);">${n}</span>`;
+        if (!isNaN(n)) return defaultColor ? `<span style="color:${defaultColor};">${Math.round(n)}</span>` : `${Math.round(n)}`;
+        return `${v}`;
+    };
 
     sourceData.forEach(row => {
         if (isPerf && statConfig.skill && statConfig.skill !== 'ALL') {
@@ -1845,21 +2033,22 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         }
 
         const date = row.date;
+        const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
         const emp = row.employee;
         const val = parseMetricValue(row.data[rawKey]);
 
-        datesSet.add(date);
-        datesWithData.add(date);
+        datesSet.add(monthKey);
+        datesWithData.add(monthKey);
         if (emp) empSet.add(emp);
 
         if (emp) {
             if (!empDateMap[emp]) empDateMap[emp] = {};
-            if (!empDateMap[emp][date]) empDateMap[emp][date] = 0;
-            empDateMap[emp][date] += val;
+            if (!empDateMap[emp][monthKey]) empDateMap[emp][monthKey] = 0;
+            empDateMap[emp][monthKey] += val;
         }
 
-        if (!aggregatedByDate[date]) aggregatedByDate[date] = 0;
-        aggregatedByDate[date] += val;
+        if (!aggregatedByDate[monthKey]) aggregatedByDate[monthKey] = 0;
+        aggregatedByDate[monthKey] += val;
     });
 
     const labels = Array.from(datesSet).sort();
@@ -1915,22 +2104,23 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         sData.forEach(row => {
             if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
             if (!isP && statConfig.product && row.data['Product'] !== statConfig.product) return;
-            const date = row.date;
-            const emp = row.employee;
-            if (!emp) return;
-            const val = parseMetricValue(row.data[rKey]);
-            if (!empMap[emp]) empMap[emp] = {};
-            if (!empMap[emp][date]) empMap[emp][date] = 0;
-            empMap[emp][date] += val;
+                const date = row.date;
+                const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
+                const emp = row.employee;
+                if (!emp) return;
+                const val = parseMetricValue(row.data[rKey]);
+                if (!empMap[emp]) empMap[emp] = {};
+                if (!empMap[emp][monthKey]) empMap[emp][monthKey] = 0;
+                empMap[emp][monthKey] += val;
         });
 
-        return labels.map(date => {
-            if (!datesWithData.has(date)) return null;
+        return labels.map(monthKey => {
+            if (!datesWithData.has(monthKey)) return null;
             let sum = 0;
             let count = 0;
             employees.forEach(emp => {
-                if (empMap[emp] && empMap[emp][date] !== undefined) {
-                    sum += empMap[emp][date];
+                if (empMap[emp] && empMap[emp][monthKey] !== undefined) {
+                    sum += empMap[emp][monthKey];
                     count++;
                 }
             });
@@ -1957,15 +2147,19 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 sData.forEach(row => {
                     if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
                     if (isIndividual && employeeName && row.employee !== employeeName) return;
+                    const date = row.date;
+                    const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
                     const val = parseMetricValue(row.data[rKey]);
-                    if (!agg[row.date]) agg[row.date] = 0;
-                    agg[row.date] += val;
+                    if (!agg[monthKey]) agg[monthKey] = 0;
+                    agg[monthKey] += val;
                 });
 
                 html += `<tr><td style="font-weight:600;">${rKey}</td>`;
                 labels.forEach(d => {
-                    const cellVal = datesWithData.has(d) ? (agg[d] !== undefined ? agg[d] : 0) : '';
-                    html += `<td style="text-align:center;">${cellVal}</td>`;
+                    const rawVal = datesWithData.has(d) ? (agg[d] !== undefined ? agg[d] : 0) : '';
+                    const cellVal = (typeof rawVal === 'number') ? Math.round(rawVal) : rawVal;
+                    const cellHtml = renderCellHtml(cellVal);
+                    html += `<td style="text-align:center;">${cellHtml}</td>`;
                 });
                 html += '</tr>';
             });
@@ -1984,8 +2178,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             html += `<tr><td style="font-weight:600;">${dispName}</td>`;
             displayLabels.forEach((l, idx) => {
                 const val = dataPts[idx];
-                const displayVal = val === null ? '' : val;
-                html += `<td style="text-align:center;">${displayVal}</td>`;
+                const displayVal = val === null ? '' : (typeof val === 'number' ? Math.round(val) : val);
+                const cellHtml = renderCellHtml(displayVal);
+                html += `<td style="text-align:center;">${cellHtml}</td>`;
             });
             html += '</tr>';
 
@@ -2056,11 +2251,13 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 const dispName = window.getDisplayName(emp);
                 html += `<tr><td style="font-weight:600;">${dispName}</td>`;
                 labels.forEach(date => {
-                    let cellVal = '';
+                    let raw = '';
                     if (datesWithData.has(date)) {
-                        cellVal = (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
+                        raw = (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
                     }
-                    html += `<td style="text-align:center;">${cellVal}</td>`;
+                    const cellVal = (typeof raw === 'number') ? Math.round(raw) : raw;
+                    const cellHtml = renderCellHtml(cellVal);
+                    html += `<td style="text-align:center;">${cellHtml}</td>`;
                 });
                 html += '</tr>';
             });
@@ -2095,7 +2292,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         canvasContainer.appendChild(canvas);
 
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
+        const pieMode = statConfig.pieMode || 'collaboratori';
         let pieEntries = [];
+        let pieEntriesInvalid = false;
 
         if (metricsList.length > 1) {
             // Se multi-metrica, la torta confronta le metriche totali
@@ -2112,8 +2311,24 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 metricTotals[rKey] = sum;
             });
             pieEntries = Object.entries(metricTotals);
+        } else if (pieMode === 'pacchetti') {
+            // Modalità Pacchetti: quantità per nome pacchetto, intero team (solo dati Sales)
+            const isPiePerf = statConfig.metric.startsWith('Performance: ');
+            if (isPiePerf) {
+                pieEntriesInvalid = true;
+            } else {
+                const prodTotals = {};
+                salesData.forEach(row => {
+                    const prod = row.data && row.data.Product;
+                    if (!prod) return;
+                    const qty = Math.round(parseMetricValue(row.data['Nb Events'])) || 1;
+                    if (!prodTotals[prod]) prodTotals[prod] = 0;
+                    prodTotals[prod] += qty;
+                });
+                pieEntries = Object.entries(prodTotals).sort((a, b) => b[1] - a[1]);
+            }
         } else {
-            // Totale per collaboratore
+            // Modalità Collaboratori: prezzo totale per ogni collaboratore
             const empTotals = {};
             employees.forEach(emp => {
                 let total = 0;
@@ -2127,20 +2342,25 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             pieEntries = Object.entries(empTotals).map(([e, v]) => [window.getDisplayName(e), v]).sort((a,b) => b[1]-a[1]);
         }
 
-        const colorsList = (statConfig.colors && statConfig.colors.length > 0) ? statConfig.colors : DISTINCT_COLORS;
+        // Colore base: quello scelto dall'utente (primo colore della configurazione)
+        const baseColor = (statConfig.colors && statConfig.colors.length > 0) ? statConfig.colors[0] : '#2563EB';
 
-        if (pieEntries.length === 0) {
+        if (pieEntriesInvalid) {
+            canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Pacchetti è disponibile solo con dati Sales.</p>';
+        } else if (pieEntries.length === 0) {
             canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
         } else {
             const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
             const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#1e2130';
+            const pieShades = generateColorShades(baseColor, pieEntries.length);
+            const showQtyInLabels = pieMode === 'pacchetti';
             new Chart(canvas, {
                 type: 'doughnut',
                 data: {
-                    labels: pieEntries.map(([label]) => label),
+                    labels: pieEntries.map(([label, v]) => showQtyInLabels ? `${label} (${Math.round(v)})` : label),
                     datasets: [{
                         data: pieEntries.map(([,v]) => v),
-                        backgroundColor: pieEntries.map((_, i) => colorsList[i % colorsList.length]),
+                        backgroundColor: pieShades,
                         borderWidth: 2,
                         borderColor: surfaceColor
                     }]
@@ -2183,9 +2403,11 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                         if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
                         if (!isP && statConfig.product && row.data['Product'] !== statConfig.product) return;
                         if (row.employee !== employeeName) return;
+                        const date = row.date;
+                        const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
                         const val = parseMetricValue(row.data[rKey]);
-                        if (!dateAgg[row.date]) dateAgg[row.date] = 0;
-                        dateAgg[row.date] += val;
+                        if (!dateAgg[monthKey]) dateAgg[monthKey] = 0;
+                        dateAgg[monthKey] += val;
                     });
                     const color = colorsList[idx % colorsList.length];
                     const pts = labels.map(l => datesWithData.has(l) ? (dateAgg[l] !== undefined ? dateAgg[l] : 0) : null);
@@ -2264,12 +2486,13 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                         if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
                         if (!isP && statConfig.product && row.data['Product'] !== statConfig.product) return;
                         const date = row.date;
+                        const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
                         const emp = row.employee;
                         if (!emp) return;
                         const val = parseMetricValue(row.data[rKey]);
                         if (!empMap[emp]) empMap[emp] = {};
-                        if (!empMap[emp][date]) empMap[emp][date] = 0;
-                        empMap[emp][date] += val;
+                        if (!empMap[emp][monthKey]) empMap[emp][monthKey] = 0;
+                        empMap[emp][monthKey] += val;
                     });
 
                     const baseColor = colorsList[idx % colorsList.length];
@@ -2800,6 +3023,56 @@ async function saveStatsOrder(orderedStats) {
 // TABELLE OBIETTIVI CON VALORI ATTUALI (per sezione Statistiche)
 // ============================================================
 
+const GOAL_COLORS = {
+    notReached: { bg: 'rgba(244,114,182,0.16)', label: 'Non raggiunto' },
+    almost:     { bg: 'rgba(250,204,21,0.16)',  label: 'Quasi raggiunto' },
+    reached:    { bg: 'rgba(34,197,94,0.16)',   label: 'Raggiunto' },
+    surpassed:  { bg: 'rgba(168,85,247,0.18)',  label: 'Superato' }
+};
+
+const DEFAULT_ALMOST_PCT = 80;
+const DEFAULT_SURPASS_PCT = 105;
+const DEFAULT_ALMOST_VAL = 1;
+const DEFAULT_SURPASS_VAL = 1;
+
+function getGoalReachedKey(actual, target, p) {
+    const a = parseFloat(actual);
+    const t = parseFloat(target);
+    if (isNaN(a) || isNaN(t) || t <= 0) return null;
+    if (p.thresholdMode === 'val') {
+        const almostDelta = (p.almostVal !== undefined && p.almostVal !== null) ? p.almostVal : DEFAULT_ALMOST_VAL;
+        const surpassDelta = (p.surpassVal !== undefined && p.surpassVal !== null) ? p.surpassVal : DEFAULT_SURPASS_VAL;
+        if (a < t - almostDelta) return 'notReached';
+        if (a < t) return 'almost';
+        if (a < t + surpassDelta) return 'reached';
+        return 'surpassed';
+    }
+    const almostPct = (p.almostPct !== undefined && p.almostPct !== null) ? p.almostPct : DEFAULT_ALMOST_PCT;
+    const surpassPct = (p.surpassPct !== undefined && p.surpassPct !== null) ? p.surpassPct : DEFAULT_SURPASS_PCT;
+    const ratio = a / t;
+    if (ratio < (almostPct / 100)) return 'notReached';
+    if (ratio < 1) return 'almost';
+    if (ratio < (surpassPct / 100)) return 'reached';
+    return 'surpassed';
+}
+
+function goalCellStyle(actual, target, p) {
+    const key = getGoalReachedKey(actual, target, p);
+    if (!key || key === 'notReached') return '';
+    return `background:${GOAL_COLORS[key].bg};`;
+}
+
+function buildGoalLegendHTML() {
+    return `
+        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:0.74rem; color:var(--text-muted);">
+            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:transparent; border:1px solid var(--border);"></span> ${GOAL_COLORS.notReached.label}</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:${GOAL_COLORS.almost.bg};"></span> ${GOAL_COLORS.almost.label}</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:${GOAL_COLORS.reached.bg};"></span> ${GOAL_COLORS.reached.label}</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:${GOAL_COLORS.surpassed.bg};"></span> ${GOAL_COLORS.surpassed.label}</span>
+        </div>
+    `;
+}
+
 /**
  * Calcola il valore realizzato per un collaboratore (o tutto il team) per una lista di metriche mappate.
  */
@@ -2877,11 +3150,15 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
         const num = parseFloat(v);
         if (isNaN(num)) return '—';
         if (isCHF) return Math.round(num).toLocaleString('de-CH');
-        return Number.isInteger(num) ? num.toString() : num.toFixed(1);
+        return Math.round(num).toString();
     };
 
     const table = document.createElement('table');
     table.style.cssText = 'width:auto; border-collapse:collapse; font-size:0.87rem; color:var(--text-main);';
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
+    wrapper.innerHTML = buildGoalLegendHTML();
 
     const thead = document.createElement('thead');
     let headHtml = `<tr style="background:var(--bg-base); border-bottom:1px solid var(--border);">
@@ -2936,8 +3213,9 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
             } else {
                 const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
                 const objIndiv = totalWorkPctSum > 0 ? Math.round(indivTotal * (empWorkPct / totalWorkPctSum)) : 0;
+                const cellBg = goalCellStyle(actualVal, objIndiv, p);
                 rowHtml += `
-                    <td style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-family:monospace; font-weight:700; color:var(--text-main);">${formatVal(actualVal, p.isCHF)}</td>
+                    <td style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-family:monospace; font-weight:700; color:var(--text-main); ${cellBg}">${formatVal(actualVal, p.isCHF)}</td>
                     <td style="padding:8px 10px; text-align:center; border-right:1px solid var(--border); font-family:monospace; color:var(--text-muted);">${formatVal(objIndiv, p.isCHF)}</td>`;
             }
         });
@@ -2957,13 +3235,15 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
         const actualTeam = calcActualForMetric(mappedMetrics, perfData, salesData, null);
         if (p.mode === 'team') {
             const teamTotal = savedTargets['TEAM_' + p.key] ?? 0;
+            const cellBg = goalCellStyle(actualTeam, teamTotal, p);
             footHtml += `
-                <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(actualTeam, p.isCHF)}</td>
+                <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--text-main); font-family:monospace; ${cellBg}">${formatVal(actualTeam, p.isCHF)}</td>
                 <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-family:monospace;">${formatVal(teamTotal, p.isCHF)}</td>`;
         } else {
             const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] ?? 0;
+            const cellBg = goalCellStyle(actualTeam, indivTotal, p);
             footHtml += `
-                <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--text-main); font-family:monospace;">${formatVal(actualTeam, p.isCHF)}</td>
+                <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--text-main); font-family:monospace; ${cellBg}">${formatVal(actualTeam, p.isCHF)}</td>
                 <td style="padding:10px 8px; text-align:center; border-right:1px solid var(--border); font-weight:800; color:var(--primary); font-family:monospace;">${formatVal(indivTotal, p.isCHF)}</td>`;
         }
     });
@@ -2972,7 +3252,156 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
 
     table.appendChild(tbody);
     table.appendChild(tfoot);
-    return table;
+    wrapper.appendChild(table);
+    return wrapper;
+}
+
+async function openGoalThresholdsModal(year, tableId) {
+    const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+    const t = (tablesList || []).find(tbl => tbl.id === tableId);
+    let products = await appDb.getSetting(`sales_table_products_${tableId}`, []);
+    if (!products || !Array.isArray(products) || products.length === 0) return;
+
+    let modal = document.getElementById('goal-thresholds-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'goal-thresholds-modal';
+        modal.className = 'modal';
+        modal.style.cssText = 'max-width: 640px; width: 94%; border-radius: 12px;';
+        document.body.appendChild(modal);
+    }
+
+    const overlay = document.getElementById('modal-overlay');
+    const title = t ? t.name : 'Tabella Obiettivi';
+
+    const modes = products.map(p => (p.thresholdMode === 'val' ? 'val' : 'pct'));
+    const pctVals = products.map(p => [
+        (p.almostPct !== undefined && p.almostPct !== null) ? p.almostPct : DEFAULT_ALMOST_PCT,
+        (p.surpassPct !== undefined && p.surpassPct !== null) ? p.surpassPct : DEFAULT_SURPASS_PCT
+    ]);
+    const valVals = products.map(p => [
+        (p.almostVal !== undefined && p.almostVal !== null) ? p.almostVal : DEFAULT_ALMOST_VAL,
+        (p.surpassVal !== undefined && p.surpassVal !== null) ? p.surpassVal : DEFAULT_SURPASS_VAL
+    ]);
+
+    const modeLabels = {
+        pct: { almost: 'Quasi raggiunto da', surpass: 'Superato da', unit: '%' },
+        val: { almost: 'Quasi raggiunto entro', surpass: 'Superato di', unit: '' }
+    };
+
+    modal.innerHTML = `
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Soglie Colori Realizzato — ${title}</h2>
+            <button class="close-modal" id="close-thr-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+            <div style="font-size:0.82rem; color:var(--text-muted); line-height:1.6;">
+                Per ogni colonna indica da quale soglia il realizzato è considerato <strong style="color:var(--text-main);">quasi raggiunto</strong> (giallo) e da quale <strong style="color:var(--text-main);">superato</strong> (viola). Con lo switch <strong style="color:var(--text-main);">PCT/VAL</strong> puoi usare percentuali oppure quantità assolute: in modalità quantità la soglia è la distanza dal target (es. target 2, "Superato di 4" → superato da 6). Sotto la soglia "quasi raggiunto" il valore è <strong style="color:var(--text-main);">non raggiunto</strong> (rosa); tra il target e la soglia di superamento è <strong style="color:var(--text-main);">raggiunto</strong> (verde).
+            </div>
+            ${buildGoalLegendHTML()}
+            <div id="threshold-cols-list" style="display:flex; flex-direction:column; gap:10px;">
+                ${products.map((p, idx) => {
+                    const m = modes[idx];
+                    const lbl = modeLabels[m];
+                    const vals = m === 'pct' ? pctVals[idx] : valVals[idx];
+                    return `
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-base); flex-wrap:wrap;">
+                        <span style="font-weight:700; font-size:0.85rem; color:var(--text-main); flex:1; min-width:120px; word-break:break-word;">${p.label}</span>
+                        <span class="thr-mode-toggle" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.68rem; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.03em; ${m === 'val' ? 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4);' : 'background:rgba(99,102,241,0.2); color:var(--primary); border:1px solid rgba(99,102,241,0.4);'}">${m === 'val' ? 'VAL' : 'PCT'}</span>
+                        <label style="font-size:0.78rem; color:var(--text-muted); display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span class="thr-almost-label" data-idx="${idx}">${lbl.almost}</span>
+                            <input type="number" class="thr-almost-input" data-idx="${idx}" value="${vals[0]}" min="0" step="any" style="width:70px; padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; text-align:center;"><span class="thr-almost-unit" data-idx="${idx}">${lbl.unit}</span>
+                        </label>
+                        <label style="font-size:0.78rem; color:var(--text-muted); display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span class="thr-surpass-label" data-idx="${idx}">${lbl.surpass}</span>
+                            <input type="number" class="thr-surpass-input" data-idx="${idx}" value="${vals[1]}" min="0" step="any" style="width:70px; padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; text-align:center;"><span class="thr-surpass-unit" data-idx="${idx}">${lbl.unit}</span>
+                        </label>
+                    </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--border);">
+            <button class="btn secondary" id="cancel-thr-btn" style="padding:6px 16px; font-size:0.85rem;">Annulla</button>
+            <button class="btn primary" id="save-thr-btn" style="padding:6px 16px; font-size:0.85rem;">Salva Soglie</button>
+        </div>
+    `;
+
+    const refreshRow = (idx) => {
+        const m = modes[idx];
+        const lbl = modeLabels[m];
+        const vals = m === 'pct' ? pctVals[idx] : valVals[idx];
+        const toggle = modal.querySelector(`.thr-mode-toggle[data-idx="${idx}"]`);
+        const almostLabel = modal.querySelector(`.thr-almost-label[data-idx="${idx}"]`);
+        const almostUnit = modal.querySelector(`.thr-almost-unit[data-idx="${idx}"]`);
+        const almostInp = modal.querySelector(`.thr-almost-input[data-idx="${idx}"]`);
+        const surpassLabel = modal.querySelector(`.thr-surpass-label[data-idx="${idx}"]`);
+        const surpassUnit = modal.querySelector(`.thr-surpass-unit[data-idx="${idx}"]`);
+        const surpassInp = modal.querySelector(`.thr-surpass-input[data-idx="${idx}"]`);
+        if (toggle) {
+            toggle.textContent = m === 'val' ? 'VAL' : 'PCT';
+            toggle.style.background = m === 'val' ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.2)';
+            toggle.style.color = m === 'val' ? '#10b981' : 'var(--primary)';
+            toggle.style.border = m === 'val' ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(99,102,241,0.4)';
+        }
+        if (almostLabel) almostLabel.textContent = lbl.almost;
+        if (almostUnit) almostUnit.textContent = lbl.unit;
+        if (surpassLabel) surpassLabel.textContent = lbl.surpass;
+        if (surpassUnit) surpassUnit.textContent = lbl.unit;
+        if (almostInp) almostInp.value = vals[0];
+        if (surpassInp) surpassInp.value = vals[1];
+    };
+
+    modal.querySelectorAll('.thr-mode-toggle').forEach(toggle => {
+        toggle.onclick = () => {
+            const idx = parseInt(toggle.dataset.idx, 10);
+            if (isNaN(idx)) return;
+            const cur = modes[idx];
+            const target = cur === 'pct' ? 'val' : 'pct';
+            const almostInp = modal.querySelector(`.thr-almost-input[data-idx="${idx}"]`);
+            const surpassInp = modal.querySelector(`.thr-surpass-input[data-idx="${idx}"]`);
+            const store = cur === 'pct' ? pctVals[idx] : valVals[idx];
+            store[0] = parseFloat(almostInp?.value) || 0;
+            store[1] = parseFloat(surpassInp?.value) || 0;
+            modes[idx] = target;
+            refreshRow(idx);
+        };
+    });
+    products.forEach((_, idx) => refreshRow(idx));
+
+    const closeModal = () => {
+        modal.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+    };
+    modal.querySelector('#close-thr-modal').onclick = closeModal;
+    modal.querySelector('#cancel-thr-btn').onclick = closeModal;
+    modal.querySelector('#save-thr-btn').onclick = async () => {
+        products.forEach((p, idx) => {
+            const almostInp = modal.querySelector(`.thr-almost-input[data-idx="${idx}"]`);
+            const surpassInp = modal.querySelector(`.thr-surpass-input[data-idx="${idx}"]`);
+            if (almostInp) {
+                const v = parseFloat(almostInp.value);
+                if (modes[idx] === 'pct') {
+                    p.almostPct = (!isNaN(v) && v > 0 && v < 100) ? v : DEFAULT_ALMOST_PCT;
+                } else {
+                    p.almostVal = (!isNaN(v) && v >= 0) ? v : DEFAULT_ALMOST_VAL;
+                }
+            }
+            if (surpassInp) {
+                const v = parseFloat(surpassInp.value);
+                if (modes[idx] === 'pct') {
+                    p.surpassPct = (!isNaN(v) && v > 100) ? v : DEFAULT_SURPASS_PCT;
+                } else {
+                    p.surpassVal = (!isNaN(v) && v > 0) ? v : DEFAULT_SURPASS_VAL;
+                }
+            }
+            p.thresholdMode = modes[idx];
+        });
+        await appDb.setSetting(`sales_table_products_${tableId}`, products);
+        closeModal();
+        if (window.renderStatistics) window.renderStatistics();
+    };
+
+    modal.classList.add('open');
+    if (overlay) overlay.classList.add('open');
 }
 
 

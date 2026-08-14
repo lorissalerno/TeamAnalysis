@@ -149,8 +149,8 @@ input:checked + .slider:before {
 #stat-config-modal {
     max-width: 1700px;
     width: 98%;
-    max-height: 52vh;
-    height: 48vh;
+    max-height: 78vh;
+    height: 72vh;
 }
 
 .stat-modal-layout {
@@ -212,9 +212,9 @@ input:checked + .slider:before {
     border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--bg-base);
-    overflow: hidden;
+    overflow: auto;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
 }
 

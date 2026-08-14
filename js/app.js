@@ -211,6 +211,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const initialSection = hashSection || savedSection || 'dashboard';
 
     await navigateToSection(initialSection);
+
+    // Notify other modules that appState and initial data are ready
+    window.dispatchEvent(new Event('app-initialized'));
 });
 
 // --- SKILLS MANAGEMENT ---
@@ -676,14 +679,22 @@ async function renderImportedData() {
 
     salesRecords.forEach(r => {
         const skillName = r.skill || (r.data && r.data.Product === 'Nuovi Abo' ? 'Nuovi Abo' : 'AOIT');
-        const productName = (r.data && r.data.Product) ? r.data.Product : 'AOIT gew';
+        let productName = (r.data && r.data.Product) ? r.data.Product : 'AOIT';
+        // Normalize AOIT product naming: hide variants like "AOIT gew" and similar
+        if (typeof productName === 'string' && productName.toLowerCase().includes('aoit')) {
+            productName = 'AOIT';
+        }
         
         let value = 0;
-        let metricKeyForRecord = 'AOIT gew';
+        let metricKeyForRecord = 'AOIT';
         if (r.data && typeof r.data === 'object') {
-            if (r.data['AOIT gew'] !== undefined) {
+            if (r.data['AOIT'] !== undefined) {
+                value = r.data['AOIT'];
+                metricKeyForRecord = 'AOIT';
+            } else if (r.data['AOIT gew'] !== undefined) {
+                // backward compatibility for older imports
                 value = r.data['AOIT gew'];
-                metricKeyForRecord = 'AOIT gew';
+                metricKeyForRecord = 'AOIT';
             } else if (r.data['Value'] !== undefined) {
                 value = r.data['Value'];
                 metricKeyForRecord = 'Value';
@@ -707,17 +718,17 @@ async function renderImportedData() {
             qty = r.data['Nb Events'];
         }
 
-        singleRows.push({
+            singleRows.push({
             recordId: r.id,
             store: 'sales',
             date: r.date,
             employee: r.employee,
             type: 'Sales',
-            skill: skillName,
-            metric: (metricKeyForRecord && metricKeyForRecord !== 'AOIT gew' && metricKeyForRecord !== 'Nb Events') ? metricKeyForRecord : productName,
+                skill: skillName,
+                metric: (metricKeyForRecord && metricKeyForRecord !== 'AOIT' && metricKeyForRecord !== 'Nb Events') ? metricKeyForRecord : productName,
             metricKey: metricKeyForRecord,
             qty: qty,
-            value: value
+                value: Math.round(value)
         });
     });
 

@@ -42,8 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Render iniziale
-    renderSalesGoalsTable();
+    // Render iniziale: attendi che l'app sia inizializzata (appState popolato)
+    if (window.appState && window.appState.activeYear !== undefined) {
+        renderSalesGoalsTable();
+    } else {
+        window.addEventListener('app-initialized', () => {
+            renderSalesGoalsTable();
+        }, { once: true });
+    }
     
     window.renderGoals = async function() {
         const list = document.getElementById('goals-list');
@@ -213,7 +219,7 @@ async function renderSalesGoalsTable() {
     const salesData = await appDb.getAll('sales', 'year', year);
     const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
 
-    const salesMetricsSet = new Set(['AOIT gew', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
+    const salesMetricsSet = new Set(['AOIT', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
     salesData.forEach(d => {
         if (d.data?.Product) salesMetricsSet.add(d.data.Product);
         if (d.category) salesMetricsSet.add(d.category);
@@ -252,26 +258,51 @@ async function renderSalesGoalsTable() {
         }
 
         const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${t.id}`, {})) || {};
-        const manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.id}`, null)) || null;
+        // Support backward-compatible keys: some codepaths stored manual collabs
+        // under the table id, others under the skill name. Try table id first,
+        // then fallback to skill, then to a global ALL key.
+        let manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.id}`, null)) || null;
+        if (!manualCollabs) {
+            manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.skill || 'ALL'}`, null)) || null;
+        }
 
         const empSet = new Set();
-        if (manualCollabs && Array.isArray(manualCollabs)) {
+        const skillFilter = t.skill || 'ALL';
+        const configuredEmployees = Object.keys(window.appState.anonymousMap || {});
+        const matchingConfiguredEmployees = configuredEmployees.filter(name => {
+            if (skillFilter === 'ALL') return true;
+            const assignedSkills = window.appState.collaboratorSkills?.[name] || [];
+            return Array.isArray(assignedSkills) && assignedSkills.includes(skillFilter);
+        });
+
+        if (matchingConfiguredEmployees.length > 0) {
+            matchingConfiguredEmployees.forEach(name => empSet.add(name));
+        } else if (manualCollabs && Array.isArray(manualCollabs)) {
             manualCollabs.forEach(n => empSet.add(n));
         } else {
-            const skillFilter = t.skill || 'ALL';
-            perfData.forEach(d => {
-                if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
-                    empSet.add(d.employee);
-                }
-            });
-            salesData.forEach(d => {
-                if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
-                    empSet.add(d.employee);
-                }
-            });
+            if (configuredEmployees.length > 0) {
+                configuredEmployees.forEach(name => {
+                    if (skillFilter === 'ALL') {
+                        empSet.add(name);
+                    }
+                });
+            }
 
             if (empSet.size === 0) {
-                Object.keys(window.appState.anonymousMap || {}).forEach(n => empSet.add(n));
+                perfData.forEach(d => {
+                    if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
+                        empSet.add(d.employee);
+                    }
+                });
+                salesData.forEach(d => {
+                    if (d.employee && (skillFilter === 'ALL' || d.skill === skillFilter)) {
+                        empSet.add(d.employee);
+                    }
+                });
+            }
+
+            if (empSet.size === 0) {
+                configuredEmployees.forEach(n => empSet.add(n));
             }
         }
 
@@ -596,7 +627,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
         const num = parseFloat(v);
         if (isNaN(num)) return '—';
         if (isCHF) return Math.round(num).toLocaleString('de-CH') + '.-';
-        return Number.isInteger(num) ? num.toString() : num.toFixed(1);
+        return Math.round(num).toString();
     };
 
     employees.forEach((emp, empIdx) => {
@@ -784,7 +815,7 @@ async function saveSalesTableData(tableCard, tableId, products, employees, year,
                         metric: `Sales: ${p.key}`,
                         skill: activeSkillFilter,
                         employee: emp,
-                        target: tgt,
+                        target: calcVal,
                         year: year
                     });
                 }
@@ -852,7 +883,11 @@ async function openAddCollaboratorModal(existingEmployees, year, skillFilter) {
         const currentList = new Set(existingEmployees);
         currentList.add(empName);
 
-        await appDb.setSetting(`sales_table_collabs_${year}_${skillFilter}`, Array.from(currentList));
+        // Use the table-specific key when possible (matches other code locations)
+        // If caller passed a table id as skillFilter, use that; otherwise fallback to skillFilter
+        const keySuffix = (typeof skillFilter === 'string' && skillFilter) ? skillFilter : (existingEmployees && existingEmployees.tableId ? existingEmployees.tableId : 'ALL');
+
+        await appDb.setSetting(`sales_table_collabs_${year}_${keySuffix}`, Array.from(currentList));
         closeModal();
         await renderSalesGoalsTable();
     };
@@ -946,7 +981,7 @@ async function getAvailableDbMetrics(year) {
     const perfData = await appDb.getAll('performance', 'year', activeYear);
     const salesData = await appDb.getAll('sales', 'year', activeYear);
 
-    const salesMetricsSet = new Set(['AOIT gew', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
+    const salesMetricsSet = new Set(['AOIT', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
     salesData.forEach(d => {
         if (d.data?.Product) salesMetricsSet.add(d.data.Product);
         if (d.category) salesMetricsSet.add(d.category);

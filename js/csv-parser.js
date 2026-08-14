@@ -41,11 +41,12 @@ class CSVParser {
 
                 // Auto-detect type from first few rows
                 let type = 'unknown';
-                if (cleanedLines[0].includes("Voice Inbound")) {
+                const headerLower = cleanedLines[0].toLowerCase();
+                if (headerLower.includes("voice inbound")) {
                     type = 'performance';
-                } else if (cleanedLines[0].includes("AOIT gew")) {
+                } else if (headerLower.includes("aoit")) {
                     type = 'sales_aoit';
-                } else if (cleanedLines[0].includes("Open Year Sales Event")) {
+                } else if (headerLower.includes("open year sales event")) {
                     type = 'sales_nuovi';
                 }
 
@@ -247,10 +248,16 @@ class CSVParser {
                 
                 // Dividi in N record singoli di vendita
                 for (let k = 0; k < count; k++) {
+                    // Normalize product name: hide variants like 'AOIT gew'
+                    let productNormalized = product;
+                    if (productNormalized && productNormalized.toLowerCase().includes('aoit')) {
+                        productNormalized = 'AOIT';
+                    }
+
                     const dataObj = {
-                        "Product": product,
+                        "Product": productNormalized,
                         "Nb Events": 1,
-                        "AOIT gew": Math.round(unitGew * 100) / 100
+                        "AOIT": Math.round(unitGew)
                     };
                     results.push({ year: year.toString(), date, employee, skill: 'AOIT', data: dataObj, category: 'sales' });
                 }

@@ -141,7 +141,7 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
         const teamVal = calculateTeamMetricValue(g.metric, g.skill, perfData, salesData, activeEmployees);
         const targetVal = parseFloat(g.target) || 1;
         const pct = targetVal !== 0 ? ((teamVal / targetVal) * 100) : 0;
-        const formattedPct = pct.toFixed(1);
+        const formattedPct = Math.round(pct * 10) / 10;
         const clampedPct = Math.min(Math.max(pct, 0), 100);
 
         // Tolerance calculation
@@ -172,7 +172,7 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
                         <span style="font-size:0.8rem; color:var(--text-muted);">${skillBadge}</span>
                     </div>
                     <div style="font-weight:600; font-size:0.9rem;">
-                        <span style="color:var(--text-main);">${teamVal.toFixed(1)}</span> / <span style="color:var(--text-muted);">${targetVal}</span>
+                        <span style="color:var(--text-main);">${Math.round(teamVal)}</span> / <span style="color:var(--text-muted);">${Math.round(targetVal)}</span>
                         <span style="margin-left:8px; padding:2px 8px; border-radius:12px; background:var(--bg-surface); border:1px solid var(--border); font-size:0.8rem; font-weight:600;">${formattedPct}%</span>
                     </div>
                 </div>
@@ -358,10 +358,10 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
             <tr>
                 <td><strong>${v.displayName}</strong></td>
                 <td>${v.goalMetric}${skillStr}</td>
-                <td>${v.target} <span style="font-size:0.75rem; color:var(--text-muted);">(${v.minVal.toFixed(1)} - ${v.maxVal.toFixed(1)})</span></td>
-                <td style="font-weight:600;">${v.actualVal.toFixed(1)}</td>
+                <td>${Math.round(v.target)} <span style="font-size:0.75rem; color:var(--text-muted);">(${Math.round(v.minVal)} - ${Math.round(v.maxVal)})</span></td>
+                <td style="font-weight:600;">${Math.round(v.actualVal)}</td>
                 <td style="color:${v.type === 'Sotto la soglia' ? 'var(--danger)' : '#f59e0b'}; font-weight:500;">
-                    ${v.type === 'Sotto la soglia' ? '-' : '+'}${v.scostamento.toFixed(1)}
+                    ${v.type === 'Sotto la soglia' ? '-' : '+'}${Math.round(v.scostamento)}
                 </td>
                 <td style="text-align:center;">
                     <span class="severity-badge ${v.severityClass}">${v.severityLabel}</span>
