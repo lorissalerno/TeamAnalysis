@@ -3666,9 +3666,7 @@ async function openGoalThresholdsModal(year, tableId) {
             <button class="close-modal" id="close-thr-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:16px;">
-            <div style="font-size:0.82rem; color:var(--text-muted); line-height:1.6;">
-                Per ogni colonna indica da quale soglia il realizzato è considerato <strong style="color:var(--text-main);">quasi raggiunto</strong> (giallo) e da quale <strong style="color:var(--text-main);">superato</strong> (viola). Con lo switch <strong style="color:var(--text-main);">PCT/VAL</strong> puoi usare percentuali oppure quantità assolute: in modalità quantità la soglia è la distanza dal target (es. target 2, "Superato di 4" → superato da 6). Sotto la soglia "quasi raggiunto" il valore è <strong style="color:var(--text-main);">non raggiunto</strong> (rosa); tra il target e la soglia di superamento è <strong style="color:var(--text-main);">raggiunto</strong> (verde).
-            </div>
+
             ${buildGoalLegendHTML()}
             <div id="threshold-cols-list" style="display:flex; flex-direction:column; gap:10px;">
                 ${products.map((p, idx) => {
