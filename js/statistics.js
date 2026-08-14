@@ -3187,7 +3187,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
 
                     const baseColor = colorsList[idx % colorsList.length];
                     const yAxisID = (metricsList.length > 1 && idx > 0) ? 'y2' : 'y';
-                    const metricShades = isBar ? generateBarColorShades(baseColor, employees.length) : generateColorShades(baseColor, employees.length);
+                    const metricShades = generateBarColorShades(baseColor, employees.length);
 
                     employees.forEach((emp, empIdx) => {
                         const empColor = metricShades[empIdx] || baseColor;
@@ -3207,7 +3207,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                             minBarLength: isBar ? 4 : 0,
                             pointRadius: 0,
                             pointHoverRadius: isBar ? 0 : 5,
-                            pointBackgroundColor: baseColor,
+                            pointBackgroundColor: empColor,
                             tension: 0.35,
                             order: 2
                         });
@@ -3300,7 +3300,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             }
         } else {
             const teamBaseColor = colorsList[0];
-            const teamShades = isBar ? generateBarColorShades(teamBaseColor, employees.length) : generateColorShades(teamBaseColor, employees.length);
+            const teamShades = generateBarColorShades(teamBaseColor, employees.length);
             employees.forEach((emp, idx) => {
                 const color = teamShades[idx] || teamBaseColor;
                 const empPts = labels.map(date => {
