@@ -2397,17 +2397,20 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 price += parseMetricValue(row.data[k]);
             });
             return price;
-        };
-
         const isSalesRowMatching = (row) => {
             if (!row || !row.data) return false;
+            // Se la metrica è AOIT, accetta solo righe AOIT ed escludi altri tipi di vendita (Nuovi Abo, Ret, ecc.)
+            if (rawKey.toLowerCase().includes('aoit')) {
+                return (row.skill && row.skill.toLowerCase().includes('aoit')) || 
+                       row.data['AOIT'] !== undefined || 
+                       row.data['AOIT gew'] !== undefined || 
+                       row.data['AOIT (CHF)'] !== undefined;
+            }
+            // Per altre metriche sales:
             if (statConfig.skill && statConfig.skill !== 'ALL' && row.skill && row.skill !== statConfig.skill) return false;
             if (row.data[rawKey] !== undefined && row.data[rawKey] !== null) return true;
             if (row.skill === rawKey) return true;
-            if (rawKey.toLowerCase() === 'aoit') {
-                return (row.skill && row.skill.toLowerCase() === 'aoit') || row.data['AOIT'] !== undefined;
-            }
-            if (row.category && row.category !== 'sales') return false;
+            if (row.data.Product && row.data.Product.toLowerCase() === rawKey.toLowerCase()) return true;
             return false;
         };
 
@@ -2418,7 +2421,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 if (!isSalesRowMatching(row)) return;
                 const prod = row.data && row.data.Product;
                 if (!prod) return;
-                const price = (row.data[rawKey] !== undefined) ? parseMetricValue(row.data[rawKey]) : getRecordPrice(row);
+                const price = getRecordPrice(row);
                 if (price <= 0) return;
                 if (!prodTotals[prod]) prodTotals[prod] = 0;
                 prodTotals[prod] += price;
