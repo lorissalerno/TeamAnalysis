@@ -3105,7 +3105,8 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         const scalesConfig = {
             x: {
                 grid: {
-                    color: 'rgba(128, 128, 128, 0.12)'
+                    display: false,
+                    drawOnChartArea: false
                 }
             },
             y: {
