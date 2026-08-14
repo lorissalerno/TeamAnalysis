@@ -1708,7 +1708,11 @@ async function renderIndividualStats() {
         container.appendChild(goalsSection);
     }
 
-    // 2b. Statistiche individuali (goals_table type gestito in buildStatCard)
+    // 2b. Tabella Dettaglio Vendite Mensili per Tipo (AOIT, Nuovo Mobile, Nuovo TV, ecc.)
+    const monthlyTypesTable = await buildIndividualMonthlyTypesTable(employee, year, salesData, perfData);
+    if (monthlyTypesTable) {
+        container.appendChild(monthlyTypesTable);
+    }
 
     // 3. Grafici e Statistiche Personalizzate (Template Grid)
     const chartsSectionHeader = document.createElement('div');
@@ -1941,6 +1945,182 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
     });
 
     return cardsHtml;
+}
+
+async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfData) {
+    const section = document.createElement('div');
+    section.className = 'card individual-monthly-types-card';
+    section.style.cssText = 'margin-bottom: 24px; padding: 18px 20px; border-radius: var(--radius); background: var(--bg-surface); border: 1px solid var(--border);';
+
+    // 1. Raccogli tutti i tipi di vendita presenti nel DB per quest'anno
+    const allTypesSet = new Set();
+    const priorityOrder = ['AOIT', 'Nuovo Mobile', 'Nuovo Internet', 'Nuovo TV', 'Retention', 'My Service', 'My Security M + L'];
+
+    (salesData || []).forEach(r => {
+        const t = (r.skill || r.data?.Product || '').trim();
+        if (t) allTypesSet.add(t);
+    });
+
+    // Aggiungi anche eventuali prodotti configurati nelle tabelle sales
+    try {
+        const salesTablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+        for (const table of salesTablesList || []) {
+            const prods = await appDb.getSetting(`sales_table_products_${table.id}`, []);
+            (prods || []).forEach(p => {
+                if (p.label && p.label.trim()) allTypesSet.add(p.label.trim());
+                if (p.key && p.key.trim() && !p.key.startsWith('Obiettivo_')) allTypesSet.add(p.key.trim());
+            });
+        }
+    } catch (e) {
+        console.error('Error fetching sales table products:', e);
+    }
+
+    if (allTypesSet.size === 0) {
+        ['AOIT', 'Nuovo Mobile', 'Nuovo Internet', 'Nuovo TV', 'Retention'].forEach(t => allTypesSet.add(t));
+    }
+
+    // Ordinamento: tipi prioritari in ordine prestabilito, seguiti dagli altri in ordine alfabetico
+    const typesList = Array.from(allTypesSet).sort((a, b) => {
+        const idxA = priorityOrder.indexOf(a);
+        const idxB = priorityOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    const monthShortNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    const monthFullNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+    // 2. Matrice valori per questo collaboratore: matrix[type][monthIdx 0..11]
+    const matrix = {};
+    const typeTotals = {};
+    const isCHFFlag = {};
+
+    typesList.forEach(t => {
+        matrix[t] = new Array(12).fill(0);
+        typeTotals[t] = 0;
+        const norm = t.toUpperCase();
+        isCHFFlag[t] = norm.includes('AOIT') || norm.includes('CHF') || norm.includes('GEW');
+    });
+
+    const empSales = (salesData || []).filter(r => r.employee === employee);
+
+    empSales.forEach(r => {
+        if (!r.date) return;
+        const parts = r.date.split('-');
+        if (parts.length < 2) return;
+        const mIdx = parseInt(parts[1], 10) - 1;
+        if (mIdx < 0 || mIdx > 11 || isNaN(mIdx)) return;
+
+        let rawType = (r.skill || r.data?.Product || 'AOIT').trim();
+        let matchedType = typesList.find(t => t.toLowerCase() === rawType.toLowerCase());
+        if (!matchedType) {
+            matchedType = rawType;
+            typesList.push(matchedType);
+            matrix[matchedType] = new Array(12).fill(0);
+            typeTotals[matchedType] = 0;
+            const norm = matchedType.toUpperCase();
+            isCHFFlag[matchedType] = norm.includes('AOIT') || norm.includes('CHF') || norm.includes('GEW');
+        }
+
+        // Estrazione valore numerico
+        let val = 0;
+        if (r.data && typeof r.data === 'object') {
+            if (r.data['AOIT'] !== undefined) val = r.data['AOIT'];
+            else if (r.data['AOIT gew'] !== undefined) val = r.data['AOIT gew'];
+            else if (r.data['Value'] !== undefined) val = r.data['Value'];
+            else if (r.data['W- Value ACQ'] !== undefined) val = r.data['W- Value ACQ'];
+            else if (r.data['Nb Events'] !== undefined) val = r.data['Nb Events'];
+            else {
+                const keys = Object.keys(r.data).filter(k => k !== 'Product');
+                if (keys.length > 0 && r.data[keys[0]] !== undefined) {
+                    val = r.data[keys[0]];
+                }
+            }
+        }
+        const num = typeof val === 'number' ? val : (parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0);
+        matrix[matchedType][mIdx] += num;
+        typeTotals[matchedType] += num;
+    });
+
+    // Funzioni formattazione
+    const formatCellValue = (num, isCHF) => {
+        if (!num || num === 0) return `<span style="color:var(--text-muted); opacity:0.35;">0</span>`;
+        if (isCHF) {
+            return `<span style="font-weight:700; color:var(--text-main); font-family:monospace;">${Math.round(num).toLocaleString('de-CH')}</span>`;
+        }
+        return `<span style="font-weight:700; color:var(--text-main); font-family:monospace;">${Math.round(num)}</span>`;
+    };
+
+    const formatTotalValue = (num, isCHF) => {
+        if (!num || num === 0) return `<span style="color:var(--text-muted); opacity:0.5;">0</span>`;
+        if (isCHF) {
+            return `<span style="font-weight:800; color:var(--primary); font-family:monospace;">CHF ${Math.round(num).toLocaleString('de-CH')}</span>`;
+        }
+        return `<span style="font-weight:800; color:var(--primary); font-family:monospace;">${Math.round(num)}</span>`;
+    };
+
+    let tableRowsHtml = '';
+    typesList.forEach(t => {
+        const isCHF = isCHFFlag[t];
+        const rowTotal = typeTotals[t];
+
+        tableRowsHtml += `
+            <tr>
+                <td style="font-weight: 600; white-space: nowrap;">
+                    <div class="ind-monthly-table-type-badge">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${isCHF ? '#3b82f6' : '#10b981'}; flex-shrink:0;"></span>
+                        <span style="color:var(--text-main);">${t}</span>
+                        ${isCHF ? `<span style="font-size:0.7rem; color:var(--text-muted); font-weight:500;">(CHF)</span>` : ''}
+                    </div>
+                </td>
+                ${matrix[t].map(val => `
+                    <td style="text-align: center; ${val > 0 ? 'background: rgba(59,130,246,0.04);' : ''}">
+                        ${formatCellValue(val, isCHF)}
+                    </td>
+                `).join('')}
+                <td style="text-align: right; background: var(--bg-base); font-weight: 700;">
+                    ${formatTotalValue(rowTotal, isCHF)}
+                </td>
+            </tr>
+        `;
+    });
+
+    section.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary); flex-shrink:0;">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                    <line x1="3" y1="15" x2="21" y2="15"></line>
+                    <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+                <h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0;">Riepilogo Vendite Mensili per Tipo</h3>
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted);">
+                Anno ${year}
+            </div>
+        </div>
+        <div class="ind-monthly-table-wrapper">
+            <table class="ind-monthly-table">
+                <thead>
+                    <tr>
+                        <th style="min-width:160px;">Tipo</th>
+                        ${monthShortNames.map((m, idx) => `
+                            <th title="${monthFullNames[idx]}" style="text-align:center; min-width:55px;">${m}</th>
+                        `).join('')}
+                        <th style="text-align:right; min-width:95px; color:var(--primary);">Totale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRowsHtml}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    return section;
 }
 
 async function openIndividualGoalsModal(employee, year) {

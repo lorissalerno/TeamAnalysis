@@ -1283,4 +1283,61 @@ select option {
     color: var(--text-muted);
 }
 
+/* Tabella Dettaglio Mensile per Tipo (Statistiche Individuali) */
+.ind-monthly-table-wrapper {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+}
 
+.ind-monthly-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.85rem;
+}
+
+.ind-monthly-table th {
+    padding: 10px 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-base);
+    border-bottom: 2px solid var(--border);
+    border-right: 1px solid var(--border);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.ind-monthly-table th:last-child {
+    border-right: none;
+}
+
+.ind-monthly-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    color: var(--text-main);
+    transition: background var(--transition);
+}
+
+.ind-monthly-table td:last-child {
+    border-right: none;
+}
+
+.ind-monthly-table tbody tr:hover td {
+    background: var(--bg-surface-hover);
+}
+
+.ind-monthly-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.ind-monthly-table-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
