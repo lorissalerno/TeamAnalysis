@@ -426,7 +426,7 @@ let showIndividualTeamGoal = false;
 document.addEventListener('DOMContentLoaded', () => {
     const createBtn = document.getElementById('create-stat-btn');
     if(createBtn) {
-        createBtn.addEventListener('click', openStatModal);
+        createBtn.addEventListener('click', () => openStatModal());
     }
     
     const reorderBtn = document.getElementById('reorder-stats-btn');
@@ -772,6 +772,35 @@ const DISTINCT_COLORS = [
     '#EC4899', '#06B6D4', '#F59E0B', '#EF4444', '#64748B'
 ];
 
+// Origine dati selezionata nel modal statistiche: 'performance' | 'sales'
+let currentStatSource = 'performance';
+
+// Tipi di visualizzazione disponibili per ciascuna origine dati
+const STAT_SOURCE_TYPES = {
+    performance: [
+        { value: 'bar', label: 'Grafico a Barre' },
+        { value: 'line', label: 'Grafico a Linee' },
+        { value: 'table', label: 'Tabella Dati' },
+        { value: 'pie', label: 'Grafico a Torta' }
+    ],
+    sales: [
+        { value: 'bar', label: 'Grafico a Barre' },
+        { value: 'line', label: 'Grafico a Linee' },
+        { value: 'table', label: 'Tabella Dati' },
+        { value: 'pie', label: 'Grafico a Torta' },
+        { value: 'goals_table', label: 'Tabella Obiettivi Vendita' }
+    ]
+};
+
+// Icone SVG per ciascun tipo di visualizzazione
+const STAT_TYPE_ICONS = {
+    bar: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
+    line: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 15 9 9 13 13 21 5"></polyline><line x1="3" y1="21" x2="21" y2="21"></line></svg>',
+    table: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line><line x1="9" y1="4" x2="9" y2="20"></line><line x1="15" y1="4" x2="15" y2="20"></line></svg>',
+    pie: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>',
+    goals_table: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>'
+};
+
 let currentEditingStatId = null;
 
 async function openStatModal(editingStat = null) {
@@ -867,6 +896,29 @@ async function openStatModal(editingStat = null) {
     }
 
     const allMetrics = Array.from(metrics).sort();
+
+    // Determina l'origine dati iniziale: dalla statistica in modifica o default Performance
+    currentStatSource = 'performance';
+    if (editingStat) {
+        if (editingStat.type === 'goals_table') {
+            currentStatSource = 'sales';
+        } else if (editingStat.metric && editingStat.metric.startsWith('Sales: ')) {
+            currentStatSource = 'sales';
+        } else if (editingStat.metric && editingStat.metric.startsWith('Performance: ')) {
+            currentStatSource = 'performance';
+        } else if (editingStat.metric) {
+            // Metriche senza prefisso: comportamento legacy, considera Sales
+            currentStatSource = 'sales';
+        }
+    }
+
+    function getSourceMetrics() {
+        if (currentStatSource === 'sales') {
+            return allMetrics.filter(m => m.startsWith('Sales: ') || m.startsWith('Tabella Obiettivi: '));
+        }
+        return allMetrics.filter(m => m.startsWith('Performance: '));
+    }
+
     const metricsContainer = document.getElementById('stat-metrics-container');
     const addMetricBtn = document.getElementById('add-metric-btn');
     metricsContainer.innerHTML = '';
@@ -915,7 +967,7 @@ async function openStatModal(editingStat = null) {
                     .filter(inp => inp !== hiddenInput && inp.value)
                     .map(inp => inp.value)
             );
-            const filtered = allMetrics.filter(m => (!query || m.toLowerCase().includes(query)) && (!selectedInOtherRows.has(m) || m === selectedMetric));
+            const filtered = getSourceMetrics().filter(m => (!query || m.toLowerCase().includes(query)) && (!selectedInOtherRows.has(m) || m === selectedMetric));
             if (filtered.length === 0) {
                 const empty = document.createElement('div');
                 empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
@@ -1143,6 +1195,50 @@ async function openStatModal(editingStat = null) {
     const metricsContainer2 = document.getElementById('stat-metrics-container');
     const addMetricBtn2 = document.getElementById('add-metric-btn');
     const yScaleGroup = document.getElementById('y-scale-custom-group');
+    const sourcePerfBtn = document.getElementById('stat-source-performance');
+    const sourceSalesBtn = document.getElementById('stat-source-sales');
+
+    // Popola il select tipo di visualizzazione in base all'origine dati
+    function populateTypeSelect(source) {
+        if (!typeSelect) return;
+        const types = STAT_SOURCE_TYPES[source] || STAT_SOURCE_TYPES.performance;
+        const currentVal = typeSelect.value;
+        typeSelect.innerHTML = '';
+        types.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.value;
+            opt.textContent = t.label;
+            if (t.value === currentVal) opt.selected = true;
+            typeSelect.appendChild(opt);
+        });
+        // Se il tipo corrente non è valido per l'origine, torna al primo
+        if (!currentVal || !types.some(t => t.value === currentVal)) {
+            typeSelect.value = types[0].value;
+        }
+        // Genera i pulsanti personalizzati del tipo visualizzazione
+        const typeSelector = document.getElementById('stat-type-selector');
+        if (typeSelector) {
+            typeSelector.innerHTML = '';
+            types.forEach(t => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'stat-type-btn' + (t.value === typeSelect.value ? ' active' : '');
+                btn.dataset.type = t.value;
+                btn.title = t.label;
+                btn.innerHTML = (STAT_TYPE_ICONS[t.value] || '') + '<span>' + t.label + '</span>';
+                btn.addEventListener('click', () => {
+                    typeSelect.value = t.value;
+                    typeSelector.querySelectorAll('.stat-type-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.type === t.value);
+                    });
+                    applyTypeUI(typeSelect.value);
+                    schedulePreview();
+                });
+                typeSelector.appendChild(btn);
+            });
+        }
+        applyTypeUI(typeSelect.value);
+    }
 
     // Popola il selector tabelle obiettivi
     const yr2 = window.appState?.activeYear || new Date().getFullYear().toString();
@@ -1161,14 +1257,19 @@ async function openStatModal(editingStat = null) {
     function applyTypeUI(typeVal) {
         const isGoalsTable = typeVal === 'goals_table';
         const isPie = typeVal === 'pie';
+        const isTable = typeVal === 'table';
         if (goalsTableSelectorGroup) goalsTableSelectorGroup.style.display = isGoalsTable ? 'block' : 'none';
         if (metricsContainer2) metricsContainer2.style.display = isGoalsTable ? 'none' : '';
         if (addMetricBtn2) addMetricBtn2.style.display = isGoalsTable ? 'none' : '';
         if (skillSelect) skillSelect.parentElement && (skillSelect.closest('div, label') || skillSelect).closest('[style]') || null;
+        const skillGroup = document.getElementById('stat-skill-group');
         const skillLabel = skillSelect ? skillSelect.previousElementSibling : null;
-        if (skillSelect) skillSelect.style.display = isGoalsTable ? 'none' : '';
-        if (skillLabel && skillLabel.tagName === 'LABEL') skillLabel.style.display = isGoalsTable ? 'none' : '';
-        if (yScaleGroup) yScaleGroup.style.display = (isGoalsTable || isPie) ? 'none' : '';
+        const isPerfSource = currentStatSource === 'performance';
+        const showSkill = !isGoalsTable && isPerfSource;
+        if (skillGroup) skillGroup.style.display = showSkill ? '' : 'none';
+        if (skillSelect) skillSelect.style.display = showSkill ? '' : 'none';
+        if (skillLabel && skillLabel.tagName === 'LABEL') skillLabel.style.display = showSkill ? '' : 'none';
+        if (yScaleGroup) yScaleGroup.style.display = (isGoalsTable || isPie || isTable) ? 'none' : '';
         const pieModeGroup = document.getElementById('pie-mode-group');
         if (pieModeGroup) pieModeGroup.style.display = isPie ? 'block' : 'none';
     }
@@ -1182,10 +1283,49 @@ async function openStatModal(editingStat = null) {
         if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
         const pieGoalCenterCb = document.getElementById('pie-goal-center');
         if (pieGoalCenterCb) pieGoalCenterCb.checked = !!editingStat.pieGoalCenter;
+        if (sourcePerfBtn && sourceSalesBtn) {
+            if (currentStatSource === 'sales') {
+                sourceSalesBtn.classList.add('active');
+                sourcePerfBtn.classList.remove('active');
+            } else {
+                sourcePerfBtn.classList.add('active');
+                sourceSalesBtn.classList.remove('active');
+            }
+        }
+        populateTypeSelect(currentStatSource);
         applyTypeUI(editingStat.type || 'bar');
+    } else {
+        populateTypeSelect(currentStatSource);
+        applyTypeUI('bar');
+    }
+
+    function switchStatSource(source) {
+        if (currentStatSource === source) return;
+        currentStatSource = source;
+        if (sourcePerfBtn) sourcePerfBtn.classList.toggle('active', source === 'performance');
+        if (sourceSalesBtn) sourceSalesBtn.classList.toggle('active', source === 'sales');
+        // Ricrea le righe metrica per il nuovo filtro origine dati
+        metricsContainer.innerHTML = '';
+        createMetricRow();
+        populateTypeSelect(currentStatSource);
+        applyTypeUI(typeSelect.value);
+        schedulePreview();
+    }
+
+    if (sourcePerfBtn) sourcePerfBtn.addEventListener('click', () => switchStatSource('performance'));
+    if (sourceSalesBtn) sourceSalesBtn.addEventListener('click', () => switchStatSource('sales'));
+
+    // Sincronizza l'evidenziazione dei pulsanti tipo con il valore corrente del select
+    function syncTypeSelectorButtons() {
+        const typeSelector = document.getElementById('stat-type-selector');
+        if (!typeSelector) return;
+        typeSelector.querySelectorAll('.stat-type-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === typeSelect.value);
+        });
     }
 
     typeSelect.addEventListener('change', (e) => {
+        syncTypeSelectorButtons();
         applyTypeUI(e.target.value);
         schedulePreview();
     });
@@ -1274,14 +1414,23 @@ function createStatModalHTML() {
         </div>
         <div class="stat-modal-layout">
             <div class="stat-modal-form">
+                <div id="stat-source-group" style="margin-bottom:16px;">
+                    <label style="font-weight:700;">Origine Dati:</label>
+                    <div style="display:flex; gap:8px; margin-top:6px;">
+                        <button type="button" class="stat-source-btn active" id="stat-source-performance" data-source="performance" style="flex:1; justify-content:center;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                            Performance
+                        </button>
+                        <button type="button" class="stat-source-btn" id="stat-source-sales" data-source="sales" style="flex:1; justify-content:center;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                            Vendita
+                        </button>
+                    </div>
+                </div>
+
                 <label style="font-weight:700;">Tipo Visualizzazione:</label>
-                <select id="stat-type" style="width:100%; padding:8px; margin-bottom:16px;">
-                    <option value="bar">Grafico a Barre</option>
-                    <option value="line">Grafico a Linee</option>
-                    <option value="table">Tabella Dati</option>
-                    <option value="pie">Grafico a Torta</option>
-                    <option value="goals_table">Tabella Obiettivi Vendita</option>
-                </select>
+                <div id="stat-type-selector" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;"></div>
+                <select id="stat-type" style="display:none;"></select>
 
                 <div id="goals-table-selector-group" style="display:none; margin-bottom:16px;">
                     <label style="font-weight:700;">Seleziona Tabella Obiettivi:</label>
