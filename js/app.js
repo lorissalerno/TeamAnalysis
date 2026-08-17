@@ -467,8 +467,39 @@ function setupImports() {
                 return;
             }
 
+            const searchInput = document.getElementById('db-search-input');
+            const searchTerm = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
             const perfRecords = await appDb.getAll('performance', 'year', activeYear);
             const salesRecords = await appDb.getAll('sales', 'year', activeYear);
+
+            const matchesSearch = (r, store) => {
+                if (!searchTerm) return true;
+                const dispName = window.getDisplayName(r.employee).toLowerCase();
+                const realName = (r.employee || '').toLowerCase();
+                const skill = (r.skill || '').toLowerCase();
+                const date = (r.date || '').toLowerCase();
+                let monthName = '';
+                if (r.date && r.date.includes('-')) {
+                    const m = parseInt(r.date.split('-')[1], 10);
+                    if (m >= 1 && m <= 12) monthName = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'][m - 1].toLowerCase();
+                }
+                if (dispName.includes(searchTerm) || realName.includes(searchTerm) || skill.includes(searchTerm) || date.includes(searchTerm) || monthName.includes(searchTerm)) {
+                    return true;
+                }
+                if (r.data && typeof r.data === 'object') {
+                    for (const [k, v] of Object.entries(r.data)) {
+                        if (k.toLowerCase().includes(searchTerm) || String(v).toLowerCase().includes(searchTerm)) return true;
+                    }
+                }
+                return false;
+            };
+
+            const perfToDelete = perfRecords.filter(r => {
+                const sk = r.skill || 'Performance (Generale)';
+                return activeFilters.has(sk) && matchesSearch(r, 'performance');
+            });
+            const salesToDelete = salesRecords.filter(r => activeFilters.has('Sales') && matchesSearch(r, 'sales'));
 
             const allCategories = [];
             perfRecords.forEach(r => {
@@ -477,32 +508,26 @@ function setupImports() {
             });
             if (salesRecords.length > 0) allCategories.push('Sales');
 
-            const isAll = allCategories.length > 0 && allCategories.every(cat => activeFilters.has(cat));
+            const isAll = allCategories.length > 0 && allCategories.every(cat => activeFilters.has(cat)) && !searchTerm;
+
             let confirmMsg = "";
             if (isAll) {
                 confirmMsg = `Sei sicuro di voler eliminare TUTTI i dati (Performance e Sales) per l'anno ${activeYear}?`;
             } else {
                 const activeList = Array.from(activeFilters).join(', ');
-                confirmMsg = `Sei sicuro di voler eliminare tutti i dati delle fonti attive (${activeList}) per l'anno ${activeYear}?`;
+                const searchNote = searchTerm ? ` e che corrispondono alla ricerca "${searchInput.value.trim()}"` : '';
+                confirmMsg = `Sei sicuro di voler eliminare i dati delle fonti attive (${activeList})${searchNote} per l'anno ${activeYear}?`;
             }
 
             if (!confirm(confirmMsg)) return;
 
-            if (isAll) {
-                for (const r of perfRecords) await appDb.deleteRecord('performance', r.id);
-                for (const r of salesRecords) await appDb.deleteRecord('sales', r.id);
-                logImport(`Eliminati tutti i dati per l'anno ${activeYear}.`);
-            } else {
-                if (activeFilters.has('Sales')) {
-                    for (const r of salesRecords) await appDb.deleteRecord('sales', r.id);
-                    logImport(`Eliminati tutti i dati Sales per l'anno ${activeYear}.`);
-                }
-                for (const cat of activeFilters) {
-                    if (cat !== 'Sales') {
-                        await appDb.deleteBySkill('performance', cat, activeYear);
-                        logImport(`Eliminati tutti i dati della Skill "${cat}" per l'anno ${activeYear}.`);
-                    }
-                }
+            if (perfToDelete.length > 0) {
+                for (const r of perfToDelete) await appDb.deleteRecord('performance', r.id);
+                logImport(`Eliminati ${perfToDelete.length} record Performance per l'anno ${activeYear}.`);
+            }
+            if (salesToDelete.length > 0) {
+                for (const r of salesToDelete) await appDb.deleteRecord('sales', r.id);
+                logImport(`Eliminati ${salesToDelete.length} record Sales per l'anno ${activeYear}.`);
             }
 
             await refreshYearsList();
