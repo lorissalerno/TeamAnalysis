@@ -9,50 +9,50 @@ const db = {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
 
             request.onupgradeneeded = function(event) {
-                const db = event.target.result;
+                const database = event.target.result;
                 const oldVersion = event.oldVersion;
                 // Settings store
-                if (!db.objectStoreNames.contains('settings')) {
-                    db.createObjectStore('settings', { keyPath: 'key' });
+                if (!database.objectStoreNames.contains('settings')) {
+                    database.createObjectStore('settings', { keyPath: 'key' });
                 }
                 // Performance store: id, year, date, employee, data{}
-                if (!db.objectStoreNames.contains('performance')) {
-                    const perfStore = db.createObjectStore('performance', { keyPath: 'id', autoIncrement: true });
+                if (!database.objectStoreNames.contains('performance')) {
+                    const perfStore = database.createObjectStore('performance', { keyPath: 'id', autoIncrement: true });
                     perfStore.createIndex('year', 'year', { unique: false });
                     perfStore.createIndex('date', 'date', { unique: false });
                 }
                 // Sales store: id, year, date, employee, data{}
-                if (!db.objectStoreNames.contains('sales')) {
-                    const salesStore = db.createObjectStore('sales', { keyPath: 'id', autoIncrement: true });
+                if (!database.objectStoreNames.contains('sales')) {
+                    const salesStore = database.createObjectStore('sales', { keyPath: 'id', autoIncrement: true });
                     salesStore.createIndex('year', 'year', { unique: false });
                     salesStore.createIndex('date', 'date', { unique: false });
                 }
                 // Anonymous mapping: id, year, realName, anonId
-                if (!db.objectStoreNames.contains('anonymous_map')) {
-                    const anonStore = db.createObjectStore('anonymous_map', { keyPath: 'id', autoIncrement: true });
+                if (!database.objectStoreNames.contains('anonymous_map')) {
+                    const anonStore = database.createObjectStore('anonymous_map', { keyPath: 'id', autoIncrement: true });
                     anonStore.createIndex('year', 'year', { unique: false });
                 }
                 // Widgets
-                if (!db.objectStoreNames.contains('dashboard_widgets')) {
-                    db.createObjectStore('dashboard_widgets', { keyPath: 'id' }); // id can be string generated
+                if (!database.objectStoreNames.contains('dashboard_widgets')) {
+                    database.createObjectStore('dashboard_widgets', { keyPath: 'id' }); // id can be string generated
                 }
                 // Custom Stats
-                if (!db.objectStoreNames.contains('custom_stats')) {
-                    db.createObjectStore('custom_stats', { keyPath: 'id' });
+                if (!database.objectStoreNames.contains('custom_stats')) {
+                    database.createObjectStore('custom_stats', { keyPath: 'id' });
                 }
                 // Goals
-                if (!db.objectStoreNames.contains('goals')) {
-                    const goalsStore = db.createObjectStore('goals', { keyPath: 'id' });
+                if (!database.objectStoreNames.contains('goals')) {
+                    const goalsStore = database.createObjectStore('goals', { keyPath: 'id' });
                     goalsStore.createIndex('year', 'year', { unique: false });
                 }
                 // Import Logs Store
-                if (!db.objectStoreNames.contains('import_logs')) {
-                    const logStore = db.createObjectStore('import_logs', { keyPath: 'id', autoIncrement: true });
+                if (!database.objectStoreNames.contains('import_logs')) {
+                    const logStore = database.createObjectStore('import_logs', { keyPath: 'id', autoIncrement: true });
                     logStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
 
                 // Migration v1 -> v2: add year index to goals if store already exists
-                if (oldVersion < 2 && db.objectStoreNames.contains('goals')) {
+                if (oldVersion < 2 && database.objectStoreNames.contains('goals')) {
                     const goalsStore = event.currentTarget.transaction.objectStore('goals');
                     if (!goalsStore.indexNames.contains('year')) {
                         goalsStore.createIndex('year', 'year', { unique: false });
@@ -62,7 +62,7 @@ const db = {
                 // Migration v3 -> v4: add dedupKey index to performance and sales
                 if (oldVersion < 4) {
                     ['performance', 'sales'].forEach(storeName => {
-                        if (db.objectStoreNames.contains(storeName)) {
+                        if (database.objectStoreNames.contains(storeName)) {
                             const store = event.currentTarget.transaction.objectStore(storeName);
                             if (!store.indexNames.contains('dedupKey')) {
                                 store.createIndex('dedupKey', 'dedupKey', { unique: false });
