@@ -224,11 +224,18 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
     });
     const allMetrics = Array.from(metricsSet).sort();
 
+    function displayMetric(m) {
+        return m.replace('Performance: ', '').replace('Sales: ', '');
+    }
+
     function renderMetricDropdown(filterText = '') {
         if (!dropdownEl) return;
         dropdownEl.innerHTML = '';
         const query = filterText.toLowerCase().trim();
-        const filteredMetrics = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
+        const filteredMetrics = allMetrics.filter(m => {
+            if (m.startsWith('Sales: ')) return false;
+            return !query || displayMetric(m).toLowerCase().includes(query);
+        });
         
         if (filteredMetrics.length === 0) {
             const empty = document.createElement('div');
@@ -241,7 +248,7 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         filteredMetrics.forEach(m => {
             const item = document.createElement('div');
             item.className = 'searchable-dropdown-item' + (searchInput && searchInput.value === m ? ' selected' : '');
-            item.textContent = m;
+            item.textContent = displayMetric(m);
             item.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 if (searchInput) searchInput.value = m;
@@ -351,7 +358,7 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
 
     // Filter by search query (metric / statistic name)
     if (searchQuery) {
-        filtered = filtered.filter(v => v.goalMetric.toLowerCase().includes(searchQuery));
+        filtered = filtered.filter(v => displayMetric(v.goalMetric).toLowerCase().includes(searchQuery));
     }
 
     // Sort by Severity Ratio descending (most critical first)
@@ -383,7 +390,7 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         tableHtml += `
             <tr>
                 <td><strong>${v.displayName}</strong></td>
-                <td>${v.goalMetric}${skillStr}</td>
+                <td>${displayMetric(v.goalMetric)}${skillStr}</td>
                 <td>${Math.round(v.target)} <span style="font-size:0.75rem; color:var(--text-muted);">(${v.rangeLabel})</span></td>
                 <td style="font-weight:600;">${Math.round(v.actualVal)}</td>
                 <td style="color:${v.type === 'Sotto la soglia' ? 'var(--danger)' : '#f59e0b'}; font-weight:500;">
