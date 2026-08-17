@@ -43,7 +43,7 @@
                 <label class="toggle-switch" title="Modalità Anonima" data-tooltip="Modalità Anonima">
                     <input type="checkbox" id="anon-toggle">
                     <span class="slider round"></span>
-                    <span class="label">Anonimo</span>
+                    <span class="label" id="anon-label">Anonimo</span>
                 </label>
                 <button id="theme-toggle" class="icon-btn" title="Cambia Tema" data-tooltip="Cambia Tema">
                     <svg class="theme-icon sun-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -324,26 +324,26 @@
                 <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
                     <h1>Obiettivi</h1>
                     <div class="tabs" style="display:inline-flex;">
-                        <button class="tab-btn active" id="goals-tab-sales-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Vendita</button>
-                        <button class="tab-btn" id="goals-tab-list-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Performance</button>
+                        <button class="tab-btn active" id="goals-tab-list-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Performance</button>
+                        <button class="tab-btn" id="goals-tab-sales-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Vendita</button>
                     </div>
                 </div>
                 <div id="goals-top-actions" style="display:flex; align-items:center; gap:8px;">
-                    <button class="btn primary" id="add-goal-btn" style="display:none;">Nuovo Obiettivo</button>
+                    <button class="btn primary" id="add-goal-btn">Nuovo Obiettivo</button>
                 </div>
             </div>
 
-            <!-- Vista Tabella Obiettivi Vendita (Stile Excel) -->
-            <div id="goals-sales-container" class="goals-tab-content">
-                <div id="goals-sales-table-container"></div>
-            </div>
-
             <!-- Vista Elenco Obiettivi Generali -->
-            <div id="goals-list-container" class="goals-tab-content" style="display:none;">
+            <div id="goals-list-container" class="goals-tab-content">
                 <div style="margin-bottom: 16px;">
                     <input type="text" id="goals-search-input" placeholder="Cerca obiettivo per metrica, skill o dipendente..." style="width:100%; max-width:400px; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
                 </div>
                 <div id="goals-list" class="goals-grid"></div>
+            </div>
+
+            <!-- Vista Tabella Obiettivi Vendita (Stile Excel) -->
+            <div id="goals-sales-container" class="goals-tab-content" style="display:none;">
+                <div id="goals-sales-table-container"></div>
             </div>
         </section>
 

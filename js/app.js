@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const savedAnon = await appDb.getSetting('isAnonymous', false);
     document.getElementById('anon-toggle').checked = savedAnon;
     window.appState.isAnonymous = savedAnon;
+    updateAnonToggleLabel();
 
     const savedYear = await appDb.getSetting('activeYear', window.appState.activeYear);
     window.appState.activeYear = savedYear;
@@ -199,6 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('anon-toggle').addEventListener('change', async (e) => {
         window.appState.isAnonymous = e.target.checked;
         await appDb.setSetting('isAnonymous', e.target.checked);
+        updateAnonToggleLabel();
 
         const contentEl = document.querySelector('.content');
         const savedScroll = contentEl ? contentEl.scrollTop : 0;
@@ -356,6 +358,11 @@ async function updateCollabCountBadge() {
 
 
 
+
+function updateAnonToggleLabel() {
+    const label = document.getElementById('anon-label');
+    if (label) label.textContent = window.appState.isAnonymous ? 'Anonimo' : 'Nominativo';
+}
 
 window.getDisplayName = function(realName) {
     if (!window.appState.isAnonymous) return realName;
