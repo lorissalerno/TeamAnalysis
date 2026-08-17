@@ -3,6 +3,32 @@
 let editingGoalId = null;
 let activeSalesSkillFilter = 'ALL';
 
+// Calcola il range di accettazione di un obiettivo in base alla direzione:
+// - direction 'min' (obiettivo minimo, "almeno"): tolleranza solo in giu -> [target - tol, +inf]
+// - direction 'max' (obiettivo massimo, "al massimo"): tolleranza solo in su -> [-inf, target + tol]
+// - obiettivi legacy senza direction: comportamento bilaterale storico [target - minus, target + plus]
+window.computeGoalRange = function(g) {
+    const target = parseFloat(g && g.target) || 0;
+    if (!g || !g.toleranceType || g.toleranceType === 'none') return { min: target, max: target };
+
+    const isNumeric = g.toleranceType === 'numeric';
+    const plus = parseFloat(g.tolerancePlus) || 0;
+    const minus = parseFloat(g.toleranceMinus) || 0;
+
+    if (g.direction === 'max') {
+        const max = isNumeric ? target + plus : target * (1 + plus / 100);
+        return { min: null, max: max };
+    }
+    if (g.direction === 'min') {
+        const min = isNumeric ? target - minus : target * (1 - minus / 100);
+        return { min: min, max: null };
+    }
+
+    const min = isNumeric ? target - minus : target * (1 - minus / 100);
+    const max = isNumeric ? target + plus : target * (1 + plus / 100);
+    return { min: min, max: max };
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('add-goal-btn');
     if (addBtn) {
@@ -83,21 +109,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const skillText = g.skill && g.skill !== 'ALL' ? g.skill : 'Tutte le Skill';
             const empText = g.employee ? window.getDisplayName(g.employee) : 'Tutto il Team';
             
+            let tolLabel = '';
+            let rangeLabel = null;
             let minVal = null;
             let maxVal = null;
-            let tolLabel = '';
-            
+
+            const range = window.computeGoalRange(g);
+            minVal = range.min;
+            maxVal = range.max;
+
             if (g.toleranceType && g.toleranceType !== 'none') {
+                const unit = g.toleranceType === 'numeric' ? '' : '%';
                 const plus = parseFloat(g.tolerancePlus) || 0;
                 const minus = parseFloat(g.toleranceMinus) || 0;
-                if (g.toleranceType === 'numeric') {
-                    minVal = g.target - minus;
-                    maxVal = g.target + plus;
-                    tolLabel = plus === minus ? `±${plus}` : `-${minus} / +${plus}`;
+                if (g.direction === 'max') {
+                    tolLabel = `+${plus}${unit}`;
+                    rangeLabel = `≤ ${Math.round(maxVal)}`;
+                } else if (g.direction === 'min') {
+                    tolLabel = `-${minus}${unit}`;
+                    rangeLabel = `≥ ${Math.round(minVal)}`;
                 } else {
-                    minVal = Math.round(g.target * (1 - minus / 100));
-                    maxVal = Math.round(g.target * (1 + plus / 100));
-                    tolLabel = plus === minus ? `±${plus}%` : `-${minus}% / +${plus}%`;
+                    tolLabel = plus === minus ? `±${plus}${unit}` : `-${minus}${unit} / +${plus}${unit}`;
+                    rangeLabel = `${Math.round(minVal)} – ${Math.round(maxVal)}`;
                 }
             }
 
@@ -125,10 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="font-size:1.15rem; font-weight:800; color:var(--primary, #6366f1); font-family:monospace;">${g.target}</span>
                         </div>
 
-                        ${minVal !== null ? `
+                        ${rangeLabel !== null ? `
                         <div style="border-left:1px solid var(--border, rgba(255,255,255,0.1)); padding-left:14px; display:flex; align-items:baseline; gap:6px;">
                             <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">Range <span style="font-size:0.7rem; font-weight:500; text-transform:none;">(${tolLabel})</span>:</span>
-                            <span style="font-size:1rem; font-weight:700; color:var(--text-main); font-family:monospace;">${minVal} – ${maxVal}</span>
+                            <span style="font-size:1rem; font-weight:700; color:var(--text-main); font-family:monospace;">${rangeLabel}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -1188,17 +1221,14 @@ async function openGoalModal(goalId = null) {
     // Populate metrics
     const year = window.appState?.activeYear || new Date().getFullYear();
     const perfData = await appDb.getAll('performance', 'year', year);
-    const salesData = await appDb.getAll('sales', 'year', year);
     
     const metricsSet = new Set();
     perfData.forEach(d => Object.keys(d.data).forEach(k => metricsSet.add(`Performance: ${k}`)));
-    salesData.forEach(d => {
-        Object.keys(d.data).forEach(k => {
-            if (k !== 'Product') metricsSet.add(`Sales: ${k}`);
-        });
-    });
-    
+
     const allMetrics = Array.from(metricsSet).sort();
+    function displayMetric(m) {
+        return m.replace('Performance: ', '').replace('Sales: ', '');
+    }
 
     const metricSearchInput = document.getElementById('goal-metric-search');
     const metricDropdown = document.getElementById('goal-metric-dropdown');
@@ -1220,23 +1250,22 @@ async function openGoalModal(goalId = null) {
         filtered.forEach(m => {
             const item = document.createElement('div');
             item.className = 'searchable-dropdown-item' + (m === goalSelectedMetric ? ' selected' : '');
-            item.textContent = m;
+            item.textContent = displayMetric(m);
             item.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 goalSelectedMetric = m;
                 metricHidden.value = m;
-                metricSearchInput.value = m;
+                metricSearchInput.value = displayMetric(m);
                 metricDropdown.classList.remove('open');
-                renderGoalDropdown(m);
+                renderGoalDropdown(displayMetric(m));
             });
             metricDropdown.appendChild(item);
         });
     }
 
     metricSearchInput.value = '';
-    goalSelectedMetric = allMetrics.length > 0 ? allMetrics[0] : '';
-    metricHidden.value = goalSelectedMetric;
-    if (goalSelectedMetric) metricSearchInput.value = goalSelectedMetric;
+    goalSelectedMetric = '';
+    metricHidden.value = '';
     renderGoalDropdown('');
 
     metricSearchInput.addEventListener('focus', () => {
@@ -1250,7 +1279,7 @@ async function openGoalModal(goalId = null) {
     });
     metricSearchInput.addEventListener('blur', () => {
         metricDropdown.classList.remove('open');
-        if (goalSelectedMetric) metricSearchInput.value = goalSelectedMetric;
+        if (goalSelectedMetric) metricSearchInput.value = displayMetric(goalSelectedMetric);
     });
 
     // Populate skills
@@ -1271,7 +1300,7 @@ async function openGoalModal(goalId = null) {
     
     // Populate employees
     const empSelect = document.getElementById('goal-employee');
-    empSelect.innerHTML = '<option value="">Tutto il Team (Default)</option>';
+    empSelect.innerHTML = '<option value="">Tutto il Team</option>';
     const names = Object.keys(window.appState.anonymousMap || {}).sort();
     names.forEach(n => {
         const opt = document.createElement('option');
@@ -1280,61 +1309,41 @@ async function openGoalModal(goalId = null) {
         empSelect.appendChild(opt);
     });
 
-    // Live calculation logic between target, tolerance percentage, and numeric values
+    // Live calculation between target and single tolerance value (percent/num)
     const targetInput = document.getElementById('goal-target');
-    const minusPctInput = document.getElementById('goal-tolerance-minus-pct');
-    const minusNumInput = document.getElementById('goal-tolerance-minus-num');
-    const plusPctInput = document.getElementById('goal-tolerance-plus-pct');
-    const plusNumInput = document.getElementById('goal-tolerance-plus-num');
+    const directionSelect = document.getElementById('goal-direction');
+    const tolPctInput = document.getElementById('goal-tolerance-pct');
+    const tolNumInput = document.getElementById('goal-tolerance-num');
 
     function syncToleranceFromPct() {
         const target = parseFloat(targetInput.value);
-        const mPct = parseFloat(minusPctInput.value);
-        const pPct = parseFloat(plusPctInput.value);
-
-        if (!isNaN(target)) {
-            if (!isNaN(mPct)) {
-                minusNumInput.value = Math.round(target * (mPct / 100));
-            }
-            if (!isNaN(pPct)) {
-                plusNumInput.value = Math.round(target * (pPct / 100));
-            }
+        const pct = parseFloat(tolPctInput.value);
+        if (!isNaN(target) && !isNaN(pct)) {
+            tolNumInput.value = Math.round(target * (pct / 100));
         }
     }
 
-    function syncToleranceMinusFromNum() {
+    function syncToleranceFromNum() {
         const target = parseFloat(targetInput.value);
-        const mNum = parseFloat(minusNumInput.value);
-        if (!isNaN(target) && target !== 0 && !isNaN(mNum)) {
-            minusPctInput.value = Math.round((mNum / target) * 100);
-        }
-    }
-
-    function syncTolerancePlusFromNum() {
-        const target = parseFloat(targetInput.value);
-        const pNum = parseFloat(plusNumInput.value);
-        if (!isNaN(target) && target !== 0 && !isNaN(pNum)) {
-            plusPctInput.value = Math.round((pNum / target) * 100);
+        const num = parseFloat(tolNumInput.value);
+        if (!isNaN(target) && target !== 0 && !isNaN(num)) {
+            tolPctInput.value = Math.round((num / target) * 100);
         }
     }
 
     targetInput.oninput = () => { syncToleranceFromPct(); setSuffixes(); };
-    minusPctInput.oninput = () => { syncToleranceFromPct(); };
-    plusPctInput.oninput = () => { syncToleranceFromPct(); };
-    minusNumInput.oninput = () => { syncToleranceMinusFromNum(); setSuffixes(); };
-    plusNumInput.oninput = () => { syncTolerancePlusFromNum(); setSuffixes(); };
+    tolPctInput.oninput = () => { syncToleranceFromPct(); };
+    tolNumInput.oninput = () => { syncToleranceFromNum(); setSuffixes(); };
 
     // Suffix % visibility management
-    const minusPctSuffix = document.getElementById('tol-minus-pct-suffix');
-    const plusPctSuffix = document.getElementById('tol-plus-pct-suffix');
+    const tolPctSuffix = document.getElementById('tol-pct-suffix');
 
     function updateSuffix(input, suffix) {
         suffix.style.display = input.value !== '' ? 'block' : 'none';
     }
 
     function setSuffixes() {
-        updateSuffix(minusPctInput, minusPctSuffix);
-        updateSuffix(plusPctInput, plusPctSuffix);
+        updateSuffix(tolPctInput, tolPctSuffix);
     }
 
     // Load existing goal values if editing
@@ -1344,37 +1353,47 @@ async function openGoalModal(goalId = null) {
         if (existing) {
             goalSelectedMetric = existing.metric || '';
             metricHidden.value = goalSelectedMetric;
-            metricSearchInput.value = goalSelectedMetric;
+            metricSearchInput.value = displayMetric(goalSelectedMetric);
             renderGoalDropdown('');
             targetInput.value = existing.target ?? '';
             skillSelect.value = existing.skill || 'ALL';
             empSelect.value = existing.employee || '';
-            
-            if (existing.toleranceType === 'percentage') {
-                minusPctInput.value = existing.toleranceMinus ?? '';
-                plusPctInput.value = existing.tolerancePlus ?? '';
-                syncToleranceFromPct();
-            } else if (existing.toleranceType === 'numeric') {
-                minusNumInput.value = existing.toleranceMinus ?? '';
-                plusNumInput.value = existing.tolerancePlus ?? '';
-                syncToleranceMinusFromNum();
-                syncTolerancePlusFromNum();
+
+            // Deduci la direzione per gli obiettivi legacy (senza direction)
+            let direction = existing.direction;
+            if (!direction || direction === 'both') {
+                const legacyPlus = parseFloat(existing.tolerancePlus) || 0;
+                const legacyMinus = parseFloat(existing.toleranceMinus) || 0;
+                if (legacyPlus > 0 && legacyMinus === 0) direction = 'max';
+                else if (legacyMinus > 0) direction = 'min';
+                else direction = 'min';
+            }
+            directionSelect.value = direction;
+
+            if (existing.toleranceType === 'percentage' || existing.toleranceType === 'numeric') {
+                const tolVal = direction === 'max'
+                    ? (parseFloat(existing.tolerancePlus) || 0)
+                    : (parseFloat(existing.toleranceMinus) || 0);
+                if (existing.toleranceType === 'numeric') {
+                    tolNumInput.value = tolVal || '';
+                    syncToleranceFromNum();
+                } else {
+                    tolPctInput.value = tolVal || '';
+                    syncToleranceFromPct();
+                }
             } else {
-                minusPctInput.value = '';
-                plusPctInput.value = '';
-                minusNumInput.value = '';
-                plusNumInput.value = '';
+                tolPctInput.value = '';
+                tolNumInput.value = '';
             }
             setSuffixes();
         }
     } else {
         targetInput.value = '';
+        directionSelect.value = 'min';
         skillSelect.value = 'ALL';
         empSelect.value = '';
-        minusPctInput.value = '';
-        plusPctInput.value = '';
-        minusNumInput.value = '';
-        plusNumInput.value = '';
+        tolPctInput.value = '';
+        tolNumInput.value = '';
         setSuffixes();
     }
 
@@ -1393,44 +1412,36 @@ function createGoalModalHTML() {
         <div class="modal-body">
             <label>Dato / Metrica:</label>
             <div style="position:relative; margin-bottom:16px;">
-                <input type="text" id="goal-metric-search" placeholder="Cerca metrica..." autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                <input type="text" id="goal-metric-search" placeholder="Esempio: SR Push" autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
                 <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 <input type="hidden" id="goal-metric">
                 <div id="goal-metric-dropdown" class="searchable-dropdown"></div>
             </div>
 
-            <!-- Single Row layout for Tolerance (-) | Target | Tolerance (+) -->
-            <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom:16px;">
-                <!-- Left: Tolleranza in meno -->
-                <div style="flex:1;">
-                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Tolleranza -</label>
-                    <div style="display:flex; gap:4px;">
-                        <div style="flex:1; position:relative;">
-                            <input type="number" step="any" id="goal-tolerance-minus-pct" placeholder="%" style="width:100%; padding:6px 24px 6px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
-                            <span id="tol-minus-pct-suffix" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); pointer-events:none; display:none;">%</span>
-                        </div>
-                        <div style="flex:1; position:relative;">
-                            <input type="number" step="any" id="goal-tolerance-minus-num" placeholder="Valore" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
-                        </div>
+            <!-- Riga unica: Obiettivo (+ direzione) | Tolleranza (% e valore) -->
+            <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap;">
+                <!-- Obiettivo con selettore direzione -->
+                <div style="flex:1; min-width:180px;">
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Obiettivo</label>
+                    <div style="display:flex; gap:6px;">
+                        <input type="number" step="any" id="goal-target" placeholder="Valore" style="flex:1; min-width:80px; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:bold; text-align:center;">
+                        <select id="goal-direction" title="Direzione obiettivo" style="padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600;">
+                            <option value="min">in su (≥)</option>
+                            <option value="max">in giù (≤)</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Center: Target / Obiettivo -->
-                <div style="flex:1;">
-                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px; text-align:center;">Obiettivo (Target)</label>
-                    <input type="number" step="any" id="goal-target" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:bold; text-align:center;">
-                </div>
-
-                <!-- Right: Tolleranza in più -->
-                <div style="flex:1;">
-                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Tolleranza +</label>
+                <!-- Tolleranza -->
+                <div style="flex:1; min-width:180px;">
+                    <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:4px;">Tolleranza</label>
                     <div style="display:flex; gap:4px;">
                         <div style="flex:1; position:relative;">
-                            <input type="number" step="any" id="goal-tolerance-plus-pct" placeholder="%" style="width:100%; padding:6px 24px 6px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
-                            <span id="tol-plus-pct-suffix" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); pointer-events:none; display:none;">%</span>
+                            <input type="number" step="any" id="goal-tolerance-pct" placeholder="%" style="width:100%; padding:6px 24px 6px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
+                            <span id="tol-pct-suffix" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); pointer-events:none; display:none;">%</span>
                         </div>
                         <div style="flex:1; position:relative;">
-                            <input type="number" step="any" id="goal-tolerance-plus-num" placeholder="Valore" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
+                            <input type="number" step="any" id="goal-tolerance-num" placeholder="Valore" style="width:100%; padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
                         </div>
                     </div>
                 </div>
@@ -1454,8 +1465,8 @@ function createGoalModalHTML() {
 async function saveNewGoal() {
     const metric = document.getElementById('goal-metric').value;
     const target = parseFloat(document.getElementById('goal-target').value);
-    const tolerancePlus = parseFloat(document.getElementById('goal-tolerance-plus-pct').value) || 0;
-    const toleranceMinus = parseFloat(document.getElementById('goal-tolerance-minus-pct').value) || 0;
+    const direction = document.getElementById('goal-direction').value === 'max' ? 'max' : 'min';
+    const tolerance = parseFloat(document.getElementById('goal-tolerance-pct').value) || 0;
     const skill = document.getElementById('goal-skill').value;
     const employee = document.getElementById('goal-employee').value;
     
@@ -1468,15 +1479,16 @@ async function saveNewGoal() {
         return;
     }
     
-    const toleranceType = (tolerancePlus !== 0 || toleranceMinus !== 0) ? 'percentage' : 'none';
+    const toleranceType = tolerance !== 0 ? 'percentage' : 'none';
 
     const newGoal = {
         id: editingGoalId || ('goal_' + Date.now()),
         metric,
         target,
+        direction,
         toleranceType,
-        tolerancePlus,
-        toleranceMinus,
+        tolerancePlus: direction === 'max' ? tolerance : 0,
+        toleranceMinus: direction === 'min' ? tolerance : 0,
         skill,
         employee,
         year: window.appState?.activeYear || new Date().getFullYear()

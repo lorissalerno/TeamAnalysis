@@ -551,8 +551,13 @@ function setupImports() {
                     logImport(`Eliminati vecchi dati performance ("${selectedSkill}") da ${monthVal}/${window.appState.activeYear} in poi.`);
                 }
                 
-                await appDb.addMultiple('performance', parsed.data);
-                logImport(`Importati ${parsed.data.length} record in Performance ("${selectedSkill}").`);
+                const skippedPerf = await appDb.addMultiple('performance', parsed.data);
+                const addedPerf = parsed.data.length - skippedPerf;
+                let perfLog = `Importati ${addedPerf} record in Performance ("${selectedSkill}").`;
+                if (skippedPerf > 0) {
+                    perfLog += ` ${skippedPerf} record duplicati ignorati.`;
+                }
+                logImport(perfLog);
                 await autoAssignAnonIds(parsed.data);
                 await refreshYearsList();
                 await renderImportedData();
@@ -594,8 +599,13 @@ function setupImports() {
                     logImport(`Eliminati vecchi dati sales da ${monthVal}/${window.appState.activeYear} in poi.`);
                 }
                 
-                await appDb.addMultiple('sales', parsed.data);
-                logImport(`Importati ${parsed.data.length} record in Sales.`);
+                const skippedSales = await appDb.addMultiple('sales', parsed.data);
+                const addedSales = parsed.data.length - skippedSales;
+                let salesLog = `Importati ${addedSales} record in Sales.`;
+                if (skippedSales > 0) {
+                    salesLog += ` ${skippedSales} record duplicati ignorati.`;
+                }
+                logImport(salesLog);
                 await autoAssignAnonIds(parsed.data);
                 await refreshYearsList();
                 await renderImportedData();
@@ -2380,8 +2390,13 @@ function setupImportWizard() {
                     }
                 }
 
-                await appDb.addMultiple(storeName, parsed.data);
-                logImport(`Importazione conclusa con successo! Registrati ${parsed.data.length} record in ${storeName === 'performance' ? `Performance ("${selectedSkill}")` : 'Sales'}.`);
+                const skipped = await appDb.addMultiple(storeName, parsed.data);
+                const addedCount = parsed.data.length - skipped;
+                let logMsg = `Importazione conclusa con successo! Registrati ${addedCount} record in ${storeName === 'performance' ? `Performance ("${selectedSkill}")` : 'Sales'}.`;
+                if (skipped > 0) {
+                    logMsg += ` ${skipped} record duplicati ignorati.`;
+                }
+                logImport(logMsg);
                 await autoAssignAnonIds(parsed.data);
 
                 if (statusBadge) {

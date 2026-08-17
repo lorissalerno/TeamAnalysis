@@ -1,5 +1,5 @@
 const DB_NAME = 'TeamAnalysisDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const db = {
     _db: null,
@@ -57,6 +57,31 @@ const db = {
                     if (!goalsStore.indexNames.contains('year')) {
                         goalsStore.createIndex('year', 'year', { unique: false });
                     }
+                }
+
+                // Migration v3 -> v4: add dedupKey index to performance and sales
+                if (oldVersion < 4) {
+                    ['performance', 'sales'].forEach(storeName => {
+                        if (db.objectStoreNames.contains(storeName)) {
+                            const store = event.currentTarget.transaction.objectStore(storeName);
+                            if (!store.indexNames.contains('dedupKey')) {
+                                store.createIndex('dedupKey', 'dedupKey', { unique: false });
+                            }
+                            // Backfill dedupKey on existing records
+                            const cursorReq = store.openCursor();
+                            cursorReq.onsuccess = (event) => {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    const item = cursor.value;
+                                    if (!item.dedupKey) {
+                                        item.dedupKey = db.buildDedupKey(item);
+                                        cursor.update(item);
+                                    }
+                                    cursor.continue();
+                                }
+                            };
+                        }
+                    });
                 }
             };
 
@@ -121,15 +146,74 @@ const db = {
         });
     },
 
-    // Generic add multiple items
+    // Build a deduplication key for a performance/sales record
+    buildDedupKey: function(item) {
+        const employee = (item.employee || '').trim();
+        const date = item.date || '';
+        const skill = (item.skill || '');
+        if (item.category === 'sales' || item.data && item.data.Product) {
+            const product = (item.data && item.data.Product) || skill;
+            return `sales|${employee}|${date}|${product}`;
+        }
+        return `perf|${employee}|${date}|${skill}`;
+    },
+
+    // Generic add multiple items (deduplicates on dedupKey for performance/sales)
     addMultiple: async function(storeName, items) {
         await this._ensureDb();
+        const readStore = this._db.transaction([storeName], 'readonly').objectStore(storeName);
+
+        if (!readStore.indexNames.contains('dedupKey')) {
+            return new Promise((resolve, reject) => {
+                const transaction = this._db.transaction([storeName], 'readwrite');
+                const store = transaction.objectStore(storeName);
+                items.forEach(item => store.put(item));
+
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        const existingKeys = new Set();
+        const index = readStore.index('dedupKey');
+        const keyRequest = index.openCursor();
+        await new Promise((resolve, reject) => {
+            keyRequest.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    existingKeys.add(cursor.key);
+                    cursor.continue();
+                } else {
+                    resolve();
+                }
+            };
+            keyRequest.onerror = () => reject(keyRequest.error);
+        });
+
+        const toAdd = [];
+        const batchKeys = new Set();
+        let skipped = 0;
+        items.forEach(item => {
+            const key = this.buildDedupKey(item);
+            if (existingKeys.has(key) || batchKeys.has(key)) {
+                skipped++;
+                return;
+            }
+            item.dedupKey = key;
+            batchKeys.add(key);
+            toAdd.push(item);
+        });
+
+        if (toAdd.length === 0) {
+            return skipped;
+        }
+
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            items.forEach(item => store.put(item));
-            
-            transaction.oncomplete = () => resolve();
+            const writeStore = transaction.objectStore(storeName);
+            toAdd.forEach(item => writeStore.put(item));
+
+            transaction.oncomplete = () => resolve(skipped);
             transaction.onerror = () => reject(transaction.error);
         });
     },

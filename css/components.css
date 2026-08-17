@@ -998,6 +998,13 @@ select option {
     color: var(--text-main);
 }
 
+#wizard-perf-skill-select {
+    padding: 12px 14px;
+    font-size: 1rem;
+    min-height: 48px;
+    cursor: pointer;
+}
+
 /* Reorder Popup List */
 .reorder-list {
     display: flex;

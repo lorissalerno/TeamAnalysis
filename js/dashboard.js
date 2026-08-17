@@ -144,22 +144,30 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
         const formattedPct = Math.round(pct * 10) / 10;
         const clampedPct = Math.min(Math.max(pct, 0), 100);
 
-        // Tolerance calculation
-        let minVal = targetVal;
-        let maxVal = targetVal;
-        if (g.toleranceType === 'numeric') {
-            minVal = targetVal - (parseFloat(g.toleranceMinus) || 0);
-            maxVal = targetVal + (parseFloat(g.tolerancePlus) || 0);
-        } else if (g.toleranceType === 'percentage') {
-            minVal = targetVal * (1 - (parseFloat(g.toleranceMinus) || 0) / 100);
-            maxVal = targetVal * (1 + (parseFloat(g.tolerancePlus) || 0) / 100);
-        }
+        // Tolerance calculation (rispetta la direzione: 'min' o 'max', legacy bilaterale)
+        const range = window.computeGoalRange ? window.computeGoalRange(g) : { min: targetVal, max: targetVal };
+        const minVal = range.min;
+        const maxVal = range.max;
 
         let statusClass = 'success';
-        if (teamVal < minVal) {
-            statusClass = 'danger';
-        } else if (teamVal < targetVal) {
-            statusClass = 'warning';
+        if (g.direction === 'max') {
+            if (maxVal !== null && teamVal > maxVal) {
+                statusClass = 'danger';
+            } else if (teamVal > targetVal) {
+                statusClass = 'warning';
+            }
+        } else if (g.direction === 'min') {
+            if (minVal !== null && teamVal < minVal) {
+                statusClass = 'danger';
+            } else if (teamVal < targetVal) {
+                statusClass = 'warning';
+            }
+        } else {
+            if (minVal !== null && teamVal < minVal) {
+                statusClass = 'danger';
+            } else if (teamVal < targetVal) {
+                statusClass = 'warning';
+            }
         }
 
         const skillBadge = g.skill && g.skill !== 'ALL' ? ` | Skill: ${g.skill}` : '';
@@ -267,53 +275,71 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
     goals.forEach(g => {
         if (!g.toleranceType || g.toleranceType === 'none') return;
         const targetVal = parseFloat(g.target) || 0;
-        let minVal = targetVal;
-        let maxVal = targetVal;
-
-        if (g.toleranceType === 'numeric') {
-            minVal = targetVal - (parseFloat(g.toleranceMinus) || 0);
-            maxVal = targetVal + (parseFloat(g.tolerancePlus) || 0);
-        } else if (g.toleranceType === 'percentage') {
-            minVal = targetVal * (1 - (parseFloat(g.toleranceMinus) || 0) / 100);
-            maxVal = targetVal * (1 + (parseFloat(g.tolerancePlus) || 0) / 100);
-        }
+        const range = window.computeGoalRange ? window.computeGoalRange(g) : { min: targetVal, max: targetVal };
+        const minVal = range.min;
+        const maxVal = range.max;
 
         // Employees to check
         const empList = g.employee ? [g.employee] : activeEmployees;
 
         empList.forEach(emp => {
             const actualVal = calculateEmployeeMetricValue(emp, g.metric, g.skill, perfData, salesData);
-            if (actualVal < minVal || actualVal > maxVal) {
-                const isUnder = actualVal < minVal;
-                const scostamento = isUnder ? (minVal - actualVal) : (actualVal - maxVal);
-                const severityRatio = targetVal !== 0 ? (scostamento / Math.abs(targetVal)) : scostamento;
 
-                let severityClass = 'severity-low';
-                let severityLabel = 'Lieve';
-                if (severityRatio >= 0.25) {
-                    severityClass = 'severity-high';
-                    severityLabel = 'Critico';
-                } else if (severityRatio >= 0.10) {
-                    severityClass = 'severity-medium';
-                    severityLabel = 'Alto';
+            let isUnder = false;
+            let scostamento = 0;
+
+            if (g.direction === 'max') {
+                if (maxVal === null || actualVal <= maxVal) return;
+                isUnder = false;
+                scostamento = actualVal - maxVal;
+            } else if (g.direction === 'min') {
+                if (minVal === null || actualVal >= minVal) return;
+                isUnder = true;
+                scostamento = minVal - actualVal;
+            } else {
+                if (minVal !== null && actualVal < minVal) {
+                    isUnder = true;
+                    scostamento = minVal - actualVal;
+                } else if (maxVal !== null && actualVal > maxVal) {
+                    isUnder = false;
+                    scostamento = actualVal - maxVal;
+                } else {
+                    return;
                 }
-
-                violations.push({
-                    employee: emp,
-                    displayName: window.getDisplayName(emp),
-                    goalMetric: g.metric,
-                    goalSkill: g.skill || 'ALL',
-                    target: targetVal,
-                    minVal,
-                    maxVal,
-                    actualVal,
-                    scostamento,
-                    severityRatio,
-                    severityClass,
-                    severityLabel,
-                    type: isUnder ? 'Sotto la soglia' : 'Sopra la soglia'
-                });
             }
+
+            const severityRatio = targetVal !== 0 ? (scostamento / Math.abs(targetVal)) : scostamento;
+
+            let severityClass = 'severity-low';
+            let severityLabel = 'Lieve';
+            if (severityRatio >= 0.25) {
+                severityClass = 'severity-high';
+                severityLabel = 'Critico';
+            } else if (severityRatio >= 0.10) {
+                severityClass = 'severity-medium';
+                severityLabel = 'Alto';
+            }
+
+            const rangeLabel = (minVal === null)
+                ? `≤ ${Math.round(maxVal)}`
+                : (maxVal === null ? `≥ ${Math.round(minVal)}` : `${Math.round(minVal)} - ${Math.round(maxVal)}`);
+
+            violations.push({
+                employee: emp,
+                displayName: window.getDisplayName(emp),
+                goalMetric: g.metric,
+                goalSkill: g.skill || 'ALL',
+                target: targetVal,
+                minVal,
+                maxVal,
+                rangeLabel,
+                actualVal,
+                scostamento,
+                severityRatio,
+                severityClass,
+                severityLabel,
+                type: isUnder ? 'Sotto la soglia' : 'Sopra la soglia'
+            });
         });
     });
 
@@ -358,7 +384,7 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
             <tr>
                 <td><strong>${v.displayName}</strong></td>
                 <td>${v.goalMetric}${skillStr}</td>
-                <td>${Math.round(v.target)} <span style="font-size:0.75rem; color:var(--text-muted);">(${Math.round(v.minVal)} - ${Math.round(v.maxVal)})</span></td>
+                <td>${Math.round(v.target)} <span style="font-size:0.75rem; color:var(--text-muted);">(${v.rangeLabel})</span></td>
                 <td style="font-weight:600;">${Math.round(v.actualVal)}</td>
                 <td style="color:${v.type === 'Sotto la soglia' ? 'var(--danger)' : '#f59e0b'}; font-weight:500;">
                     ${v.type === 'Sotto la soglia' ? '-' : '+'}${Math.round(v.scostamento)}

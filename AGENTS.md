@@ -2,7 +2,7 @@
 
 ## Panoramica
 
-TeamAnalysis: app web statica, 100% client-side (HTML/CSS/vanilla JS + IndexedDB + Chart.js via CDN), nessun server, nessun build, nessun test. Interamente in italiano (UI, commenti, commit). Il file `TeamAnalysis-Specifiche.md` è la specifica autorevole: leggerlo prima di implementare funzionalità.
+TeamAnalysis: app web statica, 100% client-side (HTML/CSS/vanilla JS + IndexedDB + Chart.js via CDN), nessun server, nessun build, nessun test. Interamente in italiano (UI, commenti, commit).
 
 ## Verifica
 

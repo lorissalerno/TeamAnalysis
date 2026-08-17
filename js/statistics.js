@@ -3832,18 +3832,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             maxTarget = relevantGoal.target;
             minTarget = relevantGoal.target;
 
-            if (relevantGoal.toleranceType && relevantGoal.toleranceType !== 'none') {
-                const plus = parseFloat(relevantGoal.tolerancePlus) || 0;
-                const minus = parseFloat(relevantGoal.toleranceMinus) || 0;
-
-                if (relevantGoal.toleranceType === 'numeric') {
-                    maxTarget = relevantGoal.target + plus;
-                    minTarget = relevantGoal.target - minus;
-                } else if (relevantGoal.toleranceType === 'percentage') {
-                    maxTarget = relevantGoal.target * (1 + plus / 100);
-                    minTarget = relevantGoal.target * (1 - minus / 100);
-                }
-            }
+            const range = window.computeGoalRange ? window.computeGoalRange(relevantGoal) : { min: relevantGoal.target, max: relevantGoal.target };
+            if (range.max !== null) maxTarget = range.max;
+            if (range.min !== null) minTarget = range.min;
         }
         
         // Calculate adaptive min and max for Y and Y2 scales
