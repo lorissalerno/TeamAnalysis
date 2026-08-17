@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // TABELLA OBIETTIVI VENDITA (STILE EXCEL)
 // ==========================================
-let isSalesTableEditMode = true;
+const salesTableEditModes = {};
 let activeSalesTableId = 'default';
 
 async function getSalesTablesList(year) {
@@ -290,23 +290,36 @@ async function renderSalesGoalsTable() {
         tableCard.dataset.tableId = t.id;
         tableCard.style.cssText = 'padding:18px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-surface);';
 
+        const editMode = !!salesTableEditModes[t.id];
+
         tableCard.innerHTML = `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <h2 class="table-title-display" data-id="${t.id}" style="font-size:1.15rem; font-weight:800; color:var(--text-main); margin:0;">${t.name}</h2>
-                    ${isSalesTableEditMode ? `
+                    ${editMode ? `
                         <button class="edit-table-title-btn" data-id="${t.id}" title="Rinomina tabella" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:2px; display:inline-flex; align-items:center; opacity:0.7;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         </button>
                     ` : ''}
                     <span style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700; letter-spacing:0.02em;">Skill: ${t.skill === 'ALL' ? 'Tutte' : t.skill}</span>
                 </div>
-                ${isSalesTableEditMode ? `
-                    <button class="btn secondary btn-sm delete-table-btn" data-id="${t.id}" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:6px 12px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        Elimina Tabella
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn secondary btn-sm toggle-table-edit-btn" data-id="${t.id}" title="${editMode ? 'Passa alla visualizzazione' : 'Passa alla modalità modifica'}" style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700; padding:6px 12px; ${editMode ? 'background:var(--primary); color:#fff; border:1px solid var(--primary);' : 'background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border);'}">
+                        ${editMode ? `
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            Visualizza
+                        ` : `
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            Modifica
+                        `}
                     </button>
-                ` : ''}
+                    ${editMode ? `
+                        <button class="btn secondary btn-sm delete-table-btn" data-id="${t.id}" title="Elimina questa tabella" style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; color:#ef4444; border-color:rgba(239,68,68,0.3); padding:6px 12px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Elimina Tabella
+                        </button>
+                    ` : ''}
+                </div>
             </div>
 
             <div style="overflow-x:auto;">
@@ -321,7 +334,7 @@ async function renderSalesGoalsTable() {
                                 ${products.map((p, idx) => `
                                     <th style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px; position:relative;">
                                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
-                                            ${isSalesTableEditMode ? `
+                                            ${editMode ? `
                                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
                                                     <input type="text" class="header-col-label-input" data-table-id="${t.id}" data-idx="${idx}" value="${p.label}" style="background:transparent; border:none; color:var(--text-main); font-weight:700; text-align:center; font-size:0.88rem; width:100%; outline:none;" placeholder="Titolo...">
                                                     <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
@@ -375,7 +388,7 @@ async function renderSalesGoalsTable() {
                                         </div>
                                     </th>
                                 `).join('')}
-                                ${isSalesTableEditMode ? `
+                                ${editMode ? `
                                     <th style="padding:6px; text-align:center; width:50px; min-width:50px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
                                         <button class="btn primary add-table-col-header-btn" data-table-id="${t.id}" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; font-weight:700; cursor:pointer; margin:0 auto;" title="Aggiungi Obiettivo">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -392,6 +405,14 @@ async function renderSalesGoalsTable() {
         `;
 
         stackDiv.appendChild(tableCard);
+
+        const toggleEditBtn = tableCard.querySelector('.toggle-table-edit-btn');
+        if (toggleEditBtn) {
+            toggleEditBtn.onclick = () => {
+                salesTableEditModes[t.id] = !salesTableEditModes[t.id];
+                renderSalesGoalsTable();
+            };
+        }
 
         const deleteBtn = tableCard.querySelector('.delete-table-btn');
         if (deleteBtn) {
@@ -571,7 +592,7 @@ async function renderSalesGoalsTable() {
         }
 
         if (employees.length > 0) {
-            buildTableBodyAndFoot(tableCard, t.id, products, employees, savedTargets, collabWorkPcts, t.skill);
+            buildTableBodyAndFoot(tableCard, t.id, products, employees, savedTargets, collabWorkPcts, t.skill, editMode);
         }
     }
 
@@ -584,7 +605,7 @@ async function renderSalesGoalsTable() {
     });
 }
 
-function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTargets, collabWorkPcts, skillFilter) {
+function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTargets, collabWorkPcts, skillFilter, editMode) {
     const tbody = tableCard.querySelector('.sales-goals-tbody');
     const tfoot = tableCard.querySelector('.sales-goals-tfoot');
     if (!tbody || !tfoot) return;
@@ -619,7 +640,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
                 ${displayName}
             </td>
             <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
-                ${isSalesTableEditMode ? `
+                ${editMode ? `
                     <input type="number" class="collab-work-pct-input" data-emp="${emp}" value="${empWorkPct}" min="0" max="200" style="width:54px; text-align:center; padding:4px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-weight:600; font-size:0.85rem;">%
                 ` : `
                     <span style="font-weight:600; font-size:0.88rem; color:var(--text-muted);">${empWorkPct}%</span>
@@ -646,7 +667,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
 
                 rowHtml += `
                     <td style="padding:8px; text-align:center; border-right:1px solid var(--border);">
-                        ${isSalesTableEditMode ? `
+                        ${editMode ? `
                             <span class="indiv-calc-display" data-emp="${emp}" data-key="${p.key}" style="display:inline-block; width:95px; text-align:center; padding:5px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-muted); font-weight:700; font-size:0.88rem;">${formatVal(calcVal, p.isCHF)}</span>
                         ` : `
                             <span class="indiv-calc-display" data-emp="${emp}" data-key="${p.key}" style="font-weight:700; font-size:0.92rem; color:var(--text-main); font-family:monospace;">${formatVal(calcVal, p.isCHF)}</span>
@@ -656,7 +677,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
             }
         });
 
-        if (isSalesTableEditMode) rowHtml += `<td></td>`;
+        if (editMode) rowHtml += `<td></td>`;
         tr.innerHTML = rowHtml;
         tbody.appendChild(tr);
     });
@@ -677,7 +698,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
         const inputClass = p.mode === 'team' ? 'sales-team-target-input' : 'sales-indiv-total-input';
         const borderColor = p.mode === 'team' ? 'var(--primary, #6366f1)' : 'var(--border)';
 
-        if (isSalesTableEditMode) {
+        if (editMode) {
             teamHtml += `
                 <td style="padding:6px; text-align:center; border-right:1px solid var(--border);">
                     <input type="number" step="any" class="${inputClass}" data-key="${p.key}" data-mode="${p.mode}" value="${storedVal || ''}" placeholder="0" style="width:95px; text-align:center; padding:6px; border-radius:6px; border:2px solid ${borderColor}; background:var(--bg-surface); color:var(--text-main); font-weight:800; font-size:0.95rem;">
@@ -691,7 +712,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
             `;
         }
     });
-    if (isSalesTableEditMode) teamHtml += `<td></td>`;
+    if (editMode) teamHtml += `<td></td>`;
     teamTr.innerHTML = teamHtml;
     tfoot.appendChild(teamTr);
 
