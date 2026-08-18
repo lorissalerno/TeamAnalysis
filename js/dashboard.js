@@ -316,7 +316,7 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
     summaryContainer.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
             <div style="display:flex; align-items:center; gap:12px;">
-                <svg viewBox="0 0 32 24" width="52" height="39" fill="var(--primary)" stroke="var(--primary)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                <svg viewBox="0 0 32 24" width="78" height="58" fill="var(--primary)" stroke="var(--primary)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
                     <circle cx="8.6" cy="5.4" r="2.2" opacity="0.35"></circle>
                     <rect x="5.5" y="11.8" width="6.2" height="6.6" rx="3.1" opacity="0.35"></rect>
                     <circle cx="23.4" cy="5.4" r="2.2" opacity="0.35"></circle>
