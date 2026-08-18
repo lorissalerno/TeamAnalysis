@@ -269,6 +269,7 @@ window.renderDashboard = async function() {
     const activeEmployees = Array.from(activeEmployeesSet).sort();
 
     renderCollaboratorsSummary(activeEmployees, perfData, salesData);
+    await renderTeamSalesGoals(perfData, salesData);
     renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees);
     await renderToleranceViolations(goals, perfData, salesData, activeEmployees);
 };
@@ -333,6 +334,137 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
 // Helper: nome metrica senza prefisso 'Performance: '/'Sales: '
 function displayMetricName(metricStr) {
     return String(metricStr || '').replace('Performance: ', '').replace('Sales: ', '');
+}
+
+// 1b. Raggiungimento Obiettivi Sales per tutto il team (stile "Obiettivi di Vendita"
+// dei singoli collaboratori, ma con target totale di team per ogni skill).
+async function renderTeamSalesGoals(perfData, salesData) {
+    const container = document.getElementById('dashboard-sales-goals-container');
+    if (!container) return;
+
+    const year = window.appState.activeYear;
+    const salesTablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
+    if (!salesTablesList || salesTablesList.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); padding:12px 0;">Nessun obiettivo Sales impostato per l\'anno attivo.</p>';
+        return;
+    }
+
+    // Ultimo mese presente nei dati (per la card mensile)
+    let allDates = [];
+    salesData.forEach(d => { if (d.date) allDates.push(d.date); });
+    perfData.forEach(d => { if (d.date) allDates.push(d.date); });
+
+    let latestMonthStr = '';
+    let latestMonthName = 'Corrente';
+    if (allDates.length > 0) {
+        allDates.sort();
+        const lastDate = allDates[allDates.length - 1];
+        const parts = lastDate.split('-');
+        if (parts.length >= 2) {
+            latestMonthStr = `${parts[0]}-${parts[1]}`;
+            const monthIdx = parseInt(parts[1], 10) - 1;
+            const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+            if (monthIdx >= 0 && monthIdx < 12) latestMonthName = mesi[monthIdx];
+        }
+    }
+
+    let html = '';
+
+    for (const table of salesTablesList) {
+        const products = await appDb.getSetting(`sales_table_products_${table.id}`, []);
+        const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${table.id}`, {})) || {};
+
+        let cardsHtml = '';
+        let hasCards = false;
+
+        (products || []).forEach((product, idx) => {
+            const label = product.label || product.key || 'Obiettivo';
+            const isCHF = !!product.isCHF;
+            const color = ['#3b82f6', '#059669', '#d97706', '#8b5cf6', '#ec4899'][idx % 5];
+
+            const mappedMetrics = Array.isArray(product.mappedMetrics)
+                ? product.mappedMetrics
+                : (product.mappedMetric ? product.mappedMetric.split(',').map(s => s.trim()).filter(Boolean) : []);
+
+            // Obiettivo totale di team: TEAM_ per modalità team, INDIV_TOTAL_ per la somma individuale
+            const annualTarget = product.mode === 'team'
+                ? Number(savedTargets['TEAM_' + product.key] || 0)
+                : Number(savedTargets['INDIV_TOTAL_' + product.key] || 0);
+            if (annualTarget <= 0 && (!mappedMetrics || mappedMetrics.length === 0)) return;
+
+            const monthlyTarget = annualTarget > 0 ? Math.round(annualTarget / 12) : 0;
+            const metricsToUse = mappedMetrics.length > 0 ? mappedMetrics : [label];
+
+            // Valori realizzati per tutto il team (senza filtro collaboratore)
+            const annualAchieved = calcActualForMetric(metricsToUse, perfData, salesData, null, isCHF);
+            const monthlySalesData = latestMonthStr ? salesData.filter(r => r.date && r.date.startsWith(latestMonthStr)) : [];
+            const monthlyPerfData = latestMonthStr ? perfData.filter(r => r.date && r.date.startsWith(latestMonthStr)) : [];
+            const monthlyAchieved = calcActualForMetric(metricsToUse, monthlyPerfData, monthlySalesData, null, isCHF);
+
+            const formatVal = (v) => {
+                if (isCHF) return 'CHF ' + Math.round(v).toLocaleString('de-CH');
+                return Math.round(v).toString();
+            };
+
+            const monthPct = monthlyTarget > 0 ? Math.round((monthlyAchieved / monthlyTarget) * 100) : 0;
+            const annualPct = annualTarget > 0 ? Math.round((annualAchieved / annualTarget) * 100) : 0;
+            const monthPctClamped = Math.min(Math.max(monthPct, 0), 100);
+            const annualPctClamped = Math.min(Math.max(annualPct, 0), 100);
+
+            cardsHtml += `
+                <div class="card" style="padding: 12px 14px; border-radius: var(--radius); background: var(--bg-surface); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 13px; color: ${color}; margin-bottom: 8px;">
+                            <span>${label}</span>
+                        </div>
+
+                        <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
+                            <span style="font-size:11px; color:var(--text-muted);">Mensile ${latestMonthName}</span>
+                            <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(monthlyAchieved)} / ${formatVal(monthlyTarget)}</span>
+                        </div>
+                        <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:8px; position:relative;">
+                            <div class="goal-progress-fill" style="width:${monthPctClamped}%; height:100%; background:${color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
+                                ${monthPct > 12 ? monthPct + '%' : ''}
+                            </div>
+                        </div>
+
+                        <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
+                            <span style="font-size:11px; color:var(--text-muted);">Annuale</span>
+                            <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(annualAchieved)} / ${formatVal(annualTarget)}</span>
+                        </div>
+                        <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative;">
+                            <div class="goal-progress-fill" style="width:${annualPctClamped}%; height:100%; background:${color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
+                                ${annualPct > 12 ? annualPct + '%' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            hasCards = true;
+        });
+
+        if (!hasCards) continue;
+
+        const skillLabel = table.name || table.skill || 'Tutte le Skill';
+        html += `
+            <div style="margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--primary); flex-shrink:0;"></span>
+                    <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">${skillLabel}</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                    ${cardsHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    if (!html) {
+        container.innerHTML = '<p style="color:var(--text-muted); padding:12px 0;">Nessun obiettivo Sales impostato per l\'anno attivo.</p>';
+        return;
+    }
+
+    container.innerHTML = html;
 }
 
 // Chiave stabile di un obiettivo per i pin (id se presente, altrimenti composita)

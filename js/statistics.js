@@ -1889,7 +1889,7 @@ async function renderIndividualStats() {
         goalsSection.style.cssText = 'margin-bottom: 24px;';
         goalsSection.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0;">Obiettivi di Vendita</h3>
+                <h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0;">Sales</h3>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
                 ${goalCardsHtml}
