@@ -148,6 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:var(--bg-alt, rgba(255,255,255,0.05)); color:var(--text-muted); border:1px solid var(--border, rgba(255,255,255,0.1)); white-space:nowrap;">
                             ${empText}
                         </span>
+                        ${g.weightMetric ? `
+                        <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); white-space:nowrap;">
+                            Ponderata per: ${g.weightMetric.replace('Performance: ', '')}
+                        </span>
+                        ` : ''}
                     </div>
                 </div>
 
@@ -1258,6 +1263,15 @@ async function openGoalModal(goalId = null) {
                 metricSearchInput.value = displayMetric(m);
                 metricDropdown.classList.remove('open');
                 renderGoalDropdown(displayMetric(m));
+                // Auto-suggest della controparte (#) come peso, se l'utente non l'ha scelta manualmente
+                if (!weightUserTouched) {
+                    const sug = suggestWeightFor(m);
+                    if (sug) {
+                        goalSelectedWeight = sug;
+                        weightHidden.value = sug;
+                        weightSearchInput.value = displayMetric(sug);
+                    }
+                }
             });
             metricDropdown.appendChild(item);
         });
@@ -1281,6 +1295,91 @@ async function openGoalModal(goalId = null) {
         metricDropdown.classList.remove('open');
         if (goalSelectedMetric) metricSearchInput.value = displayMetric(goalSelectedMetric);
     });
+
+    // Metrica di influenza (peso per media ponderata)
+    const weightSearchInput = document.getElementById('goal-weight-metric-search');
+    const weightDropdown = document.getElementById('goal-weight-metric-dropdown');
+    const weightHidden = document.getElementById('goal-weight-metric');
+
+    let goalSelectedWeight = '';
+    let weightUserTouched = false;
+
+    function renderWeightDropdown(filterText = '') {
+        weightDropdown.innerHTML = '';
+        const query = filterText.toLowerCase().trim();
+        const filtered = allMetrics.filter(m => !query || m.toLowerCase().includes(query));
+        if (filtered.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:8px 12px; color:var(--text-muted); font-size:0.85rem;';
+            empty.textContent = 'Nessun risultato';
+            weightDropdown.appendChild(empty);
+            return;
+        }
+        filtered.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'searchable-dropdown-item' + (m === goalSelectedWeight ? ' selected' : '');
+            item.textContent = displayMetric(m);
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                goalSelectedWeight = m;
+                weightUserTouched = true;
+                weightHidden.value = m;
+                weightSearchInput.value = displayMetric(m);
+                weightDropdown.classList.remove('open');
+                renderWeightDropdown(displayMetric(m));
+            });
+            weightDropdown.appendChild(item);
+        });
+    }
+
+    weightSearchInput.value = '';
+    goalSelectedWeight = '';
+    weightHidden.value = '';
+    renderWeightDropdown('');
+
+    weightSearchInput.addEventListener('focus', () => {
+        weightSearchInput.select();
+        renderWeightDropdown(weightSearchInput.value === goalSelectedWeight ? '' : weightSearchInput.value);
+        weightDropdown.classList.add('open');
+    });
+    weightSearchInput.addEventListener('input', (e) => {
+        weightUserTouched = true;
+        renderWeightDropdown(e.target.value);
+        weightDropdown.classList.add('open');
+    });
+    weightSearchInput.addEventListener('blur', () => {
+        weightDropdown.classList.remove('open');
+        if (goalSelectedWeight) weightSearchInput.value = displayMetric(goalSelectedWeight);
+        else weightSearchInput.value = '';
+    });
+    weightSearchInput.addEventListener('change', () => {
+        if (!weightSearchInput.value) {
+            goalSelectedWeight = '';
+            weightHidden.value = '';
+        }
+    });
+
+    // Auto-suggest la controparte (#) quando si seleziona una metrica media
+    function suggestWeightFor(metric) {
+        const display = displayMetric(metric);
+        if (!display) return '';
+        const subject = display.replace(/\(s\)/i, '').replace(/\s*Avg\.?\s*.*$/i, '').trim();
+        if (subject.length < 3) return '';
+        let best = '';
+        let bestBase = '';
+        allMetrics.forEach(m => {
+            const d = displayMetric(m);
+            if (!d || !d.endsWith('(#)')) return;
+            const base = d.replace(/\(\#\)$/i, '').trim();
+            if (base === subject || base.startsWith(subject + ' ') || subject.startsWith(base + ' ')) {
+                if (base.length > bestBase.length) {
+                    bestBase = base;
+                    best = m;
+                }
+            }
+        });
+        return best;
+    }
 
     // Populate skills
     const skillSelect = document.getElementById('goal-skill');
@@ -1355,6 +1454,15 @@ async function openGoalModal(goalId = null) {
             metricHidden.value = goalSelectedMetric;
             metricSearchInput.value = displayMetric(goalSelectedMetric);
             renderGoalDropdown('');
+
+            if (existing.weightMetric) {
+                goalSelectedWeight = existing.weightMetric;
+                weightUserTouched = true;
+                weightHidden.value = existing.weightMetric;
+                weightSearchInput.value = displayMetric(existing.weightMetric);
+                renderWeightDropdown('');
+            }
+
             targetInput.value = existing.target ?? '';
             skillSelect.value = existing.skill || 'ALL';
             empSelect.value = existing.employee || '';
@@ -1418,6 +1526,15 @@ function createGoalModalHTML() {
                 <div id="goal-metric-dropdown" class="searchable-dropdown"></div>
             </div>
 
+            <label>Metrica di influenza (opzionale):</label>
+            <div style="position:relative; margin-bottom:4px;">
+                <input type="text" id="goal-weight-metric-search" placeholder="Esempio: Voice Inbound (#)" autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <input type="hidden" id="goal-weight-metric">
+                <div id="goal-weight-metric-dropdown" class="searchable-dropdown"></div>
+            </div>
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0 0 16px 0;">Usata come peso per la media ponderata della metrica (es. numero chiamate <code>(#)</code>). Lascia vuoto per la media semplice.</p>
+
             <!-- Riga unica: Obiettivo (+ direzione) | Tolleranza (% e valore) -->
             <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap;">
                 <!-- Obiettivo con selettore direzione -->
@@ -1464,6 +1581,7 @@ function createGoalModalHTML() {
 
 async function saveNewGoal() {
     const metric = document.getElementById('goal-metric').value;
+    const weightMetric = document.getElementById('goal-weight-metric').value;
     const target = parseFloat(document.getElementById('goal-target').value);
     const direction = document.getElementById('goal-direction').value === 'max' ? 'max' : 'min';
     const tolerance = parseFloat(document.getElementById('goal-tolerance-pct').value) || 0;
@@ -1484,6 +1602,7 @@ async function saveNewGoal() {
     const newGoal = {
         id: editingGoalId || ('goal_' + Date.now()),
         metric,
+        weightMetric,
         target,
         direction,
         toleranceType,
