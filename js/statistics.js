@@ -2033,6 +2033,7 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
     
     let latestMonthStr = '';
     let latestMonthName = 'Corrente';
+    let latestMonthIdx = 0;
     if (allDates.length > 0) {
         allDates.sort();
         const lastDate = allDates[allDates.length - 1];
@@ -2042,6 +2043,7 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
             const monthIdx = parseInt(parts[1], 10) - 1;
             const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
             if (monthIdx >= 0 && monthIdx < 12) latestMonthName = mesi[monthIdx];
+            latestMonthIdx = monthIdx;
         }
     }
 
@@ -2052,7 +2054,7 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
         if (hiddenMap[item.key]) return;
 
         const annualTarget = customTargets[item.key] ?? item.defaultTarget;
-        const monthlyTarget = customMonthlyTargets[item.key] ?? (annualTarget > 0 ? Math.round(annualTarget / 12) : 0);
+        const customMonthly = customMonthlyTargets[item.key];
 
         const mappedMetrics = Array.isArray(item.mappedMetrics) ? item.mappedMetrics : [];
         let annualAchieved = getActualForLabel(item.label, mappedMetrics, item.isCHF);
@@ -2065,6 +2067,13 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
             ? perfData.filter(r => r.employee === employee && r.date && r.date.startsWith(latestMonthStr))
             : [];
         let monthlyAchieved = calcActualForMetric(metricsToUse, monthlyPerfData, monthlySalesData, employee, item.isCHF);
+
+        // Target mensile: resta dell'anno diviso per i mesi rimanenti (incluso quello corrente)
+        const remainingMonths = Math.max(1, 12 - latestMonthIdx);
+        const remainingTarget = Math.max(0, annualTarget - annualAchieved);
+        const monthlyTarget = customMonthly != null
+            ? customMonthly
+            : (annualTarget > 0 ? Math.round(remainingTarget / remainingMonths) : 0);
 
         cardCount++;
 

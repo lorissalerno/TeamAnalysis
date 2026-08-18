@@ -356,6 +356,7 @@ async function renderTeamSalesGoals(perfData, salesData) {
 
     let latestMonthStr = '';
     let latestMonthName = 'Corrente';
+    let latestMonthIdx = 0;
     if (allDates.length > 0) {
         allDates.sort();
         const lastDate = allDates[allDates.length - 1];
@@ -365,6 +366,7 @@ async function renderTeamSalesGoals(perfData, salesData) {
             const monthIdx = parseInt(parts[1], 10) - 1;
             const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
             if (monthIdx >= 0 && monthIdx < 12) latestMonthName = mesi[monthIdx];
+            latestMonthIdx = monthIdx;
         }
     }
 
@@ -395,7 +397,6 @@ async function renderTeamSalesGoals(perfData, salesData) {
 
             cardCount++;
 
-            const monthlyTarget = annualTarget > 0 ? Math.round(annualTarget / 12) : 0;
             const metricsToUse = mappedMetrics.length > 0 ? mappedMetrics : [label];
 
             // Valori realizzati per tutto il team (senza filtro collaboratore)
@@ -403,6 +404,11 @@ async function renderTeamSalesGoals(perfData, salesData) {
             const monthlySalesData = latestMonthStr ? salesData.filter(r => r.date && r.date.startsWith(latestMonthStr)) : [];
             const monthlyPerfData = latestMonthStr ? perfData.filter(r => r.date && r.date.startsWith(latestMonthStr)) : [];
             const monthlyAchieved = calcActualForMetric(metricsToUse, monthlyPerfData, monthlySalesData, null, isCHF);
+
+            // Target mensile: resta dell'anno diviso per i mesi rimanenti (incluso quello corrente)
+            const remainingMonths = Math.max(1, 12 - latestMonthIdx);
+            const remainingTarget = Math.max(0, annualTarget - annualAchieved);
+            const monthlyTarget = annualTarget > 0 ? Math.round(remainingTarget / remainingMonths) : 0;
 
             const formatVal = (v) => {
                 if (isCHF) return 'CHF ' + Math.round(v).toLocaleString('de-CH');
