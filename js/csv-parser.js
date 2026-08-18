@@ -1,3 +1,8 @@
+/**
+ * TeamAnalysis
+ * © Copyright 2026 Loris Salerno (TAASALO3) - loris.salerno@swisscom.com
+ * Tutti i diritti riservati.
+ */
 class CSVParser {
     static async parse(file, startDate) {
         return new Promise((resolve, reject) => {

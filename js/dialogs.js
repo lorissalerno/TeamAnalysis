@@ -1,5 +1,8 @@
 /**
- * TeamAnalysis - By Loris Salerno (taasalo3) - Loris.Salerno@swisscom.com
+ * TeamAnalysis
+ * © Copyright 2026 Loris Salerno (TAASALO3) - loris.salerno@swisscom.com
+ * Tutti i diritti riservati.
+ *
  * Modali di dialogo personalizzati (alert / confirm / prompt) in sostituzione
  * dei popup nativi del browser ("Questa pagina dice").
  * API: window.appDialog.alert(msg, opts) -> Promise

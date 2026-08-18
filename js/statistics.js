@@ -1,3 +1,8 @@
+/**
+ * TeamAnalysis
+ * © Copyright 2026 Loris Salerno (TAASALO3) - loris.salerno@swisscom.com
+ * Tutti i diritti riservati.
+ */
 // Plugin per aggiungere spaziatura sotto la legenda del grafico
 const legendMarginPlugin = {
     id: 'legendMarginPlugin',

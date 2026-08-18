@@ -1,5 +1,7 @@
 /**
- * TeamAnalysis - Anonimizzazione CSV - By Loris Salerno (taasalo3) - Loris.Salerno@swisscom.com
+ * TeamAnalysis - Anonimizzazione CSV
+ * © Copyright 2026 Loris Salerno (TAASALO3) - loris.salerno@swisscom.com
+ * Tutti i diritti riservati.
  *
  * Sostituisce i nomi dei collaboratori (colonna Employee) nei file CSV con nomi
  * fittizi predefiniti, mantenendo la stessa mappatura tra tutti i file selezionati.

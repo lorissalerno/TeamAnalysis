@@ -1,3 +1,8 @@
+/**
+ * TeamAnalysis
+ * © Copyright 2026 Loris Salerno (TAASALO3) - loris.salerno@swisscom.com
+ * Tutti i diritti riservati.
+ */
 // js/dashboard.js
 
 // Contatori "Mostra altro" (barre obiettivi e righe tolleranze)

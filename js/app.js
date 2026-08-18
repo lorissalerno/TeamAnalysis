@@ -1,10 +1,12 @@
 /**
- * TeamAnalysis - By Loris Salerno (taasalo3) - Loris.Salerno@swisscom.com
+ * TeamAnalysis
+ * © Copyright 2026 Loris Salerno (TAASALO3) - loris.salerno@swisscom.com
+ * Tutti i diritti riservati.
  */
 window.getAuthorInfo = function() {
     return {
         author: "Loris Salerno",
-        sigla: "taasalo3",
+        sigla: "TAASALO3",
         email: "Loris.Salerno@swisscom.com"
     };
 };
