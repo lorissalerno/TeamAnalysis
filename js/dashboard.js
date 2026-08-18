@@ -317,7 +317,12 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
             <div style="display:flex; align-items:center; gap:16px;">
                 <div style="width:48px; height:48px; border-radius:12px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center;">
-                    <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="8" r="3.2" fill="currentColor" stroke="none" opacity="0.55"></circle>
+                        <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" fill="currentColor" stroke="none" opacity="0.55"></path>
+                        <circle cx="16.5" cy="9.5" r="2.4"></circle>
+                        <path d="M14.5 19c0-2.4 1.6-4 4-4s4 1.6 4 4"></path>
+                    </svg>
                 </div>
                 <div>
                     <h3 style="margin:0; font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Collaboratori Totali</h3>
@@ -743,10 +748,10 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
             let severityLabel = 'Lieve';
             if (severityRatio >= 0.25) {
                 severityClass = 'severity-high';
-                severityLabel = 'Alta';
+                severityLabel = 'Critico';
             } else if (severityRatio >= 0.10) {
                 severityClass = 'severity-medium';
-                severityLabel = 'Media';
+                severityLabel = 'Alto';
             }
 
             const rangeLabel = (minVal === null)
