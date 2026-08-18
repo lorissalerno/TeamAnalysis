@@ -455,6 +455,26 @@ html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .sun-icon {
     display: block;
 }
 
+.page-footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    opacity: 0.75;
+}
+
+.page-footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.page-footer a:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
 .section-header {
     display: flex;
     justify-content: space-between;
