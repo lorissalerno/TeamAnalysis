@@ -368,11 +368,12 @@ function bindSkillRowDelete(container) {
             row.remove();
             return;
         }
-        let message = `Vuoi eliminare lo skill "${original}"?\n\nAttenzione: verranno eliminati definitivamente anche tutti i dati associati a questo skill (performance, vendite, statistiche e obiettivi). L'operazione non è reversibile.`;
+        let message = `Eliminare lo skill "${original}"?\n\n- I dati associati a questo skill verranno eliminati.\n- I collaboratori con altri skill manterranno i loro dati.`;
         const onlyEmployees = await getEmployeesOnlyOnSkill(original);
         if (onlyEmployees.length > 0) {
-            message += `\n\nI seguenti collaboratori hanno dati SOLO su questo skill e, procedendo, perderanno tutti i loro dati:\n- ${onlyEmployees.join('\n- ')}\n\nSe vuoi conservare questi dati, annulla e assegna prima i loro dati a un altro skill (rinomina o riassegna). Altrimenti procedi: i loro dati verranno eliminati insieme allo skill, senza lasciare dati orfani.`;
+            message += `\n- Collaboratori con SOLO questo skill (perderanno tutti i dati): ${onlyEmployees.join(', ')}.\n\nPer conservarli: annulla e assegna prima i dati a un altro skill.`;
         }
+        message += `\n\nOperazione non reversibile.`;
         const confirmed = await appDialog.confirm(
             message,
             { title: 'Elimina Skill', okText: 'Elimina Skill', cancelText: 'Annulla' }
