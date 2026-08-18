@@ -743,10 +743,10 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
             let severityLabel = 'Lieve';
             if (severityRatio >= 0.25) {
                 severityClass = 'severity-high';
-                severityLabel = 'Critico';
+                severityLabel = 'Alta';
             } else if (severityRatio >= 0.10) {
                 severityClass = 'severity-medium';
-                severityLabel = 'Alto';
+                severityLabel = 'Media';
             }
 
             const rangeLabel = (minVal === null)
