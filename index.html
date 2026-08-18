@@ -84,8 +84,18 @@
 
             <!-- Team Goals & Progress Section -->
             <div class="card" style="margin-bottom: 24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
                     <h2 style="margin:0;">Obiettivi di Team e Raggiungimento</h2>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <label for="dash-goals-period" style="font-size:0.85rem; color:var(--text-muted);">Periodo :</label>
+                        <div id="dash-goals-period" class="period-btn-group" role="group" aria-label="Periodo">
+                            <button type="button" class="period-btn active" data-period="current">Mese corrente</button>
+                            <button type="button" class="period-btn" data-period="last">Mese scorso</button>
+                            <button type="button" class="period-btn" data-period="3">Ultimi 3 mesi</button>
+                            <button type="button" class="period-btn" data-period="6">Ultimi 6 mesi</button>
+                            <button type="button" class="period-btn" data-period="year">Da gennaio</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="dashboard-team-goals-container">
                     <!-- Populated by JS -->

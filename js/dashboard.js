@@ -14,39 +14,221 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.renderDashboard) window.renderDashboard();
         });
     }
+
+    const goalsPeriod = document.getElementById('dash-goals-period');
+    if (goalsPeriod) {
+        goalsPeriod.addEventListener('click', (e) => {
+            const btn = e.target.closest('.period-btn');
+            if (!btn) return;
+            goalsPeriod.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (window.renderDashboard) window.renderDashboard();
+        });
+    }
 });
 
 // Helper function to extract numeric value for employee & metric
-function calculateEmployeeMetricValue(employee, metricStr, skillFilter, perfData, salesData) {
+// dateRange = { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } (opzionale, filtra per data)
+// weightMetric (opzionale): per le metriche Performance, se valorizzato il risultato e'
+// la media ponderata dei record usando quella metrica come peso (es. "Voice Inbound (#)").
+function calculateEmployeeMetricValue(employee, metricStr, skillFilter, perfData, salesData, dateRange, weightMetric) {
     let isSales = metricStr.startsWith('Sales: ');
     let metricName = metricStr.replace('Performance: ', '').replace('Sales: ', '');
 
+    function inRange(record) {
+        if (!dateRange) return true;
+        const d = record.date;
+        if (!d) return true;
+        return d >= dateRange.start && d <= dateRange.end;
+    }
+
     if (isSales) {
-        const records = salesData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined);
+        let records = salesData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined && inRange(d));
         if (records.length === 0) return 0;
         return records.reduce((sum, r) => sum + (parseFloat(r.data[metricName]) || 0), 0);
     } else {
-        let records = perfData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined);
+        let records = perfData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined && inRange(d));
         if (skillFilter && skillFilter !== 'ALL') {
             records = records.filter(d => d.skill === skillFilter);
         }
         if (records.length === 0) return 0;
+
+        // Media ponderata: il peso (es. numero chiamate) viene preso dallo stesso record mensile
+        if (weightMetric) {
+            const weightName = String(weightMetric).replace('Performance: ', '').trim();
+            let sumW = 0;
+            let sumWt = 0;
+            records.forEach(r => {
+                const w = parseFloat(r.data[weightName]) || 0;
+                if (w > 0) {
+                    sumW += (parseFloat(r.data[metricName]) || 0) * w;
+                    sumWt += w;
+                }
+            });
+            return sumWt > 0 ? sumW / sumWt : 0;
+        }
+
         const sum = records.reduce((acc, r) => acc + (parseFloat(r.data[metricName]) || 0), 0);
         return sum / records.length;
     }
 }
 
-// Helper to calculate team aggregate value for a metric
-function calculateTeamMetricValue(metricStr, skillFilter, perfData, salesData, activeEmployees) {
+// Helper to calculate team aggregate value for a metric (opzionale dateRange)
+// weightMetric (opzionale): per le metriche Performance usa il pool globale del team
+// (somma secondi / somma peso) invece della media dei valori per-collaboratore.
+function calculateTeamMetricValue(metricStr, skillFilter, perfData, salesData, activeEmployees, dateRange, weightMetric) {
     if (activeEmployees.length === 0) return 0;
-    const values = activeEmployees.map(emp => calculateEmployeeMetricValue(emp, metricStr, skillFilter, perfData, salesData));
+
     const isSales = metricStr.startsWith('Sales: ');
+    if (!isSales && weightMetric) {
+        const metricName = metricStr.replace('Performance: ', '').replace('Sales: ', '');
+        const weightName = String(weightMetric).replace('Performance: ', '').trim();
+        const inRange = (record) => {
+            if (!dateRange) return true;
+            const d = record.date;
+            if (!d) return true;
+            return d >= dateRange.start && d <= dateRange.end;
+        };
+        let sumW = 0;
+        let sumWt = 0;
+        (perfData || []).forEach(r => {
+            if (!r.data || r.data[metricName] === undefined) return;
+            if (!inRange(r)) return;
+            if (skillFilter && skillFilter !== 'ALL' && r.skill !== skillFilter) return;
+            const w = parseFloat(r.data[weightName]) || 0;
+            if (w > 0) {
+                sumW += (parseFloat(r.data[metricName]) || 0) * w;
+                sumWt += w;
+            }
+        });
+        return sumWt > 0 ? sumW / sumWt : 0;
+    }
+
+    const values = activeEmployees.map(emp => calculateEmployeeMetricValue(emp, metricStr, skillFilter, perfData, salesData, dateRange, weightMetric));
     if (isSales) {
         return values.reduce((a, b) => a + b, 0);
     } else {
         const sum = values.reduce((a, b) => a + b, 0);
         return sum / activeEmployees.length;
     }
+}
+
+// Calcola l'intervallo di date (YYYY-MM-DD) in base al periodo scelto.
+// 'current' = mese corrente; 'last' = mese scorso; '3'/'6' = ultimi N mesi; 'year' = da Gennaio a oggi.
+function getGoalPeriodRange(period, year) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    // Data di fine: oggi (o fine anno se si lavora su un anno diverso da quello corrente)
+    let end = new Date();
+    if (year && Number(year) !== currentYear) {
+        end = new Date(Number(year), 11, 31); // 31 dicembre dell'anno attivo
+    }
+
+    function fmt(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+    }
+
+    let start;
+    if (period === 'year') {
+        start = new Date(Number(year) || currentYear, 0, 1); // 1 gennaio
+    } else if (period === 'current') {
+        // Mese corrente: dal primo giorno del mese di 'end' fino a 'end'
+        start = new Date(end.getFullYear(), end.getMonth(), 1);
+    } else if (period === 'last') {
+        // Mese scorso: dal primo all'ultimo giorno del mese precedente
+        start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+        end = new Date(end.getFullYear(), end.getMonth(), 0);
+    } else {
+        let monthsBack;
+        if (period === '3') monthsBack = 3;
+        else if (period === '6') monthsBack = 6;
+        else monthsBack = 2; // fallback: mese scorso + corrente
+        // Primo giorno del mese, (monthsBack-1) mesi indietro
+        start = new Date(end.getFullYear(), end.getMonth() - (monthsBack - 1), 1);
+    }
+
+    return { start: fmt(start), end: fmt(end) };
+}
+
+// Etichetta leggibile del periodo selezionato (es. "ultimi 3 mesi").
+function getGoalPeriodLabel(period) {
+    if (period === 'year') return 'Da Gennaio a oggi';
+    if (period === '3') return 'Ultimi 3 mesi';
+    if (period === '6') return 'Ultimi 6 mesi';
+    if (period === 'last') return 'Mese scorso';
+    return 'Mese corrente';
+}
+
+// Costruisce una barra progressiva con zone colorate fisse (1/3 rosso, 1/3 giallo,
+// 1/3 verde) e indicatore bianco posizionato secondo le soglie reali dell'obiettivo
+// (target + tolleranze), in modo che la linea cada nella zona giusta:
+// - direzione 'min' (>=): minTol -> inizio zona gialla, target -> inizio zona verde
+// - direzione 'max' (<=): target -> inizio zona verde, maxTol -> inizio zona gialla
+function buildGoalBarHTML(value, target, range, direction) {
+    const minTol = (range && range.min !== undefined && range.min !== null) ? range.min : null;
+    const maxTol = (range && range.max !== undefined && range.max !== null) ? range.max : null;
+
+    // Scala massima visualizzata: copre valore, obiettivo e limiti di tolleranza
+    const displayMax = Math.max(
+        value || 0,
+        target || 0,
+        minTol || 0,
+        maxTol || 0,
+        1
+    );
+    if (displayMax <= 0) return '';
+
+    const zones = `
+        <div style="position:absolute; left:0; width:33.33%; top:0; bottom:0; background:#ef4444;"></div>
+        <div style="position:absolute; left:33.33%; width:33.34%; top:0; bottom:0; background:#f59e0b;"></div>
+        <div style="position:absolute; left:66.67%; width:33.33%; top:0; bottom:0; background:#10b981;"></div>
+    `;
+
+    const clamp = v => Math.max(0, Math.min(100, v));
+    const isMaxDir = direction === 'max';
+
+    function positionForValue(v) {
+        const vNum = Number(v) || 0;
+
+        if (isMaxDir) {
+            // Verde a destra: basso valore = ok. low=target -> 66.67, high=maxTol -> 33.33
+            const low = target;
+            const high = (maxTol !== null && maxTol !== undefined) ? maxTol : target;
+            if (low === high) {
+                if (vNum <= low) return clamp(66.67 + (1 - vNum / Math.max(low, 1)) * 33.33);
+                return clamp(66.67 - ((vNum - low) / Math.max(displayMax - low, 1)) * 66.67);
+            }
+            if (vNum <= low) return clamp(66.67 + (1 - vNum / Math.max(low, 1)) * 33.33);
+            if (vNum <= high) return clamp(66.67 - ((vNum - low) / (high - low)) * 33.33);
+            return clamp(33.33 - ((vNum - high) / Math.max(displayMax - high, 1)) * 33.33);
+        }
+
+        // Direzioni 'min' / bilaterali: basso valore = non ok. low=minTol -> 33.33, high=target -> 66.67
+        const low = (minTol !== null && minTol !== undefined) ? minTol : target;
+        const high = target;
+        if (low === high || high <= low) {
+            if (vNum < low) return clamp((vNum / Math.max(low, 1)) * 33.33);
+            return clamp(33.33 + ((vNum - low) / Math.max(displayMax - low, 1)) * 66.67);
+        }
+        if (vNum <= low) return clamp((vNum / Math.max(low, 1)) * 33.33);
+        if (vNum <= high) return clamp(33.33 + ((vNum - low) / (high - low)) * 33.33);
+        return clamp(66.67 + ((vNum - high) / Math.max(displayMax - high, 1)) * 33.33);
+    }
+
+    const valuePct = positionForValue(value);
+
+    return `
+        <div style="position:relative; height:18px;">
+            <div style="position:absolute; left:0; right:0; top:0; bottom:0; border-radius:9px; overflow:hidden; background:var(--bg-base); border:1px solid var(--border);">
+                ${zones}
+            </div>
+            <div style="position:absolute; left:${valuePct}%; top:-5px; bottom:-5px; width:5px; background:#fff; border-radius:2px; box-shadow:0 0 4px rgba(0,0,0,0.6); transform:translateX(-2.5px);"></div>
+        </div>
+    `;
 }
 
 window.renderDashboard = async function() {
@@ -123,10 +305,19 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
     `;
 }
 
+// Helper: nome metrica senza prefisso 'Performance: '/'Sales: '
+function displayMetricName(metricStr) {
+    return String(metricStr || '').replace('Performance: ', '').replace('Sales: ', '');
+}
+
 // 2. Team Goals & Progressive Bars
 function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
     const goalsContainer = document.getElementById('dashboard-team-goals-container');
     if (!goalsContainer) return;
+
+    const periodGroup = document.getElementById('dash-goals-period');
+    const periodBtn = periodGroup ? periodGroup.querySelector('.period-btn.active') : null;
+    const period = periodBtn ? periodBtn.dataset.period : 'current';
 
     const teamGoals = goals.filter(g => !g.employee || g.employee === '');
 
@@ -135,57 +326,34 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
         return;
     }
 
-    let html = '<div style="display:flex; flex-direction:column; gap:16px;">';
+    const year = window.appState.activeYear;
+    const periodRange = getGoalPeriodRange(period, year);
+
+    let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">';
 
     teamGoals.forEach(g => {
-        const teamVal = calculateTeamMetricValue(g.metric, g.skill, perfData, salesData, activeEmployees);
         const targetVal = parseFloat(g.target) || 1;
-        const pct = targetVal !== 0 ? ((teamVal / targetVal) * 100) : 0;
-        const formattedPct = Math.round(pct * 10) / 10;
-        const clampedPct = Math.min(Math.max(pct, 0), 100);
-
-        // Tolerance calculation (rispetta la direzione: 'min' o 'max', legacy bilaterale)
         const range = window.computeGoalRange ? window.computeGoalRange(g) : { min: targetVal, max: targetVal };
-        const minVal = range.min;
-        const maxVal = range.max;
 
-        let statusClass = 'success';
-        if (g.direction === 'max') {
-            if (maxVal !== null && teamVal > maxVal) {
-                statusClass = 'danger';
-            } else if (teamVal > targetVal) {
-                statusClass = 'warning';
-            }
-        } else if (g.direction === 'min') {
-            if (minVal !== null && teamVal < minVal) {
-                statusClass = 'danger';
-            } else if (teamVal < targetVal) {
-                statusClass = 'warning';
-            }
-        } else {
-            if (minVal !== null && teamVal < minVal) {
-                statusClass = 'danger';
-            } else if (teamVal < targetVal) {
-                statusClass = 'warning';
-            }
-        }
+        // Valore nel periodo selezionato
+        const periodVal = calculateTeamMetricValue(g.metric, g.skill, perfData, salesData, activeEmployees, periodRange, g.weightMetric);
 
         const skillBadge = g.skill && g.skill !== 'ALL' ? ` | Skill: ${g.skill}` : '';
 
         html += `
             <div style="background:var(--bg-base); padding:14px 16px; border-radius:8px; border:1px solid var(--border);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div>
-                        <strong style="font-size:0.95rem; color:var(--text-main);">${g.metric}</strong>
+                        <strong style="font-size:0.95rem; color:var(--text-main);">${displayMetricName(g.metric)}</strong>
                         <span style="font-size:0.8rem; color:var(--text-muted);">${skillBadge}</span>
                     </div>
-                    <div style="font-weight:600; font-size:0.9rem;">
-                        <span style="color:var(--text-main);">${Math.round(teamVal)}</span> / <span style="color:var(--text-muted);">${Math.round(targetVal)}</span>
-                        <span style="margin-left:8px; padding:2px 8px; border-radius:12px; background:var(--bg-surface); border:1px solid var(--border); font-size:0.8rem; font-weight:600;">${formattedPct}%</span>
-                    </div>
                 </div>
-                <div class="dash-progress-track">
-                    <div class="dash-progress-fill ${statusClass}" style="width: ${clampedPct}%;"></div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">
+                        <span>${getGoalPeriodLabel(period)}</span>
+                        <span style="font-weight:600;">${Math.round(periodVal)} / ${Math.round(targetVal)}</span>
+                    </div>
+                    ${buildGoalBarHTML(periodVal, targetVal, range, g.direction)}
                 </div>
             </div>
         `;
@@ -290,7 +458,7 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         const empList = g.employee ? [g.employee] : activeEmployees;
 
         empList.forEach(emp => {
-            const actualVal = calculateEmployeeMetricValue(emp, g.metric, g.skill, perfData, salesData);
+            const actualVal = calculateEmployeeMetricValue(emp, g.metric, g.skill, perfData, salesData, null, g.weightMetric);
 
             let isUnder = false;
             let scostamento = 0;

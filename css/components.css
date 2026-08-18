@@ -975,6 +975,39 @@ input:checked + .slider:before {
     opacity: 1;
 }
 
+/* Pulsanti periodo dashboard (Mese corrente / Mese scorso / 3-6 mesi / Da gennaio) */
+.period-btn-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.period-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--transition);
+    line-height: 1.5;
+}
+
+.period-btn:hover {
+    color: var(--text-main);
+    border-color: var(--primary);
+}
+
+.period-btn.active {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary) inset;
+}
+
 .tab-content {
     display: none;
 }
