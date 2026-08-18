@@ -1,5 +1,31 @@
 // js/dashboard.js
 
+// Contatori "Mostra altro" (barre obiettivi e righe tolleranze)
+let goalsShownCount = 6;
+let tolShownCount = 10;
+
+// Inizializza un gruppo di pulsanti periodo (stato salvato in localStorage).
+function initPeriodGroup(groupId, storageKey) {
+    const group = document.getElementById(groupId);
+    if (!group) return;
+
+    const saved = localStorage.getItem(storageKey);
+    const savedBtn = saved ? group.querySelector(`.period-btn[data-period="${saved}"]`) : null;
+    if (savedBtn) {
+        group.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        savedBtn.classList.add('active');
+    }
+
+    group.addEventListener('click', (e) => {
+        const btn = e.target.closest('.period-btn');
+        if (!btn) return;
+        group.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        localStorage.setItem(storageKey, btn.dataset.period);
+        if (window.renderDashboard) window.renderDashboard();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('dash-tolerance-search');
     if (searchInput) {
@@ -15,16 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const goalsPeriod = document.getElementById('dash-goals-period');
-    if (goalsPeriod) {
-        goalsPeriod.addEventListener('click', (e) => {
-            const btn = e.target.closest('.period-btn');
-            if (!btn) return;
-            goalsPeriod.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            if (window.renderDashboard) window.renderDashboard();
-        });
-    }
+    initPeriodGroup('dash-goals-period', 'taDashGoalsPeriod');
+    initPeriodGroup('dash-tolerance-period', 'taDashTolerancePeriod');
 });
 
 // Helper function to extract numeric value for employee & metric
@@ -317,7 +335,7 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
 
     const periodGroup = document.getElementById('dash-goals-period');
     const periodBtn = periodGroup ? periodGroup.querySelector('.period-btn.active') : null;
-    const period = periodBtn ? periodBtn.dataset.period : 'current';
+    const period = periodBtn ? periodBtn.dataset.period : '3';
 
     const teamGoals = goals.filter(g => !g.employee || g.employee === '');
 
@@ -329,9 +347,11 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
     const year = window.appState.activeYear;
     const periodRange = getGoalPeriodRange(period, year);
 
+    const shownGoals = teamGoals.slice(0, goalsShownCount);
+
     let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">';
 
-    teamGoals.forEach(g => {
+    shownGoals.forEach(g => {
         const targetVal = parseFloat(g.target) || 1;
         const range = window.computeGoalRange ? window.computeGoalRange(g) : { min: targetVal, max: targetVal };
 
@@ -360,7 +380,25 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
     });
 
     html += '</div>';
+
+    const remaining = teamGoals.length - goalsShownCount;
+    if (remaining > 0) {
+        html += `
+            <div style="text-align:center; margin-top:16px;">
+                <button type="button" class="btn secondary" id="goals-show-more-btn">Mostra altro (${Math.min(4, remaining)})</button>
+            </div>
+        `;
+    }
+
     goalsContainer.innerHTML = html;
+
+    const showMoreBtn = document.getElementById('goals-show-more-btn');
+    if (showMoreBtn) {
+        showMoreBtn.addEventListener('click', () => {
+            goalsShownCount += 4;
+            if (window.renderDashboard) window.renderDashboard();
+        });
+    }
 }
 
 // 3. Tolerance Violations List ordered by Severity with Search & Filters
@@ -445,6 +483,11 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
     const selectedSkill = skillSelect ? skillSelect.value : 'ALL';
     const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
+    const periodGroup = document.getElementById('dash-tolerance-period');
+    const periodBtn = periodGroup ? periodGroup.querySelector('.period-btn.active') : null;
+    const period = periodBtn ? periodBtn.dataset.period : '3';
+    const periodRange = getGoalPeriodRange(period, window.appState.activeYear);
+
     const violations = [];
 
     goals.forEach(g => {
@@ -458,7 +501,7 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         const empList = g.employee ? [g.employee] : activeEmployees;
 
         empList.forEach(emp => {
-            const actualVal = calculateEmployeeMetricValue(emp, g.metric, g.skill, perfData, salesData, null, g.weightMetric);
+            const actualVal = calculateEmployeeMetricValue(emp, g.metric, g.skill, perfData, salesData, periodRange, g.weightMetric);
 
             let isUnder = false;
             let scostamento = 0;
@@ -537,6 +580,8 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         return;
     }
 
+    const shownViolations = filtered.slice(0, tolShownCount);
+
     let tableHtml = `
         <div style="overflow-x:auto;">
             <table class="data-table">
@@ -553,7 +598,7 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
                 <tbody>
     `;
 
-    filtered.forEach(v => {
+    shownViolations.forEach(v => {
         const skillStr = v.goalSkill !== 'ALL' ? ` (${v.goalSkill})` : '';
         tableHtml += `
             <tr>
@@ -577,5 +622,22 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         </div>
     `;
 
+    const remaining = filtered.length - tolShownCount;
+    if (remaining > 0) {
+        tableHtml += `
+            <div style="text-align:center; margin-top:16px;">
+                <button type="button" class="btn secondary" id="tol-show-more-btn">Mostra altro (${Math.min(5, remaining)})</button>
+            </div>
+        `;
+    }
+
     container.innerHTML = tableHtml;
+
+    const showMoreBtn = document.getElementById('tol-show-more-btn');
+    if (showMoreBtn) {
+        showMoreBtn.addEventListener('click', () => {
+            tolShownCount += 5;
+            if (window.renderDashboard) window.renderDashboard();
+        });
+    }
 }
