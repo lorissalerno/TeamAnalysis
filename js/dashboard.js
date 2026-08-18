@@ -335,6 +335,32 @@ function displayMetricName(metricStr) {
     return String(metricStr || '').replace('Performance: ', '').replace('Sales: ', '');
 }
 
+// Chiave stabile di un obiettivo per i pin (id se presente, altrimenti composita)
+function goalPinKey(g) {
+    return g.id ? `id:${g.id}` : `m:${g.metric}|s:${g.skill || 'ALL'}|e:${g.employee || 'TEAM'}`;
+}
+
+function loadPinnedGoals(year) {
+    try {
+        const raw = localStorage.getItem(`pinnedTeamGoals_${year}`);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function togglePinnedGoal(year, key) {
+    let keys = loadPinnedGoals(year);
+    const idx = keys.indexOf(key);
+    if (idx !== -1) {
+        keys.splice(idx, 1);
+    } else if (keys.length < 4) {
+        keys.push(key);
+    }
+    localStorage.setItem(`pinnedTeamGoals_${year}`, JSON.stringify(keys.slice(0, 4)));
+}
+
 // 2. Team Goals & Progressive Bars
 function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
     const goalsContainer = document.getElementById('dashboard-team-goals-container');
@@ -361,7 +387,11 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
     const year = window.appState.activeYear;
     const periodRange = getGoalPeriodRange(period, year);
 
-    const shownGoals = teamGoals.slice(0, goalsShownCount);
+    const pinnedKeys = loadPinnedGoals(year);
+    const isPinned = (g) => pinnedKeys.includes(goalPinKey(g));
+    const pinnedGoals = teamGoals.filter(isPinned).slice(0, 4);
+    const otherGoals = teamGoals.filter(g => !isPinned(g));
+    const shownGoals = pinnedGoals.concat(otherGoals.slice(0, goalsShownCount));
 
     let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">';
 
@@ -374,13 +404,23 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
 
         const skillBadge = g.skill && g.skill !== 'ALL' ? ` | Skill: ${g.skill}` : '';
 
+        const key = goalPinKey(g);
+        const pinned = isPinned(g);
+        const pinDisabled = !pinned && pinnedKeys.length >= 4;
+        const pinTitle = pinned ? 'Togli dagli appuntati' : (pinDisabled ? 'Limite di 4 obiettivi appuntati raggiunto' : 'Appunta questo obiettivo');
+        const pinColor = pinned ? 'var(--primary)' : (pinDisabled ? 'var(--border)' : 'var(--text-muted)');
+        const pinFill = pinned ? 'var(--primary)' : 'none';
+
         html += `
-            <div style="background:var(--bg-base); padding:14px 16px; border-radius:8px; border:1px solid var(--border);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div>
+            <div style="background:var(--bg-base); padding:14px 16px; border-radius:8px; border:1px solid ${pinned ? 'var(--primary)' : 'var(--border)'};">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;">
+                    <div style="min-width:0;">
                         <strong style="font-size:0.95rem; color:var(--text-main);">${displayMetricName(g.metric)}</strong>
                         <span style="font-size:0.8rem; color:var(--text-muted);">${skillBadge}</span>
                     </div>
+                    <button type="button" class="goal-pin-btn" data-key="${key}" title="${pinTitle}" ${pinDisabled ? 'disabled' : ''} style="background:none; border:none; cursor:${pinDisabled ? 'not-allowed' : 'pointer'}; padding:4px; display:inline-flex; align-items:center; color:${pinColor}; flex-shrink:0; opacity:${pinDisabled ? 0.35 : (pinned ? 1 : 0.65)};" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${pinDisabled ? 0.35 : (pinned ? 1 : 0.65)}'">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="${pinFill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    </button>
                 </div>
                 <div>
                     <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">
@@ -395,7 +435,7 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
 
     html += '</div>';
 
-    const remaining = teamGoals.length - goalsShownCount;
+    const remaining = otherGoals.length - goalsShownCount;
     if (remaining > 0) {
         html += `
             <div style="text-align:center; margin-top:16px;">
@@ -405,6 +445,13 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
     }
 
     goalsContainer.innerHTML = html;
+
+    goalsContainer.querySelectorAll('.goal-pin-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            togglePinnedGoal(year, btn.dataset.key);
+            if (window.renderDashboard) window.renderDashboard();
+        });
+    });
 
     const showMoreBtn = document.getElementById('goals-show-more-btn');
     if (showMoreBtn) {
