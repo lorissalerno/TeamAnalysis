@@ -24,7 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeYear: new Date().getFullYear().toString(),
         anonymousMap: {}, // { "Loris Salerno": 1, ... }
         dbCategoryFilters: null,
-        dbSort: { column: 'date', direction: 'desc' }
+        dbSort: { column: 'date', direction: 'desc' },
+        dbPage: 1,
+        _dbFilterSig: null
     };
 
     // Theme helpers & tooltips (Default: dark -> light -> dim -> dark)
@@ -765,6 +767,65 @@ async function renderSkillsModalList() {
 }
 
 // --- RENDER IMPORTED DATABASE DATA (SINGLE ROW PER METRIC) ---
+const DB_PAGE_SIZE = 100;
+
+function renderDbPagination(totalFiltered, page, totalPages) {
+    const pag = document.getElementById('db-pagination');
+    if (!pag) return;
+    pag.innerHTML = '';
+    if (totalFiltered === 0) return;
+
+    const btnPrev = document.createElement('button');
+    btnPrev.type = 'button';
+    btnPrev.disabled = page <= 1;
+    btnPrev.className = 'btn secondary';
+    btnPrev.style.cssText = 'padding:4px 12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:6px;';
+    btnPrev.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Precedente';
+    btnPrev.addEventListener('click', () => {
+        if (window.appState.dbPage > 1) {
+            window.appState.dbPage--;
+            renderImportedData();
+        }
+    });
+
+    const info = document.createElement('span');
+    info.style.cssText = 'font-size:0.8rem; color:var(--text-muted); font-weight:600;';
+    info.textContent = `Pagina ${page} di ${totalPages}`;
+
+    const btnNext = document.createElement('button');
+    btnNext.type = 'button';
+    btnNext.disabled = page >= totalPages;
+    btnNext.className = 'btn secondary';
+    btnNext.style.cssText = 'padding:4px 12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:6px;';
+    btnNext.innerHTML = 'Successiva <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+    btnNext.addEventListener('click', () => {
+        if (window.appState.dbPage < totalPages) {
+            window.appState.dbPage++;
+            renderImportedData();
+        }
+    });
+
+    const jump = document.createElement('select');
+    jump.style.cssText = 'padding:4px 8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.8rem; cursor:pointer;';
+    jump.title = 'Vai alla pagina';
+    for (let i = 1; i <= totalPages; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        if (i === page) opt.selected = true;
+        jump.appendChild(opt);
+    }
+    jump.addEventListener('change', () => {
+        window.appState.dbPage = parseInt(jump.value, 10);
+        renderImportedData();
+    });
+
+    pag.appendChild(btnPrev);
+    pag.appendChild(info);
+    pag.appendChild(btnNext);
+    pag.appendChild(jump);
+}
+
 async function renderImportedData() {
     const activeYearLabel = document.getElementById('db-active-year-label');
     const recordsCounter = document.getElementById('db-records-counter');
@@ -1044,6 +1105,21 @@ async function renderImportedData() {
         return sort.direction === 'desc' ? -cmp : cmp;
     });
 
+    // Reset alla prima pagina se cambiano filtri/ricerca/ordinamento/anno
+    const filterSig = `${activeYear}|${searchTerm}|${[...window.appState.dbCategoryFilters].sort().join(',')}|${sort.column}|${sort.direction}`;
+    if (window.appState._dbFilterSig !== filterSig) {
+        window.appState.dbPage = 1;
+        window.appState._dbFilterSig = filterSig;
+    }
+
+    // Paginazione: si opera sempre su tutto il dataset filtrato, si renderizza solo la pagina corrente
+    const totalFiltered = singleRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / DB_PAGE_SIZE));
+    if (!window.appState.dbPage || window.appState.dbPage < 1) window.appState.dbPage = 1;
+    if (window.appState.dbPage > totalPages) window.appState.dbPage = totalPages;
+    const page = window.appState.dbPage;
+    const pageRows = singleRows.slice((page - 1) * DB_PAGE_SIZE, page * DB_PAGE_SIZE);
+
     // Aggiornamento icone ed evidenziazione intestazioni tabella
     document.querySelectorAll('.db-sortable-th').forEach(th => {
         const col = th.getAttribute('data-sort');
@@ -1065,16 +1141,16 @@ async function renderImportedData() {
 
     // Aggiornamento contatore record
     if (recordsCounter) {
-        if (singleRows.length === totalRawRows) {
+        if (totalFiltered === totalRawRows) {
             recordsCounter.textContent = `${totalRawRows} record totali`;
         } else {
-            recordsCounter.textContent = `${singleRows.length} di ${totalRawRows} record`;
+            recordsCounter.textContent = `${totalFiltered} di ${totalRawRows} record`;
         }
     }
 
     tbody.innerHTML = '';
 
-    if (singleRows.length === 0) {
+    if (totalFiltered === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" style="text-align:center; padding:48px 16px; color:var(--text-muted);">
@@ -1094,11 +1170,12 @@ async function renderImportedData() {
                 renderImportedData();
             });
         }
+        renderDbPagination(totalFiltered, page, totalPages);
         return;
     }
 
     const fragment = document.createDocumentFragment();
-    singleRows.forEach(r => {
+    pageRows.forEach(r => {
         const tr = document.createElement('tr');
         const dispEmployee = window.getDisplayName(r.employee);
 
@@ -1140,6 +1217,7 @@ async function renderImportedData() {
         fragment.appendChild(tr);
     });
     tbody.appendChild(fragment);
+    renderDbPagination(totalFiltered, page, totalPages);
 
     // Attach row edit handlers
     tbody.querySelectorAll('.edit-metric-row-btn').forEach(btn => {
