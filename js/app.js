@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             'dim': 'Passa al Tema Scuro (Nero)'
         };
         const tip = tooltips[theme] || 'Cambia Tema';
-        themeBtn.title = tip;
         themeBtn.setAttribute('data-tooltip', tip);
     }
 
