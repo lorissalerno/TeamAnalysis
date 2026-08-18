@@ -363,10 +363,18 @@ const db = {
         }
     },
     
-    // Backup entire DB to JSON
-    exportJSON: async function() {
-        const stores = ['settings', 'performance', 'sales', 'anonymous_map', 'dashboard_widgets', 'custom_stats', 'goals'];
+    // Gruppi di store per i tre tipi di backup
+    backupGroups: {
+        full: ['settings', 'performance', 'sales', 'anonymous_map', 'dashboard_widgets', 'custom_stats', 'goals'],
+        structure: ['settings', 'dashboard_widgets', 'custom_stats', 'goals'],
+        database: ['performance', 'sales', 'anonymous_map']
+    },
+
+    // Backup to JSON: group = 'full' (tutto) | 'structure' (template/grafici, senza dati e collaboratori) | 'database' (solo dati e collaboratori)
+    exportJSON: async function(group = 'full') {
+        const stores = this.backupGroups[group] || this.backupGroups.full;
         const backup = {};
+        backup.__meta = { type: group, exportedAt: new Date().toISOString() };
         
         for (const storeName of stores) {
             backup[storeName] = await this.getAll(storeName);
@@ -375,10 +383,10 @@ const db = {
         return JSON.stringify(backup);
     },
     
-    // Import from JSON
+    // Import from JSON (importa solo gli store presenti nel file)
     importJSON: async function(jsonString) {
         const backup = JSON.parse(jsonString);
-        const stores = Object.keys(backup);
+        const stores = Object.keys(backup).filter(s => s !== '__meta');
         
         return new Promise((resolve, reject) => {
             const transaction = this._db.transaction(stores, 'readwrite');

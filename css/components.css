@@ -45,6 +45,19 @@
     opacity: 0.9;
 }
 
+/* Backup actions */
+.backup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.backup-actions .btn {
+    flex: 1;
+    min-width: 140px;
+}
+
 .icon-btn {
     background: none;
     border: none;

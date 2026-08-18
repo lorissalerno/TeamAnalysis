@@ -1611,15 +1611,25 @@ function setupSettings() {
         };
     });
     
-    // Backup Export
-    document.getElementById('export-backup-btn').addEventListener('click', async () => {
-        const json = await appDb.exportJSON();
-        const blob = new Blob([json], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `TeamAnalysis_Backup_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
+    // Backup Export (3 tipi: completo, struttura, database)
+    const backupTypes = {
+        'export-full-btn': { group: 'full', label: 'Completo' },
+        'export-structure-btn': { group: 'structure', label: 'Struttura' },
+        'export-database-btn': { group: 'database', label: 'Database' }
+    };
+    Object.keys(backupTypes).forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            const type = backupTypes[id];
+            const json = await appDb.exportJSON(type.group);
+            const blob = new Blob([json], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `TeamAnalysis_Backup_${type.label}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        });
     });
     
     // Backup Import
@@ -1629,8 +1639,10 @@ function setupSettings() {
         const reader = new FileReader();
         reader.onload = async (ev) => {
             try {
-                await appDb.importJSON(ev.target.result);
-                alert('Backup ripristinato con successo!');
+                const parsed = JSON.parse(ev.target.result);
+                const type = (parsed.__meta && parsed.__meta.type) || 'sconosciuto';
+                await appDb.importJSON(JSON.stringify(parsed));
+                alert('Backup (' + type + ') ripristinato con successo!');
                 location.reload();
             } catch (err) {
                 alert('Errore ripristino backup: ' + err);
