@@ -419,7 +419,7 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
                         <span style="font-size:0.8rem; color:var(--text-muted);">${skillBadge}</span>
                     </div>
                     <button type="button" class="goal-pin-btn" data-key="${key}" title="${pinTitle}" ${pinDisabled ? 'disabled' : ''} style="background:none; border:none; cursor:${pinDisabled ? 'not-allowed' : 'pointer'}; padding:4px; display:inline-flex; align-items:center; color:${pinColor}; flex-shrink:0; opacity:${pinDisabled ? 0.35 : (pinned ? 1 : 0.65)};" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${pinDisabled ? 0.35 : (pinned ? 1 : 0.65)}'">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="${pinFill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="${pinFill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"></path><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"></path></svg>
                     </button>
                 </div>
                 <div>
