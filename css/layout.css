@@ -557,6 +557,18 @@ html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .sun-icon {
     line-height: 1.5;
 }
 
+/* Card impostazioni uniformi: stessa altezza e pulsante allineato in fondo */
+.settings-cards > .card {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+}
+
+.settings-cards > .card .btn {
+    margin-top: auto;
+    align-self: flex-start;
+}
+
 /* Stat Cards */
 .stat-card {
     position: relative;

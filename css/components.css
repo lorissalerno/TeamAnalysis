@@ -128,6 +128,28 @@
     width: 100%;
 }
 
+/* Layout a due colonne (Esporta a sinistra, Importa a destra) nella modal Backup */
+.backup-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 24px;
+    align-items: start;
+}
+
+.backup-modal-grid .backup-section + .backup-section {
+    border-left: 1px solid var(--border);
+    padding-left: 24px;
+}
+
+@media (max-width: 560px) {
+    .backup-modal-grid .backup-section + .backup-section {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+    }
+}
+
 .icon-btn {
     background: none;
     border: none;
