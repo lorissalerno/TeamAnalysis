@@ -558,7 +558,8 @@ html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .sun-icon {
     margin-bottom: 24px;
 }
 
-.db-import-split > .card {
+.db-import-split > .card,
+.db-import-split > .card + .card {
     margin-top: 0;
     margin-bottom: 0;
 }
