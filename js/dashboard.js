@@ -315,15 +315,13 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
 
     summaryContainer.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
-            <div style="display:flex; align-items:center; gap:16px;">
-                <div style="width:48px; height:48px; border-radius:12px; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center;">
-                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="9" cy="8" r="3.2" fill="currentColor" stroke="none" opacity="0.55"></circle>
-                        <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" fill="currentColor" stroke="none" opacity="0.55"></path>
-                        <circle cx="16.5" cy="9.5" r="2.4"></circle>
-                        <path d="M14.5 19c0-2.4 1.6-4 4-4s4 1.6 4 4"></path>
-                    </svg>
-                </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                    <circle cx="9" cy="8" r="3.2" fill="var(--primary)" opacity="0.35"></circle>
+                    <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" fill="var(--primary)" opacity="0.35"></path>
+                    <circle cx="16.5" cy="9.5" r="2.4"></circle>
+                    <path d="M14.5 19c0-2.4 1.6-4 4-4s4 1.6 4 4"></path>
+                </svg>
                 <div>
                     <h3 style="margin:0; font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Collaboratori Totali</h3>
                     <div style="font-size:2rem; font-weight:700; color:var(--text-main); line-height:1.1;">${activeEmployees.length}</div>
