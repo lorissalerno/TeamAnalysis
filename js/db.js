@@ -362,6 +362,36 @@ const db = {
             });
         }
     },
+
+    deleteSkill: async function(skillName) {
+        const stores = ['performance', 'custom_stats', 'goals', 'sales'];
+        for (const storeName of stores) {
+            const all = await this.getAll(storeName);
+            const toDelete = all.filter(r => r.skill === skillName);
+            if (toDelete.length === 0) continue;
+            await new Promise((resolve, reject) => {
+                const transaction = this._db.transaction([storeName], 'readwrite');
+                const store = transaction.objectStore(storeName);
+                toDelete.forEach(r => store.delete(r.id));
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+        const maps = await this.getAll('anonymous_map');
+        const mapsToUpdate = maps.filter(m => Array.isArray(m.skills) && m.skills.includes(skillName));
+        if (mapsToUpdate.length > 0) {
+            await new Promise((resolve, reject) => {
+                const transaction = this._db.transaction(['anonymous_map'], 'readwrite');
+                const store = transaction.objectStore('anonymous_map');
+                mapsToUpdate.forEach(m => {
+                    m.skills = m.skills.filter(s => s !== skillName);
+                    store.put(m);
+                });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+    },
     
     // Gruppi di store per i tre tipi di backup
     backupGroups: {
