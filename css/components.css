@@ -822,7 +822,7 @@ input:checked + .slider:before {
 
 .db-table-interactive th.db-sortable-th.sorted {
     color: var(--primary);
-    background: var(--accent-muted);
+    background: color-mix(in srgb, var(--primary) 12%, var(--bg-base));
 }
 
 .th-sort-inner {
