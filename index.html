@@ -384,21 +384,47 @@
                     <button class="btn secondary" id="manage-mapping-btn">Gestisci Collaboratori</button>
                 </div>
 
-                <div class="card">
-                    <h2>Backup Dati</h2>
-                    <p>Salva o ripristina i dati. Tre tipi di backup disponibili:</p>
-                    <div class="backup-actions">
-                        <button class="btn primary" id="export-full-btn">Backup Completo</button>
-                        <button class="btn secondary" id="export-structure-btn">Backup Struttura</button>
-                        <button class="btn secondary" id="export-database-btn">Backup Database</button>
+                <div class="card backup-card">
+                    <div class="backup-card-header">
+                        <h2>Backup Dati</h2>
+                        <p>Salva o ripristina i dati del progetto in locale.</p>
                     </div>
-                    <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
-                        <strong>Completo</strong>: tutti i dati, struttura e collaboratori.
-                        <strong>Struttura</strong>: template, grafici e impostazioni, senza dati e collaboratori.
-                        <strong>Database</strong>: solo dati performance/vendite e lista collaboratori.
-                    </p>
-                    <input type="file" id="import-backup-file" accept=".json" style="display:none">
-                    <button class="btn secondary" onclick="document.getElementById('import-backup-file').click()">Importa Backup</button>
+
+                    <div class="backup-section">
+                        <h3>Esporta</h3>
+                        <div class="backup-list">
+                            <div class="backup-item">
+                                <div class="backup-item-info">
+                                    <span class="backup-item-title">Backup Completo</span>
+                                    <span class="backup-item-desc">Tutti i dati, la struttura e i collaboratori.</span>
+                                </div>
+                                <button class="btn primary" id="export-full-btn">Esporta</button>
+                            </div>
+                            <div class="backup-item">
+                                <div class="backup-item-info">
+                                    <span class="backup-item-title">Backup Struttura</span>
+                                    <span class="backup-item-desc">Template, grafici e impostazioni, senza dati né collaboratori.</span>
+                                </div>
+                                <button class="btn secondary" id="export-structure-btn">Esporta</button>
+                            </div>
+                            <div class="backup-item">
+                                <div class="backup-item-info">
+                                    <span class="backup-item-title">Backup Database</span>
+                                    <span class="backup-item-desc">Solo i dati performance/vendite e la lista collaboratori.</span>
+                                </div>
+                                <button class="btn secondary" id="export-database-btn">Esporta</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="backup-divider"></div>
+
+                    <div class="backup-section">
+                        <h3>Importa</h3>
+                        <p class="backup-import-hint">Seleziona un file JSON di backup esportato in precedenza: verranno ripristinati solo gli store contenuti nel file.</p>
+                        <input type="file" id="import-backup-file" accept=".json" style="display:none">
+                        <button class="btn secondary backup-import-btn" onclick="document.getElementById('import-backup-file').click()">Importa Backup</button>
+                    </div>
                 </div>
             </div>
         </section>
