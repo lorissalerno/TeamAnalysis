@@ -549,6 +549,26 @@ html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .sun-icon {
     gap: 20px;
 }
 
+/* Layout importazione CSV + pannello Gestione Skill affiancati */
+.db-import-split {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 20px;
+    align-items: stretch;
+    margin-bottom: 24px;
+}
+
+.db-import-split > .card {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+    .db-import-split {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Cards */
 .card {
     background: var(--bg-surface);

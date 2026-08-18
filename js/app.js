@@ -275,6 +275,43 @@ async function getSkills() {
 async function saveSkills(skillsList) {
     await appDb.setSetting('skills', skillsList);
     await populateSkillsUI();
+    if (typeof renderSkillsManagerList === 'function') renderSkillsManagerList();
+}
+
+async function commitSkillEdits(inputs) {
+    const list = Array.from(inputs);
+    const newSkillsList = [];
+
+    for (const input of list) {
+        const val = input.value.trim();
+        if (!val) {
+            alert("Il nome dello skill non può essere vuoto.");
+            input.focus();
+            return false;
+        }
+        if (newSkillsList.includes(val)) {
+            alert(`Lo skill "${val}" è presente più volte.`);
+            input.focus();
+            return false;
+        }
+        newSkillsList.push(val);
+    }
+
+    for (const input of list) {
+        const oldName = input.getAttribute('data-original');
+        const newName = input.value.trim();
+        if (oldName && oldName !== newName) {
+            await appDb.renameSkill(oldName, newName);
+            logImport(`Rinominato skill da "${oldName}" a "${newName}".`);
+        }
+    }
+
+    await saveSkills(newSkillsList);
+    await renderImportedData();
+    if (window.renderStatistics) window.renderStatistics();
+    if (window.renderGoals) window.renderGoals();
+    if (window.renderDashboard) window.renderDashboard();
+    return true;
 }
 
 async function populateSkillsUI() {
@@ -412,6 +449,7 @@ function setupImports() {
     const clearFilteredBtn = document.getElementById('clear-filtered-db-btn');
 
     setupSkillsModal();
+    setupSkillsManager();
     setupImportWizard();
     setupLogHistoryModal();
 
@@ -668,40 +706,8 @@ function setupSkillsModal() {
 
     if (saveSkillsModalBtn) {
         saveSkillsModalBtn.addEventListener('click', async () => {
-            const inputs = Array.from(document.querySelectorAll('#skills-list-container .skill-edit-input'));
-            const newSkillsList = [];
-
-            for (const input of inputs) {
-                const val = input.value.trim();
-                if (!val) {
-                    alert("Il nome dello skill non può essere vuoto.");
-                    input.focus();
-                    return;
-                }
-                if (newSkillsList.includes(val)) {
-                    alert(`Lo skill "${val}" è presente più volte.`);
-                    input.focus();
-                    return;
-                }
-                newSkillsList.push(val);
-            }
-
-            // Process renames in DB
-            for (const input of inputs) {
-                const oldName = input.getAttribute('data-original');
-                const newName = input.value.trim();
-                if (oldName && oldName !== newName) {
-                    await appDb.renameSkill(oldName, newName);
-                    logImport(`Rinominato skill da "${oldName}" a "${newName}".`);
-                }
-            }
-
-            await saveSkills(newSkillsList);
-            await renderImportedData();
-            if (window.renderStatistics) window.renderStatistics();
-            if (window.renderGoals) renderGoals();
-            if (window.renderDashboard) renderDashboard();
-            skillsModal.classList.remove('open');
+            const ok = await commitSkillEdits(document.querySelectorAll('#skills-list-container .skill-edit-input'));
+            if (ok) skillsModal.classList.remove('open');
         });
     }
 
@@ -762,6 +768,81 @@ async function renderSkillsModalList() {
         btn.addEventListener('click', (e) => {
             const parent = e.currentTarget.parentElement;
             parent.remove();
+        });
+    });
+}
+
+// --- SKILLS MANAGEMENT PANEL (riquadro nella sezione Database) ---
+function setupSkillsManager() {
+    const container = document.getElementById('skills-manager-list');
+    const addBtn = document.getElementById('skills-manager-add-btn');
+    const saveBtn = document.getElementById('skills-manager-save-btn');
+
+    if (container) renderSkillsManagerList();
+
+    if (addBtn && container) {
+        addBtn.addEventListener('click', () => {
+            const emptyMsg = container.querySelector('p');
+            if (emptyMsg) emptyMsg.remove();
+
+            const item = document.createElement('div');
+            item.style.display = 'flex';
+            item.style.gap = '8px';
+            item.style.alignItems = 'center';
+
+            item.innerHTML = `
+                <input type="text" class="skill-edit-input" data-original="" value="" placeholder="Nome nuovo skill..." style="flex:1; min-width:0; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+                <button type="button" class="btn secondary delete-skill-btn" title="Elimina questo skill" style="color:var(--danger, #ef4444); flex-shrink:0; padding:6px 10px;">&times;</button>
+            `;
+            container.appendChild(item);
+
+            const input = item.querySelector('input');
+            input.focus();
+
+            item.querySelector('.delete-skill-btn').addEventListener('click', () => {
+                item.remove();
+            });
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            const ok = await commitSkillEdits(document.querySelectorAll('#skills-manager-list .skill-edit-input'));
+            if (ok) {
+                await renderSkillsManagerList();
+                alert("Skill salvati correttamente.");
+            }
+        });
+    }
+}
+
+async function renderSkillsManagerList() {
+    const container = document.getElementById('skills-manager-list');
+    if (!container) return;
+    const skills = await getSkills();
+    container.innerHTML = '';
+
+    if (skills.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Nessuno skill presente.</p>';
+        return;
+    }
+
+    skills.forEach(skill => {
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.gap = '8px';
+        item.style.alignItems = 'center';
+
+        item.innerHTML = `
+            <input type="text" class="skill-edit-input" data-original="${skill}" value="${skill}" style="flex:1; min-width:0; padding:8px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border);">
+            <button type="button" class="btn secondary delete-skill-btn" title="Elimina questo skill" style="color:var(--danger, #ef4444); flex-shrink:0; padding:6px 10px;">&times;</button>
+        `;
+        container.appendChild(item);
+    });
+
+    container.querySelectorAll('.delete-skill-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.currentTarget.parentElement.remove();
         });
     });
 }
@@ -2500,6 +2581,35 @@ function setupImportWizard() {
             optAoit.style.borderColor = 'var(--border)';
             const svgAoit = optAoit.querySelector('svg');
             if (svgAoit) svgAoit.setAttribute('stroke', 'currentColor');
+        });
+    }
+
+    // Gestione skill direttamente dal Passaggio 2 (nuovo / rinomina)
+    const wizardAddSkillBtn = document.getElementById('wizard-add-skill-btn');
+    if (wizardAddSkillBtn) {
+        wizardAddSkillBtn.addEventListener('click', async () => {
+            const name = prompt("Inserisci il nome del nuovo Skill (es. Performance MyService VAS):");
+            if (!name || !name.trim()) return;
+            const cleanName = name.trim();
+            const skills = await getSkills();
+            if (skills.includes(cleanName)) {
+                alert("Questo skill esiste già!");
+                return;
+            }
+            skills.push(cleanName);
+            await saveSkills(skills);
+            const skillSelect = document.getElementById('wizard-perf-skill-select');
+            if (skillSelect) skillSelect.value = cleanName;
+            logImport(`Creato nuovo skill: "${cleanName}"`);
+        });
+    }
+
+    const wizardEditSkillBtn = document.getElementById('wizard-edit-skill-btn');
+    if (wizardEditSkillBtn) {
+        wizardEditSkillBtn.addEventListener('click', async () => {
+            await renderSkillsModalList();
+            const skillsModal = document.getElementById('skills-modal');
+            if (skillsModal) skillsModal.classList.add('open');
         });
     }
 

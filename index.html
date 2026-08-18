@@ -157,16 +157,36 @@
                 </button>
             </div>
 
-            <!-- Big Import Button Hero Box -->
-            <div class="card" style="text-align:center; padding:32px 24px; background:linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-base) 100%); border:1px solid var(--border);">
-                <h2 style="margin-bottom:8px; font-size:1.4rem;">Importazione Dati CSV</h2>
-                <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:20px; max-width:600px; margin-left:auto; margin-right:auto;">
-                    Importa rapidamente i tuoi file CSV di Efficienza o Sales tramite la procedura guidata semplice ed intuitiva.
-                </p>
-                <button type="button" class="btn primary" id="open-import-wizard-btn" style="padding:14px 32px; font-size:1.1rem; font-weight:600; border-radius:8px; display:inline-flex; align-items:center; gap:10px; box-shadow:var(--shadow-lg);">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    Importa Dati
-                </button>
+            <!-- Import Hero + Skill Manager Split -->
+            <div class="db-import-split">
+                <div class="card" style="text-align:center; padding:32px 24px; background:linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-base) 100%); border:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                    <h2 style="margin-bottom:8px; font-size:1.4rem;">Importazione Dati CSV</h2>
+                    <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:20px; max-width:600px;">
+                        Importa rapidamente i tuoi file CSV di Efficienza o Sales tramite la procedura guidata semplice ed intuitiva.
+                    </p>
+                    <button type="button" class="btn primary" id="open-import-wizard-btn" style="padding:14px 32px; font-size:1.1rem; font-weight:600; border-radius:8px; display:inline-flex; align-items:center; gap:10px; box-shadow:var(--shadow-lg);">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Importa Dati
+                    </button>
+                </div>
+
+                <!-- Skill Manager Panel -->
+                <div class="card skills-manager-card">
+                    <div class="flex-between" style="align-items:flex-start; margin-bottom:14px;">
+                        <div>
+                            <h2 style="margin:0 0 4px 0; font-size:1.1rem; font-weight:700;">Gestione Skill</h2>
+                            <p style="margin:0; font-size:0.8rem; color:var(--text-muted); line-height:1.5;">Crea, rinomina o elimina gli skill disponibili per l'importazione delle performance.</p>
+                        </div>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                    </div>
+                    <div id="skills-manager-list" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; padding-right:4px;">
+                        <!-- Popolato dinamicamente -->
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:16px;">
+                        <button type="button" class="btn secondary" id="skills-manager-add-btn" style="padding:8px 12px;">+ Nuovo Skill</button>
+                        <button type="button" class="btn primary" id="skills-manager-save-btn">Salva</button>
+                    </div>
+                </div>
             </div>
 
             <!-- List of Imported Data -->
@@ -695,9 +715,14 @@
                 <!-- Container per Efficienza (Skill Selection) -->
                 <div id="wizard-perf-skill-section" style="display:none;">
                     <label style="display:block; font-weight:500; margin-bottom:8px;">Skill di destinazione:</label>
-                    <select id="wizard-perf-skill-select" class="form-control" style="width:100%;">
-                        <!-- Popolato dinamicamente -->
-                    </select>
+                    <div style="display:flex; gap:8px; align-items:stretch;">
+                        <select id="wizard-perf-skill-select" class="form-control" style="flex:1; min-width:0;">
+                            <!-- Popolato dinamicamente -->
+                        </select>
+                        <button type="button" class="btn secondary" id="wizard-add-skill-btn" title="Crea un nuovo skill" style="white-space:nowrap;">+ Nuovo</button>
+                        <button type="button" class="btn secondary" id="wizard-edit-skill-btn" title="Rinomina o elimina gli skill esistenti" style="white-space:nowrap;">Rinomina</button>
+                    </div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Con "+ Nuovo" crei uno skill; con "Rinomina" modifichi o elimini quelli esistenti.</p>
                 </div>
 
                 <!-- Container per Sales (Report Type Selection) -->
