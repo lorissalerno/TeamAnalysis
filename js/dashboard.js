@@ -412,7 +412,7 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
         const pinFill = pinned ? 'var(--primary)' : 'none';
 
         html += `
-            <div style="background:var(--bg-base); padding:14px 16px; border-radius:8px; border:1px solid ${pinned ? 'var(--primary)' : 'var(--border)'};">
+            <div style="background:var(--bg-base); padding:14px 16px; border-radius:8px; border:1px solid var(--border);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;">
                     <div style="min-width:0;">
                         <strong style="font-size:0.95rem; color:var(--text-main);">${displayMetricName(g.metric)}</strong>
