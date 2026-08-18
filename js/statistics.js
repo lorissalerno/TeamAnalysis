@@ -171,13 +171,13 @@ async function renameTemplate(templateId, newName) {
 async function deleteTemplate(templateId) {
     const tpls = await getTemplates();
     if (tpls.length <= 1) {
-        alert("Impossibile eliminare l'unico template rimasto.");
+        await appDialog.alert("Impossibile eliminare l'unico template rimasto.");
         return;
     }
     const target = tpls.find(t => t.id === templateId);
     if (!target) return;
 
-    if (!confirm(`Eliminare il template "${target.name}" e tutte le sue statistiche?`)) return;
+    if (!await appDialog.confirm(`Eliminare il template "${target.name}" e tutte le sue statistiche?`)) return;
 
     const allStats = await appDb.getAll('custom_stats');
     for (const s of allStats) {
@@ -205,7 +205,7 @@ async function deleteTemplate(templateId) {
 async function createNewTemplate(name) {
     let cleanName = name ? name.trim() : '';
     if (!cleanName) {
-        const inputName = prompt('Nome del nuovo template:');
+        const inputName = await appDialog.prompt('Nome del nuovo template:');
         if (!inputName || !inputName.trim()) return;
         cleanName = inputName.trim();
     }
@@ -1545,7 +1545,7 @@ async function saveNewStat() {
     // Tipo speciale: Tabella Obiettivi Vendita
     if (type === 'goals_table') {
         const tableId = document.getElementById('stat-goals-table-id')?.value || '';
-        if (!tableId) { alert('Seleziona una tabella obiettivi.'); return; }
+        if (!tableId) { await appDialog.alert('Seleziona una tabella obiettivi.'); return; }
         const year = window.appState.activeYear;
         const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
         const tbl = (tablesList || []).find(t => t.id === tableId);
@@ -1595,7 +1595,7 @@ async function saveNewStat() {
     });
 
     if (selectedMetrics.length === 0) {
-        alert('Seleziona almeno un dato/metrica');
+        await appDialog.alert('Seleziona almeno un dato/metrica');
         return;
     }
 
@@ -2746,7 +2746,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
             deleteBtn.title = 'Elimina statistica';
             deleteBtn.onclick = async () => {
-                if (!confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
+                if (!await appDialog.confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
                 await appDb.deleteRecord('custom_stats', statConfig.id);
                 renderTeamStats();
             };
@@ -2840,7 +2840,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         deleteBtn.style.cssText = 'padding:4px 8px; font-size:0.75rem;';
         deleteBtn.title = 'Elimina statistica';
         deleteBtn.onclick = async () => {
-            if (!confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
+            if (!await appDialog.confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
             await appDb.deleteRecord('custom_stats', statConfig.id);
             renderTeamStats();
         };

@@ -455,7 +455,7 @@ async function renderSalesGoalsTable() {
         const deleteBtn = tableCard.querySelector('.delete-table-btn');
         if (deleteBtn) {
             deleteBtn.onclick = async () => {
-                if (!confirm(`Sei sicuro di voler eliminare la tabella "${t.name}"?`)) return;
+                if (!await appDialog.confirm(`Sei sicuro di voler eliminare la tabella "${t.name}"?`)) return;
 
                 await appDb.setSetting(`sales_table_products_${t.id}`, []);
                 await appDb.setSetting(`sales_table_targets_${year}_${t.id}`, {});
@@ -912,7 +912,7 @@ async function openAddCollaboratorModal(existingEmployees, year, skillFilter) {
         const empName = sel || inp;
 
         if (!empName) {
-            alert('Seleziona o inserisci un nome.');
+            await appDialog.alert('Seleziona o inserisci un nome.');
             return;
         }
 
@@ -1201,7 +1201,7 @@ async function openManageProductsModal(currentProducts) {
 }
 
 window.deleteGoal = async function(id) {
-    if (!confirm("Sei sicuro di voler eliminare questo obiettivo?")) return;
+    if (!await appDialog.confirm("Sei sicuro di voler eliminare questo obiettivo?")) return;
     const transaction = appDb._db.transaction(['goals'], 'readwrite');
     const store = transaction.objectStore('goals');
     store.delete(id);
@@ -1589,11 +1589,11 @@ async function saveNewGoal() {
     const employee = document.getElementById('goal-employee').value;
     
     if (!metric) {
-        alert("Seleziona una metrica.");
+        await appDialog.alert("Seleziona una metrica.");
         return;
     }
     if (isNaN(target)) {
-        alert("Inserisci un target numerico valido.");
+        await appDialog.alert("Inserisci un target numerico valido.");
         return;
     }
     

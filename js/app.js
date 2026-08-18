@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         await appDb.init();
     } catch (e) {
-        alert("Errore caricamento Database: " + e);
+        await appDialog.alert("Errore caricamento Database: " + e);
         return;
     }
 
@@ -285,12 +285,12 @@ async function commitSkillEdits(inputs) {
     for (const input of list) {
         const val = input.value.trim();
         if (!val) {
-            alert("Il nome dello skill non può essere vuoto.");
+            await appDialog.alert("Il nome dello skill non può essere vuoto.");
             input.focus();
             return false;
         }
         if (newSkillsList.includes(val)) {
-            alert(`Lo skill "${val}" è presente più volte.`);
+            await appDialog.alert(`Lo skill "${val}" è presente più volte.`);
             input.focus();
             return false;
         }
@@ -312,6 +312,44 @@ async function commitSkillEdits(inputs) {
     if (window.renderGoals) window.renderGoals();
     if (window.renderDashboard) window.renderDashboard();
     return true;
+}
+
+// Elimina uno skill e tutti i dati collegati, aggiorna la lista salvata e le viste.
+async function deleteSkillAndData(skillName, row) {
+    if (row) row.remove();
+    await appDb.deleteSkill(skillName);
+    const skills = await getSkills();
+    await appDb.setSetting('skills', skills.filter(s => s !== skillName));
+    await populateSkillsUI();
+    logImport(`Eliminato skill "${skillName}" e tutti i dati associati.`);
+    await renderImportedData();
+    if (window.renderStatistics) window.renderStatistics();
+    if (window.renderGoals) window.renderGoals();
+    if (window.renderDashboard) window.renderDashboard();
+}
+
+// Delega i clic sui pulsanti di eliminazione skill: per gli skill esistenti chiede
+// conferma informando della cancellazione dei dati associati, poi li elimina.
+function bindSkillRowDelete(container) {
+    if (!container || container.dataset.skillDeleteBound === '1') return;
+    container.dataset.skillDeleteBound = '1';
+    container.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.delete-skill-btn');
+        if (!btn) return;
+        const row = btn.closest('div');
+        const input = row ? row.querySelector('.skill-edit-input') : null;
+        const original = input ? (input.getAttribute('data-original') || '') : '';
+        if (!original) {
+            row.remove();
+            return;
+        }
+        const confirmed = await appDialog.confirm(
+            `Vuoi eliminare lo skill "${original}"?\n\nAttenzione: verranno eliminati definitivamente anche tutti i dati associati a questo skill (performance, vendite, statistiche e obiettivi). L'operazione non è reversibile.`,
+            { title: 'Elimina Skill', okText: 'Elimina Skill', cancelText: 'Annulla' }
+        );
+        if (!confirmed) return;
+        await deleteSkillAndData(original, row);
+    });
 }
 
 async function populateSkillsUI() {
@@ -455,7 +493,7 @@ function setupImports() {
 
     if (addSkillBtn) {
         addSkillBtn.addEventListener('click', async () => {
-            const name = prompt("Inserisci il nome del nuovo Skill (es. Performance MyService VAS):");
+            const name = await appDialog.prompt("Inserisci il nome del nuovo Skill (es. Performance MyService VAS):");
             if (!name || !name.trim()) return;
             const cleanName = name.trim();
             const skills = await getSkills();
@@ -466,7 +504,7 @@ function setupImports() {
                 if (perfSel) perfSel.value = cleanName;
                 logImport(`Creato nuovo skill: "${cleanName}"`);
             } else {
-                alert("Questo skill esiste già!");
+                await appDialog.alert("Questo skill esiste già!");
             }
         });
     }
@@ -505,7 +543,7 @@ function setupImports() {
             const activeFilters = window.appState.dbCategoryFilters;
 
             if (!activeFilters || activeFilters.size === 0) {
-                alert("Nessuna fonte attualmente selezionata.");
+                await appDialog.alert("Nessuna fonte attualmente selezionata.");
                 return;
             }
 
@@ -561,7 +599,7 @@ function setupImports() {
                 confirmMsg = `Sei sicuro di voler eliminare i dati delle fonti attive (${activeList})${searchNote} per l'anno ${activeYear}?`;
             }
 
-            if (!confirm(confirmMsg)) return;
+            if (!await appDialog.confirm(confirmMsg)) return;
 
             if (perfToDelete.length > 0) {
                 for (const r of perfToDelete) await appDb.deleteRecord('performance', r.id);
@@ -589,7 +627,7 @@ function setupImports() {
             const selectedSkill = document.getElementById('perf-skill-select') ? document.getElementById('perf-skill-select').value : '';
             
             if (!selectedSkill) {
-                alert("Seleziona o crea uno skill prima di importare i dati performance.");
+                await appDialog.alert("Seleziona o crea uno skill prima di importare i dati performance.");
                 perfInput.value = '';
                 return;
             }
@@ -693,6 +731,8 @@ function setupSkillsModal() {
     const saveSkillsModalBtn = document.getElementById('save-skills-modal-btn');
     const modalAddSkillBtn = document.getElementById('modal-add-skill-btn');
 
+    bindSkillRowDelete(document.getElementById('skills-list-container'));
+
     if (editSkillsBtn) {
         editSkillsBtn.addEventListener('click', async () => {
             await renderSkillsModalList();
@@ -732,10 +772,6 @@ function setupSkillsModal() {
 
             const input = item.querySelector('input');
             input.focus();
-
-            item.querySelector('.delete-skill-btn').addEventListener('click', () => {
-                item.remove();
-            });
         });
     }
 }
@@ -763,13 +799,6 @@ async function renderSkillsModalList() {
         `;
         container.appendChild(item);
     });
-
-    container.querySelectorAll('.delete-skill-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const parent = e.currentTarget.parentElement;
-            parent.remove();
-        });
-    });
 }
 
 // --- SKILLS MANAGEMENT PANEL (riquadro nella sezione Database) ---
@@ -779,6 +808,7 @@ function setupSkillsManager() {
     const saveBtn = document.getElementById('skills-manager-save-btn');
 
     if (container) renderSkillsManagerList();
+    bindSkillRowDelete(container);
 
     if (addBtn && container) {
         addBtn.addEventListener('click', () => {
@@ -798,10 +828,6 @@ function setupSkillsManager() {
 
             const input = item.querySelector('input');
             input.focus();
-
-            item.querySelector('.delete-skill-btn').addEventListener('click', () => {
-                item.remove();
-            });
         });
     }
 
@@ -810,7 +836,7 @@ function setupSkillsManager() {
             const ok = await commitSkillEdits(document.querySelectorAll('#skills-manager-list .skill-edit-input'));
             if (ok) {
                 await renderSkillsManagerList();
-                alert("Skill salvati correttamente.");
+                await appDialog.alert("Skill salvati correttamente.");
             }
         });
     }
@@ -838,12 +864,6 @@ async function renderSkillsManagerList() {
             <button type="button" class="btn secondary delete-skill-btn" title="Elimina questo skill" style="color:var(--danger, #ef4444); flex-shrink:0; padding:6px 10px;">&times;</button>
         `;
         container.appendChild(item);
-    });
-
-    container.querySelectorAll('.delete-skill-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.currentTarget.parentElement.remove();
-        });
     });
 }
 
@@ -1321,7 +1341,7 @@ async function renderImportedData() {
             const store = e.currentTarget.getAttribute('data-store');
             const metricKey = e.currentTarget.getAttribute('data-metric');
 
-            if (confirm(`Eliminare questa riga ("${metricKey}")?`)) {
+            if (await appDialog.confirm(`Eliminare questa riga ("${metricKey}")?`)) {
                 if (store === 'sales') {
                     await appDb.deleteRecord('sales', id);
                 } else {
@@ -1699,10 +1719,10 @@ function setupSettings() {
 
     // Azione: Elimina selezionati
     if (bulkDelete) {
-        bulkDelete.addEventListener('click', () => {
+        bulkDelete.addEventListener('click', async () => {
             const selected = getSelectedRows();
             if (selected.length === 0) return;
-            if (!confirm(`Eliminare ${selected.length} collaborator${selected.length > 1 ? 'i' : 'e'}?`)) return;
+            if (!await appDialog.confirm(`Eliminare ${selected.length} collaborator${selected.length > 1 ? 'i' : 'e'}?`)) return;
             selected.forEach(tr => {
                 const dataId = tr.getAttribute('data-id');
                 if (dataId && dataId !== 'new') {
@@ -1866,10 +1886,10 @@ function setupSettings() {
                 const parsed = JSON.parse(ev.target.result);
                 const type = (parsed.__meta && parsed.__meta.type) || 'sconosciuto';
                 await appDb.importJSON(JSON.stringify(parsed));
-                alert('Backup (' + type + ') ripristinato con successo!');
+                await appDialog.alert('Backup (' + type + ') ripristinato con successo!');
                 location.reload();
             } catch (err) {
-                alert('Errore ripristino backup: ' + err);
+                await appDialog.alert('Errore ripristino backup: ' + err);
             }
         };
         reader.readAsText(file);
@@ -2090,23 +2110,23 @@ async function saveManualData() {
     const rawVal = document.getElementById('manual-value-input').value.trim();
 
     if (!skillName) {
-        alert("Inserisci uno Skill o Prodotto.");
+        await appDialog.alert("Inserisci uno Skill o Prodotto.");
         return;
     }
     if (!employee) {
-        alert("Inserisci il nome del collaboratore.");
+        await appDialog.alert("Inserisci il nome del collaboratore.");
         return;
     }
     if (!dateStr) {
-        alert("Seleziona una data valida.");
+        await appDialog.alert("Seleziona una data valida.");
         return;
     }
     if (!metric) {
-        alert("Inserisci il nome della metrica.");
+        await appDialog.alert("Inserisci il nome della metrica.");
         return;
     }
     if (rawVal === '') {
-        alert("Inserisci un valore.");
+        await appDialog.alert("Inserisci un valore.");
         return;
     }
 
@@ -2235,8 +2255,9 @@ async function checkManualDataConflict(storeName, activeYear, startDate, selecte
         const overwriteCard = document.getElementById('manual-opt-overwrite-card');
 
         if (!modal || !overlay) {
-            const ans = confirm(`Attenzione: sono presenti ${totalManualCount} dati manuali o modificati nel periodo di importazione.\n\nPremi OK per MANTENERE i dati manuali.\nPremi ANNULLA per SOVRASCRIVERE anche i dati manuali.`);
-            resolve(ans ? 'preserve' : 'overwrite');
+            appDialog.confirm(`Attenzione: sono presenti ${totalManualCount} dati manuali o modificati nel periodo di importazione.\n\nPremi OK per MANTENERE i dati manuali.\nPremi ANNULLA per SOVRASCRIVERE anche i dati manuali.`).then(ans => {
+                resolve(ans ? 'preserve' : 'overwrite');
+            });
             return;
         }
 
@@ -2588,12 +2609,12 @@ function setupImportWizard() {
     const wizardAddSkillBtn = document.getElementById('wizard-add-skill-btn');
     if (wizardAddSkillBtn) {
         wizardAddSkillBtn.addEventListener('click', async () => {
-            const name = prompt("Inserisci il nome del nuovo Skill (es. Performance MyService VAS):");
+            const name = await appDialog.prompt("Inserisci il nome del nuovo Skill (es. Performance MyService VAS):");
             if (!name || !name.trim()) return;
             const cleanName = name.trim();
             const skills = await getSkills();
             if (skills.includes(cleanName)) {
-                alert("Questo skill esiste già!");
+                await appDialog.alert("Questo skill esiste già!");
                 return;
             }
             skills.push(cleanName);
@@ -2622,14 +2643,14 @@ function setupImportWizard() {
     }
 
     if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
+        nextBtn.addEventListener('click', async () => {
             if (wizardState.currentStep === 2) {
                 if (wizardState.type === 'performance') {
                     const skillSelect = document.getElementById('wizard-perf-skill-select');
                     if (skillSelect && skillSelect.value) {
                         wizardState.skill = skillSelect.value;
                     } else {
-                        alert("Seleziona uno skill prima di proseguire.");
+                        await appDialog.alert("Seleziona uno skill prima di proseguire.");
                         return;
                     }
                 }
@@ -2668,10 +2689,10 @@ function setupImportWizard() {
         });
     }
 
-    function handleWizardFileSelection(file) {
+    async function handleWizardFileSelection(file) {
         if (!file) return;
         if (!file.name.toLowerCase().endsWith('.csv')) {
-            alert("Seleziona un file valido con estensione .csv");
+            await appDialog.alert("Seleziona un file valido con estensione .csv");
             return;
         }
         wizardState.file = file;
@@ -2687,7 +2708,7 @@ function setupImportWizard() {
     if (submitBtn) {
         submitBtn.addEventListener('click', async () => {
             if (!wizardState.file) {
-                alert("Seleziona un file CSV prima di avviare l'importazione.");
+                await appDialog.alert("Seleziona un file CSV prima di avviare l'importazione.");
                 return;
             }
 
@@ -2712,7 +2733,7 @@ function setupImportWizard() {
                     const skillSelect = document.getElementById('wizard-perf-skill-select');
                     selectedSkill = skillSelect ? skillSelect.value : wizardState.skill;
                     if (!selectedSkill) {
-                        alert("Seleziona uno skill.");
+                        await appDialog.alert("Seleziona uno skill.");
                         submitBtn.disabled = false;
                         return;
                     }

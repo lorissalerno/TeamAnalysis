@@ -1604,6 +1604,89 @@ select option {
     padding-right: 8px !important;
 }
 
+/* Dialog personalizzati (alert/confirm/prompt) al posto dei popup nativi del browser */
+.app-dialog-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-dialog-overlay.open {
+    display: flex;
+}
+
+.app-dialog {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: 92%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-dialog-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.app-dialog-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.app-dialog-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    max-height: 55vh;
+}
+
+.app-dialog-message {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text-main);
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.app-dialog-input-wrap {
+    margin-top: 16px;
+}
+
+.app-dialog-input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 6px;
+    background: var(--bg-base);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    font-family: var(--font-family);
+    font-size: 0.9rem;
+}
+
+.app-dialog-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.app-dialog-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 /* Mini-card obiettivi Sales (dashboard e singolo collaboratore).
    Niente .card per evitare il margin-top di .card + .card (prima card piu alta);
    sfondo piu chiaro del contenitore per staccare i riquadri. */
