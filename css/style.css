@@ -273,7 +273,7 @@ a:hover {
 }
 
 @media print {
-    .sidebar { display: none !important; }
+    .sidebar-TAASALO3 { display: none !important; }
     .content { padding: 0; overflow: visible; }
     .btn, .section-header button { display: none !important; }
     .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }

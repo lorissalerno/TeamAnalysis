@@ -23,7 +23,7 @@
 }
 
 /* Sidebar */
-.sidebar {
+.sidebar-TAASALO3 {
     width: var(--sidebar-width);
     background-color: var(--sidebar-bg);
     border-right: 1px solid var(--sidebar-border);
@@ -35,7 +35,7 @@
     transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.sidebar-header {
+.sidebar-header-TAASALO3 {
     padding: 16px 16px;
     border-bottom: 1px solid var(--sidebar-border);
     display: flex;
@@ -45,7 +45,7 @@
     min-height: 64px;
 }
 
-.sidebar-brand {
+.sidebar-brand-TAASALO3 {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -53,7 +53,7 @@
     overflow: hidden;
 }
 
-.sidebar-logo {
+.sidebar-logo-TAASALO3 {
     width: 28px;
     height: 28px;
     border-radius: 6px;
@@ -62,7 +62,7 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
-.sidebar-header h2 {
+.sidebar-header-TAASALO3 h2 {
     font-size: 1.12rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -74,7 +74,7 @@
     margin: 0;
 }
 
-.sidebar-toggle-btn {
+.sidebar-toggle-btn-TAASALO3 {
     background: transparent;
     border: 1px solid transparent;
     color: var(--sidebar-text-muted);
@@ -90,13 +90,13 @@
     flex-shrink: 0;
 }
 
-.sidebar-toggle-btn:hover {
+.sidebar-toggle-btn-TAASALO3:hover {
     background-color: var(--sidebar-bg-hover);
     color: var(--sidebar-text);
     border-color: var(--sidebar-border);
 }
 
-.nav-links {
+.nav-links-TAASALO3 {
     list-style: none;
     padding: 12px 10px;
     flex: 1;
@@ -104,11 +104,11 @@
     overflow-x: hidden;
 }
 
-.nav-links li {
+.nav-links-TAASALO3 li {
     margin-bottom: 3px;
 }
 
-.nav-links a {
+.nav-links-TAASALO3 a {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -124,51 +124,51 @@
     border: 1px solid transparent;
 }
 
-.nav-links a:hover {
+.nav-links-TAASALO3 a:hover {
     background-color: var(--sidebar-bg-hover);
     color: var(--sidebar-text);
 }
 
-.nav-links a.active {
+.nav-links-TAASALO3 a.active {
     background-color: var(--accent-muted);
     color: var(--primary);
     font-weight: 600;
     border-color: rgba(37, 99, 235, 0.25);
 }
 
-[data-theme="dark"] .nav-links a.active {
+[data-theme="dark"] .nav-links-TAASALO3 a.active {
     border-color: rgba(59, 130, 246, 0.3);
 }
 
-.nav-links .nav-icon {
+.nav-links-TAASALO3 .nav-icon-TAASALO3 {
     flex-shrink: 0;
     width: 20px;
     height: 20px;
     transition: transform var(--transition);
 }
 
-.nav-links a:hover .nav-icon {
+.nav-links-TAASALO3 a:hover .nav-icon-TAASALO3 {
     transform: scale(1.06);
 }
 
-.nav-links .nav-label {
+.nav-links-TAASALO3 .nav-label-TAASALO3 {
     white-space: nowrap;
     transition: opacity 0.2s ease;
 }
 
-.sidebar-footer {
+.sidebar-footer-TAASALO3 {
     padding: 14px 16px;
     border-top: 1px solid var(--sidebar-border);
     transition: padding 0.25s ease;
 }
 
 /* Sidebar Collapsed state */
-.sidebar.collapsed {
+.sidebar-TAASALO3.collapsed {
     width: var(--sidebar-collapsed-width);
     overflow: visible;
 }
 
-.sidebar.collapsed .sidebar-header {
+.sidebar-TAASALO3.collapsed .sidebar-header-TAASALO3 {
     padding: 14px 8px;
     flex-direction: column;
     justify-content: center;
@@ -176,36 +176,36 @@
     gap: 10px;
 }
 
-.sidebar.collapsed .sidebar-header h2 {
+.sidebar-TAASALO3.collapsed .sidebar-header-TAASALO3 h2 {
     display: none;
 }
 
-.sidebar.collapsed .sidebar-brand {
+.sidebar-TAASALO3.collapsed .sidebar-brand-TAASALO3 {
     justify-content: center;
 }
 
-.sidebar.collapsed .sidebar-logo {
+.sidebar-TAASALO3.collapsed .sidebar-logo-TAASALO3 {
     width: 28px;
     height: 28px;
 }
 
-.sidebar.collapsed .sidebar-toggle-btn {
+.sidebar-TAASALO3.collapsed .sidebar-toggle-btn-TAASALO3 {
     transform: rotate(180deg);
 }
 
-.sidebar.collapsed .nav-links {
+.sidebar-TAASALO3.collapsed .nav-links-TAASALO3 {
     padding: 12px 6px;
     overflow: visible;
 }
 
-.sidebar.collapsed .nav-links li {
+.sidebar-TAASALO3.collapsed .nav-links-TAASALO3 li {
     display: flex;
     justify-content: center;
     margin-bottom: 4px;
     position: relative;
 }
 
-.sidebar.collapsed .nav-links a {
+.sidebar-TAASALO3.collapsed .nav-links-TAASALO3 a {
     width: 44px;
     height: 44px;
     padding: 0;
@@ -216,16 +216,16 @@
     overflow: visible;
 }
 
-.sidebar.collapsed .nav-links .nav-label {
+.sidebar-TAASALO3.collapsed .nav-links-TAASALO3 .nav-label-TAASALO3 {
     display: none;
 }
 
-/* Tooltip on hover in collapsed sidebar */
-.sidebar.collapsed [data-tooltip] {
+/* Tooltip on hover in collapsed sidebar-TAASALO3 */
+.sidebar-TAASALO3.collapsed [data-tooltip] {
     position: relative;
 }
 
-.sidebar.collapsed [data-tooltip]::after {
+.sidebar-TAASALO3.collapsed [data-tooltip]::after {
     content: attr(data-tooltip);
     position: absolute;
     left: calc(100% + 12px);
@@ -247,7 +247,7 @@
     z-index: 99999;
 }
 
-.sidebar.collapsed [data-tooltip]::before {
+.sidebar-TAASALO3.collapsed [data-tooltip]::before {
     content: '';
     position: absolute;
     left: calc(100% + 4px);
@@ -262,23 +262,23 @@
     z-index: 100000;
 }
 
-.sidebar.collapsed [data-tooltip]:hover::after {
+.sidebar-TAASALO3.collapsed [data-tooltip]:hover::after {
     opacity: 1;
     visibility: visible;
     transform: translateY(-50%) scale(1);
 }
 
-.sidebar.collapsed [data-tooltip]:hover::before {
+.sidebar-TAASALO3.collapsed [data-tooltip]:hover::before {
     opacity: 1;
     visibility: visible;
 }
 
-.sidebar.collapsed .sidebar-footer {
+.sidebar-TAASALO3.collapsed .sidebar-footer-TAASALO3 {
     padding: 14px 8px;
     overflow: visible;
 }
 
-.sidebar.collapsed .controls {
+.sidebar-TAASALO3.collapsed .controls {
     flex-direction: column;
     gap: 10px;
     align-items: center;
@@ -287,29 +287,29 @@
     width: 100%;
 }
 
-.sidebar.collapsed .toggle-switch .label {
+.sidebar-TAASALO3.collapsed .toggle-switch .label {
     display: none;
 }
 
-.sidebar.collapsed .year-selector {
+.sidebar-TAASALO3.collapsed .year-selector {
     display: flex;
     justify-content: center;
     width: 100%;
 }
 
-.sidebar.collapsed .year-selector-wrapper {
+.sidebar-TAASALO3.collapsed .year-selector-wrapper {
     width: 48px;
     height: 32px;
     padding: 0;
     justify-content: center;
 }
 
-.sidebar.collapsed .year-selector .year-icon,
-.sidebar.collapsed .year-selector .year-chevron {
+.sidebar-TAASALO3.collapsed .year-selector .year-icon,
+.sidebar-TAASALO3.collapsed .year-selector .year-chevron {
     display: none;
 }
 
-.sidebar.collapsed .year-selector select {
+.sidebar-TAASALO3.collapsed .year-selector select {
     padding: 0;
     text-align: center;
     text-align-last: center;

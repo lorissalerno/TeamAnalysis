@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             sectionId = 'dashboard';
         }
         
-        document.querySelectorAll('.nav-links a').forEach(a => {
+        document.querySelectorAll('.nav-links-TAASALO3 a').forEach(a => {
             if (a.getAttribute('data-section') === sectionId) {
                 a.classList.add('active');
                 a.setAttribute('aria-current', 'page');
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    document.querySelectorAll('.nav-links a').forEach(link => {
+    document.querySelectorAll('.nav-links-TAASALO3 a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const sectionId = link.getAttribute('data-section');
@@ -137,8 +137,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (targetId === 'stat-team') {
                 if (window.appDb) await appDb.setSetting('stat_sub_tab', 'stat-team');
-                const tc = document.getElementById('team-header-controls');
-                const ic = document.getElementById('individual-header-controls');
+                const tc = document.getElementById('team-header-controls-TAASALO3');
+                const ic = document.getElementById('individual-header-controls-TAASALO3');
                 const cc = document.getElementById('stats-center-controls');
                 if (tc) tc.style.display = 'flex';
                 if (ic) ic.style.display = 'none';
@@ -148,8 +148,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } else if (targetId === 'stat-individual') {
                 if (window.appDb) await appDb.setSetting('stat_sub_tab', 'stat-individual');
-                const tc = document.getElementById('team-header-controls');
-                const ic = document.getElementById('individual-header-controls');
+                const tc = document.getElementById('team-header-controls-TAASALO3');
+                const ic = document.getElementById('individual-header-controls-TAASALO3');
                 const cc = document.getElementById('stats-center-controls');
                 if (tc) tc.style.display = 'none';
                 if (ic) ic.style.display = 'flex';
@@ -181,18 +181,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Sidebar Toggle
-    const sidebar = document.getElementById('app-sidebar') || document.querySelector('.sidebar');
-    const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+    const sidebarTAASALO3 = document.getElementById('app-sidebar-TAASALO3') || document.querySelector('.sidebar-TAASALO3');
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle-TAASALO3');
     const savedSidebarCollapsed = await appDb.getSetting('sidebar_collapsed', false);
 
-    if (savedSidebarCollapsed && sidebar) {
-        sidebar.classList.add('collapsed');
+    if (savedSidebarCollapsed && sidebarTAASALO3) {
+        sidebarTAASALO3.classList.add('collapsed');
         if (sidebarToggleBtn) sidebarToggleBtn.title = "Espandi Menu";
     }
 
-    if (sidebarToggleBtn && sidebar) {
+    if (sidebarToggleBtn && sidebarTAASALO3) {
         sidebarToggleBtn.addEventListener('click', async () => {
-            const isCollapsed = sidebar.classList.toggle('collapsed');
+            const isCollapsed = sidebarTAASALO3.classList.toggle('collapsed');
             sidebarToggleBtn.title = isCollapsed ? "Espandi Menu" : "Comprimi Menu";
             await appDb.setSetting('sidebar_collapsed', isCollapsed);
             setTimeout(() => {

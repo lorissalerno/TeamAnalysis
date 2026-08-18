@@ -575,8 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const indTabBtn = document.querySelector('.tab-btn[data-target="stat-individual"]');
         const teamContent = document.getElementById('stat-team');
         const indContent = document.getElementById('stat-individual');
-        const tc = document.getElementById('team-header-controls');
-        const ic = document.getElementById('individual-header-controls');
+        const tc = document.getElementById('team-header-controls-TAASALO3');
+        const ic = document.getElementById('individual-header-controls-TAASALO3');
         const cc = document.getElementById('stats-center-controls');
 
         if (savedSubTab === 'stat-individual') {
@@ -627,10 +627,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Setup custom dropdown in header
-        const headerWrapper = document.getElementById('header-collab-dropdown-wrapper');
-        const headerTrigger = document.getElementById('header-collab-trigger');
-        const headerLabel = document.getElementById('header-collab-label');
-        const headerMenu = document.getElementById('header-collab-menu');
+        const headerWrapper = document.getElementById('header-collab-dropdown-wrapper-TAASALO3');
+        const headerTrigger = document.getElementById('header-collab-trigger-TAASALO3');
+        const headerLabel = document.getElementById('header-collab-label-TAASALO3');
+        const headerMenu = document.getElementById('header-collab-menu-TAASALO3');
 
         setupCollabCustomDropdown({
             wrapper: headerWrapper,
@@ -1713,10 +1713,10 @@ async function renderIndividualStats() {
     });
 
     // Keep header custom dropdown updated
-    const headerWrapper = document.getElementById('header-collab-dropdown-wrapper');
-    const headerTrigger = document.getElementById('header-collab-trigger');
-    const headerLabel = document.getElementById('header-collab-label');
-    const headerMenu = document.getElementById('header-collab-menu');
+    const headerWrapper = document.getElementById('header-collab-dropdown-wrapper-TAASALO3');
+    const headerTrigger = document.getElementById('header-collab-trigger-TAASALO3');
+    const headerLabel = document.getElementById('header-collab-label-TAASALO3');
+    const headerMenu = document.getElementById('header-collab-menu-TAASALO3');
     if (headerWrapper && headerTrigger && headerLabel && headerMenu) {
         setupCollabCustomDropdown({
             wrapper: headerWrapper,
