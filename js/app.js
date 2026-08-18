@@ -249,6 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5. Settings / Backup
     setupSettings();
+    setupAnonymizer();
     
     // Restore active section on page reload
     const hashSection = window.location.hash.replace('#', '');
@@ -1295,6 +1296,103 @@ async function autoAssignAnonIds(dataList) {
             await appDb.addMultiple('anonymous_map', newRecords);
         }
     }
+}
+
+// --- ANONIMIZZAZIONE CSV ---
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[c]));
+}
+
+function setupAnonymizer() {
+    const input = document.getElementById('anon-csv-input');
+    const selectBtn = document.getElementById('anon-csv-select-btn');
+    const startBtn = document.getElementById('anon-start-btn');
+    const fileList = document.getElementById('anon-file-list');
+    const status = document.getElementById('anon-status');
+
+    if (!input || !selectBtn || !startBtn || !fileList || !status) return;
+
+    let selectedFiles = [];
+
+    const clearSelection = () => {
+        selectedFiles = [];
+        fileList.innerHTML = '';
+        status.textContent = '';
+        startBtn.disabled = true;
+        input.value = '';
+    };
+
+    selectBtn.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+        selectedFiles = Array.from(input.files || []);
+        if (selectedFiles.length === 0) {
+            clearSelection();
+            return;
+        }
+        fileList.innerHTML = selectedFiles.map(f => `
+            <div class="backup-item" style="padding:10px 14px;">
+                <div class="backup-item-info">
+                    <span class="backup-item-title">${escapeHtml(f.name)}</span>
+                    <span class="backup-item-desc">${f.size.toLocaleString('it-IT')} byte</span>
+                </div>
+            </div>
+        `).join('');
+        status.textContent = '';
+        startBtn.disabled = false;
+        input.value = '';
+    });
+
+    startBtn.addEventListener('click', async () => {
+        if (selectedFiles.length === 0) return;
+        startBtn.disabled = true;
+        status.innerHTML = '<div style="color:var(--text-muted);">Anonimizzazione in corso...</div>';
+        try {
+            const result = await window.Anonymizer.anonymizeFiles(selectedFiles);
+            if (!result.ok) {
+                status.innerHTML = `<div style="color:var(--danger);">${result.errors.map(escapeHtml).join('<br>')}</div>`;
+                return;
+            }
+
+            const mappingEntries = Object.entries(result.mapping);
+            const mappingHtml = mappingEntries.map(([orig, anon]) => `
+                <div style="display:flex; justify-content:space-between; gap:12px; padding:4px 0; border-bottom:1px solid var(--border); font-size:0.82rem;">
+                    <span>${escapeHtml(orig)}</span>
+                    <span style="color:var(--primary); font-weight:600;">${escapeHtml(anon)}</span>
+                </div>
+            `).join('');
+
+            let html = `<div style="color:var(--primary); font-weight:600; margin-bottom:8px;">Anonimizzazione completata: ${result.files.length} file generati.</div>`;
+            if (result.errors.length > 0) {
+                html += `<div style="color:var(--danger); margin-bottom:8px;">${result.errors.map(escapeHtml).join('<br>')}</div>`;
+            }
+            html += `<div style="font-size:0.8rem; color:var(--text-muted); margin:10px 0 6px;">Mappatura nomi (${mappingEntries.length}):</div>`;
+            html += `<div style="max-height:220px; overflow-y:auto; background:var(--bg-base); border:1px solid var(--border); border-radius:6px; padding:8px 12px;">${mappingHtml}</div>`;
+            status.innerHTML = html;
+
+            result.files.forEach((f, idx) => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(f.blob);
+                a.download = f.name;
+                document.body.appendChild(a);
+                setTimeout(() => {
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(a.href);
+                }, idx * 200);
+            });
+        } catch (e) {
+            status.innerHTML = `<div style="color:var(--danger);">Errore: ${escapeHtml(e.message || e)}</div>`;
+        } finally {
+            startBtn.disabled = false;
+        }
+    });
 }
 
 // --- SETTINGS ---

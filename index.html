@@ -426,6 +426,21 @@
                         <button class="btn secondary backup-import-btn" onclick="document.getElementById('import-backup-file').click()">Importa Backup</button>
                     </div>
                 </div>
+
+                <div class="card backup-card">
+                    <div class="backup-card-header">
+                        <h2>Anonimizzazione CSV</h2>
+                        <p>Anonimizza i nomi dei collaboratori nei file CSV prima di importarli o condividerli. Seleziona più file contemporaneamente: lo stesso collaboratore riceverà lo stesso nome fittizio in tutti i file.</p>
+                    </div>
+                    <div class="backup-section">
+                        <h3>File CSV da anonimizzare</h3>
+                        <input type="file" id="anon-csv-input" accept=".csv" multiple style="display:none">
+                        <button class="btn secondary backup-import-btn" id="anon-csv-select-btn">Seleziona File CSV</button>
+                        <div id="anon-file-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+                        <button class="btn primary" id="anon-start-btn" disabled style="margin-top:14px; width:100%;">Anonimizza e Scarica</button>
+                        <div id="anon-status" style="margin-top:14px;"></div>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -804,6 +819,7 @@
     <!-- Script files -->
     <script src="js/db.js"></script>
     <script src="js/csv-parser.js"></script>
+    <script src="js/anonimizer.js"></script>
     <script src="js/statistics.js"></script>
     <script src="js/goals.js"></script>
     <script src="js/dashboard.js"></script>
