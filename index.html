@@ -384,62 +384,16 @@
                     <button class="btn secondary" id="manage-mapping-btn">Gestisci Collaboratori</button>
                 </div>
 
-                <div class="card backup-card">
-                    <div class="backup-card-header">
-                        <h2>Backup Dati</h2>
-                        <p>Salva o ripristina i dati del progetto in locale.</p>
-                    </div>
-
-                    <div class="backup-section">
-                        <h3>Esporta</h3>
-                        <div class="backup-list">
-                            <div class="backup-item">
-                                <div class="backup-item-info">
-                                    <span class="backup-item-title">Backup Completo</span>
-                                    <span class="backup-item-desc">Tutti i dati, la struttura e i collaboratori.</span>
-                                </div>
-                                <button class="btn primary" id="export-full-btn">Esporta</button>
-                            </div>
-                            <div class="backup-item">
-                                <div class="backup-item-info">
-                                    <span class="backup-item-title">Backup Struttura</span>
-                                    <span class="backup-item-desc">Template, grafici e impostazioni, senza dati né collaboratori.</span>
-                                </div>
-                                <button class="btn secondary" id="export-structure-btn">Esporta</button>
-                            </div>
-                            <div class="backup-item">
-                                <div class="backup-item-info">
-                                    <span class="backup-item-title">Backup Database</span>
-                                    <span class="backup-item-desc">Solo i dati performance/vendite e la lista collaboratori.</span>
-                                </div>
-                                <button class="btn secondary" id="export-database-btn">Esporta</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="backup-divider"></div>
-
-                    <div class="backup-section">
-                        <h3>Importa</h3>
-                        <p class="backup-import-hint">Seleziona un file JSON di backup esportato in precedenza: verranno ripristinati solo gli store contenuti nel file.</p>
-                        <input type="file" id="import-backup-file" accept=".json" style="display:none">
-                        <button class="btn secondary backup-import-btn" onclick="document.getElementById('import-backup-file').click()">Importa Backup</button>
-                    </div>
+                <div class="card">
+                    <h2>Backup Dati</h2>
+                    <p>Salva o ripristina i dati del progetto in locale.</p>
+                    <button class="btn secondary" id="open-backup-modal-btn">Gestisci Backup</button>
                 </div>
 
-                <div class="card backup-card">
-                    <div class="backup-card-header">
-                        <h2>Anonimizzazione CSV</h2>
-                        <p>Anonimizza i nomi dei collaboratori nei file CSV prima di importarli o condividerli. Seleziona più file contemporaneamente: lo stesso collaboratore riceverà lo stesso nome fittizio in tutti i file.</p>
-                    </div>
-                    <div class="backup-section">
-                        <h3>File CSV da anonimizzare</h3>
-                        <input type="file" id="anon-csv-input" accept=".csv" multiple style="display:none">
-                        <button class="btn secondary backup-import-btn" id="anon-csv-select-btn">Seleziona File CSV</button>
-                        <div id="anon-file-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
-                        <button class="btn primary" id="anon-start-btn" disabled style="margin-top:14px; width:100%;">Anonimizza e Scarica</button>
-                        <div id="anon-status" style="margin-top:14px;"></div>
-                    </div>
+                <div class="card">
+                    <h2>Anonimizzazione CSV</h2>
+                    <p>Anonimizza i nomi dei collaboratori nei file CSV prima di importarli o condividerli.</p>
+                    <button class="btn secondary" id="open-anon-modal-btn">Anonimizza CSV</button>
                 </div>
             </div>
         </section>
@@ -813,6 +767,75 @@
         <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
             <span id="logs-cleaned-notice" style="font-size:0.8rem; color:var(--text-muted);"></span>
             <button class="btn primary" id="close-logs-modal-btn">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Backup Modal -->
+    <div id="backup-modal" class="modal" style="max-width: 620px;">
+        <div class="modal-header">
+            <h2>Backup Dati</h2>
+            <button class="close-modal" id="close-backup-modal" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" style="overflow-y:auto;">
+            <p class="modal-desc">Salva o ripristina i dati del progetto in locale.</p>
+
+            <div class="backup-section">
+                <h3>Esporta</h3>
+                <div class="backup-list">
+                    <div class="backup-item">
+                        <div class="backup-item-info">
+                            <span class="backup-item-title">Backup Completo</span>
+                            <span class="backup-item-desc">Tutti i dati, la struttura e i collaboratori.</span>
+                        </div>
+                        <button class="btn primary" id="export-full-btn">Esporta</button>
+                    </div>
+                    <div class="backup-item">
+                        <div class="backup-item-info">
+                            <span class="backup-item-title">Backup Struttura</span>
+                            <span class="backup-item-desc">Template, grafici e impostazioni, senza dati né collaboratori.</span>
+                        </div>
+                        <button class="btn secondary" id="export-structure-btn">Esporta</button>
+                    </div>
+                    <div class="backup-item">
+                        <div class="backup-item-info">
+                            <span class="backup-item-title">Backup Database</span>
+                            <span class="backup-item-desc">Solo i dati performance/vendite e la lista collaboratori.</span>
+                        </div>
+                        <button class="btn secondary" id="export-database-btn">Esporta</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="backup-divider"></div>
+
+            <div class="backup-section">
+                <h3>Importa</h3>
+                <p class="backup-import-hint">Seleziona un file JSON di backup esportato in precedenza: verranno ripristinati solo gli store contenuti nel file.</p>
+                <input type="file" id="import-backup-file" accept=".json" style="display:none">
+                <button class="btn secondary backup-import-btn" id="open-import-backup-btn">Importa Backup</button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn primary" id="close-backup-modal-btn">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Anonimizzazione CSV Modal -->
+    <div id="anon-modal" class="modal" style="max-width: 620px;">
+        <div class="modal-header">
+            <h2>Anonimizzazione CSV</h2>
+            <button class="close-modal" id="close-anon-modal" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" style="overflow-y:auto;">
+            <p class="modal-desc">Anonimizza i nomi dei collaboratori nei file CSV prima di importarli o condividerli. Seleziona più file contemporaneamente: lo stesso collaboratore riceverà lo stesso nome fittizio in tutti i file.</p>
+            <input type="file" id="anon-csv-input" accept=".csv" multiple style="display:none">
+            <button class="btn secondary backup-import-btn" id="anon-csv-select-btn">Seleziona File CSV</button>
+            <div id="anon-file-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+            <button class="btn primary" id="anon-start-btn" disabled style="margin-top:14px; width:100%;">Anonimizza e Scarica</button>
+            <div id="anon-status" style="margin-top:14px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn secondary" id="close-anon-modal-btn">Chiudi</button>
         </div>
     </div>
 

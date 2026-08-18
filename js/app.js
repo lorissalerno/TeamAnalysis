@@ -874,6 +874,10 @@ async function renderImportedData() {
     if (!window.appState.dbCategoryFilters || window.appState._dbCategoryYear !== activeYear) {
         window.appState.dbCategoryFilters = new Set(availableCategories);
         window.appState._dbCategoryYear = activeYear;
+    } else {
+        // Le categorie appena importate vanno aggiunte attive al set esistente,
+        // altrimenti i nuovi record restano nascosti fino al reload della pagina
+        availableCategories.forEach(cat => window.appState.dbCategoryFilters.add(cat));
     }
 
     // Render delle chip / pulsanti interattivi di attivazione/disattivazione
@@ -1310,6 +1314,11 @@ function escapeHtml(str) {
 }
 
 function setupAnonymizer() {
+    const anonModal = document.getElementById('anon-modal');
+    const openAnonBtn = document.getElementById('open-anon-modal-btn');
+    const closeAnonBtn = document.getElementById('close-anon-modal');
+    const closeAnonBtn2 = document.getElementById('close-anon-modal-btn');
+    const anonOverlay = document.getElementById('modal-overlay');
     const input = document.getElementById('anon-csv-input');
     const selectBtn = document.getElementById('anon-csv-select-btn');
     const startBtn = document.getElementById('anon-start-btn');
@@ -1317,6 +1326,19 @@ function setupAnonymizer() {
     const status = document.getElementById('anon-status');
 
     if (!input || !selectBtn || !startBtn || !fileList || !status) return;
+
+    const openAnonModal = () => {
+        if (!anonModal) return;
+        anonModal.classList.add('open');
+        if (anonOverlay) anonOverlay.classList.add('open');
+    };
+    const closeAnonModal = () => {
+        if (anonModal) anonModal.classList.remove('open');
+        if (anonOverlay) anonOverlay.classList.remove('open');
+    };
+    if (openAnonBtn) openAnonBtn.addEventListener('click', openAnonModal);
+    if (closeAnonBtn) closeAnonBtn.addEventListener('click', closeAnonModal);
+    if (closeAnonBtn2) closeAnonBtn2.addEventListener('click', closeAnonModal);
 
     let selectedFiles = [];
 
@@ -1709,6 +1731,30 @@ function setupSettings() {
         };
     });
     
+    // Backup Modal (apertura/chiusura)
+    const backupModal = document.getElementById('backup-modal');
+    const openBackupBtn = document.getElementById('open-backup-modal-btn');
+    const closeBackupBtn = document.getElementById('close-backup-modal');
+    const closeBackupBtn2 = document.getElementById('close-backup-modal-btn');
+    const openImportBackupBtn = document.getElementById('open-import-backup-btn');
+    const backupOverlay = document.getElementById('modal-overlay');
+
+    const openBackupModal = () => {
+        if (!backupModal) return;
+        backupModal.classList.add('open');
+        if (backupOverlay) backupOverlay.classList.add('open');
+    };
+    const closeBackupModal = () => {
+        if (backupModal) backupModal.classList.remove('open');
+        if (backupOverlay) backupOverlay.classList.remove('open');
+    };
+    if (openBackupBtn) openBackupBtn.addEventListener('click', openBackupModal);
+    if (closeBackupBtn) closeBackupBtn.addEventListener('click', closeBackupModal);
+    if (closeBackupBtn2) closeBackupBtn2.addEventListener('click', closeBackupModal);
+    if (openImportBackupBtn) openImportBackupBtn.addEventListener('click', () => {
+        document.getElementById('import-backup-file').click();
+    });
+
     // Backup Export (3 tipi: completo, struttura, database)
     const backupTypes = {
         'export-full-btn': { group: 'full', label: 'Completo' },
