@@ -1,8 +1,8 @@
 // js/dashboard.js
 
 // Contatori "Mostra altro" (barre obiettivi e righe tolleranze)
-let goalsShownCount = 6;
-let tolShownCount = 10;
+let goalsShownCount = 4;
+let tolShownCount = 5;
 
 // Inizializza un gruppo di pulsanti periodo (stato salvato in localStorage).
 function initPeriodGroup(groupId, storageKey) {
@@ -37,6 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const skillFilter = document.getElementById('dash-tolerance-filter-skill');
     if (skillFilter) {
         skillFilter.addEventListener('change', () => {
+            if (window.renderDashboard) window.renderDashboard();
+        });
+    }
+
+    const goalsSearch = document.getElementById('dash-goals-search');
+    if (goalsSearch) {
+        goalsSearch.addEventListener('input', () => {
             if (window.renderDashboard) window.renderDashboard();
         });
     }
@@ -337,7 +344,14 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
     const periodBtn = periodGroup ? periodGroup.querySelector('.period-btn.active') : null;
     const period = periodBtn ? periodBtn.dataset.period : '3';
 
-    const teamGoals = goals.filter(g => !g.employee || g.employee === '');
+    const goalsSearchInput = document.getElementById('dash-goals-search');
+    const searchQuery = goalsSearchInput ? goalsSearchInput.value.toLowerCase().trim() : '';
+
+    const teamGoals = goals.filter(g => {
+        if (g.employee && g.employee !== '') return false;
+        if (!searchQuery) return true;
+        return displayMetricName(g.metric).toLowerCase().includes(searchQuery);
+    });
 
     if (teamGoals.length === 0) {
         goalsContainer.innerHTML = '<p style="color:var(--text-muted); padding:12px 0;">Nessun obiettivo di team impostato per l\'anno attivo.</p>';
