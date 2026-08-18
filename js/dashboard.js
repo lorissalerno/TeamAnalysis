@@ -317,12 +317,12 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
             <div style="display:flex; align-items:center; gap:12px;">
                 <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                    <circle cx="4.5" cy="7" r="2.2"></circle>
-                    <path d="M2.3 18.2 C2.3 15.4 3.3 13.9 4.5 13.9 C5.7 13.9 6.7 15.4 6.7 18.2"></path>
-                    <circle cx="12" cy="7" r="2.2"></circle>
-                    <path d="M9.8 18.2 C9.8 15.4 10.8 13.9 12 13.9 C13.2 13.9 14.2 15.4 14.2 18.2"></path>
-                    <circle cx="19.5" cy="7" r="2.2"></circle>
-                    <path d="M17.3 18.2 C17.3 15.4 18.3 13.9 19.5 13.9 C20.7 13.9 21.7 15.4 21.7 18.2"></path>
+                    <circle cx="4.5" cy="6.8" r="2.1"></circle>
+                    <rect x="2.7" y="13" width="3.6" height="5.6" rx="1.8"></rect>
+                    <circle cx="12" cy="6.8" r="2.1"></circle>
+                    <rect x="10.2" y="13" width="3.6" height="5.6" rx="1.8"></rect>
+                    <circle cx="19.5" cy="6.8" r="2.1"></circle>
+                    <rect x="17.7" y="13" width="3.6" height="5.6" rx="1.8"></rect>
                 </svg>
                 <div>
                     <h3 style="margin:0; font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Collaboratori Totali</h3>
