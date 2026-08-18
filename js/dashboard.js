@@ -316,13 +316,13 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
     summaryContainer.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
             <div style="display:flex; align-items:center; gap:12px;">
-                <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                    <circle cx="4.5" cy="6.8" r="2.1"></circle>
-                    <rect x="2.7" y="13" width="3.6" height="5.6" rx="1.8"></rect>
-                    <circle cx="12" cy="6.8" r="2.1"></circle>
-                    <rect x="10.2" y="13" width="3.6" height="5.6" rx="1.8"></rect>
-                    <circle cx="19.5" cy="6.8" r="2.1"></circle>
-                    <rect x="17.7" y="13" width="3.6" height="5.6" rx="1.8"></rect>
+                <svg viewBox="0 0 24 24" width="40" height="40" fill="var(--primary)" stroke="var(--primary)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                    <circle cx="5.5" cy="6" r="2.5" opacity="0.45"></circle>
+                    <rect x="3.2" y="12.2" width="4.6" height="6.4" rx="2.3" opacity="0.45"></rect>
+                    <circle cx="12" cy="6" r="2.7"></circle>
+                    <rect x="9.6" y="12.2" width="4.8" height="6.6" rx="2.4"></rect>
+                    <circle cx="18.5" cy="6" r="2.5" opacity="0.45"></circle>
+                    <rect x="16.2" y="12.2" width="4.6" height="6.4" rx="2.3" opacity="0.45"></rect>
                 </svg>
                 <div>
                     <h3 style="margin:0; font-size:0.9rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Collaboratori Totali</h3>
