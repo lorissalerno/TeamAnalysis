@@ -2312,13 +2312,13 @@ async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfD
             <table class="ind-monthly-table">
                 <thead>
                     <tr>
-                        <th style="min-width:140px;">Tipo</th>
+                        <th scope="col" style="min-width:140px;">Tipo</th>
                         ${monthShortNames.map((m, idx) => `
-                            <th title="${monthFullNames[idx]}" class="ind-col-month">${m}</th>
+                            <th scope="col" title="${monthFullNames[idx]}" class="ind-col-month">${m}</th>
                         `).join('')}
-                        <th class="ind-col-total" style="color:var(--primary);">Totale</th>
-                        <th class="ind-col-target" style="color:var(--text-muted);">Obiettivo</th>
-                        <th class="ind-col-pct" style="color:var(--text-muted);">%</th>
+                        <th scope="col" class="ind-col-total" style="color:var(--primary);">Totale</th>
+                        <th scope="col" class="ind-col-target" style="color:var(--text-muted);">Obiettivo</th>
+                        <th scope="col" class="ind-col-pct" style="color:var(--text-muted);">%</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -3013,9 +3013,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         
         if (metricsList.length > 1 && !teamAvgOnly) {
             // Tabella per metriche multiple
-            let html = `<table class="data-table"><thead><tr><th>Dato / Metrica</th>`;
+            let html = `<table class="data-table"><thead><tr><th scope="col">Dato / Metrica</th>`;
             displayLabels.forEach(l => {
-                html += `<th style="text-align:center;">${l}</th>`;
+                html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
             html += '</tr></thead><tbody>';
 
@@ -3048,9 +3048,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             canvasContainer.innerHTML = html;
         } else if (isIndividual) {
             const colHeader = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
-            let html = `<table class="data-table"><thead><tr><th>${colHeader}</th>`;
+            let html = `<table class="data-table"><thead><tr><th scope="col">${colHeader}</th>`;
             displayLabels.forEach(l => {
-                html += `<th style="text-align:center;">${l}</th>`;
+                html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
             html += '</tr></thead><tbody>';
 
@@ -3088,9 +3088,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             canvasContainer.innerHTML = html;
         } else if (teamAvgOnly) {
             // Solo Media Team nella tabella
-            let html = '<table class="data-table"><thead><tr><th>Metrica</th>';
+            let html = '<table class="data-table"><thead><tr><th scope="col">Metrica</th>';
             displayLabels.forEach(l => {
-                html += `<th style="text-align:center;">${l}</th>`;
+                html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
             html += '</tr></thead><tbody>';
 
@@ -3121,9 +3121,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             canvasContainer.innerHTML = html;
         } else {
             const colHeader = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
-            let html = `<table class="data-table"><thead><tr><th>${colHeader}</th>`;
+            let html = `<table class="data-table"><thead><tr><th scope="col">${colHeader}</th>`;
             displayLabels.forEach(l => {
-                html += `<th style="text-align:center;">${l}</th>`;
+                html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
             html += '</tr></thead><tbody>';
 
@@ -4387,11 +4387,11 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
 
     const thead = document.createElement('thead');
     let headHtml = `<tr style="background:var(--bg-base); border-bottom:1px solid var(--border);">
-        <th rowspan="2" style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
-        <th rowspan="2" style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>`;
+        <th rowspan="2" scope="colgroup" style="padding:10px 12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
+        <th rowspan="2" scope="colgroup" style="padding:10px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>`;
 
     products.forEach(p => {
-        headHtml += `<th colspan="2" style="padding:8px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05);">
+        headHtml += `<th colspan="2" scope="colgroup" style="padding:8px 12px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05);">
             <span>${p.label}</span>
         </th>`;
     });
@@ -4400,8 +4400,8 @@ async function buildSingleGoalsActualTable(year, tableId, perfData, salesData, e
     headHtml += `<tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">`;
     products.forEach(p => {
         headHtml += `
-            <th style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Realizzato</th>
-            <th style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Target</th>`;
+            <th scope="col" style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Realizzato</th>
+            <th scope="col" style="padding:6px 10px; text-align:center; border-right:1px solid var(--border); font-size:0.72rem; font-weight:600; color:var(--text-muted); background:rgba(59,130,246,0.02); min-width:80px;">Target</th>`;
     });
     headHtml += '</tr>';
 

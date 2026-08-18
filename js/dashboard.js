@@ -559,7 +559,15 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
         const maxVal = range.max;
 
         // Employees to check
-        const empList = g.employee ? [g.employee] : activeEmployees;
+        let empList = g.employee ? [g.employee] : activeEmployees;
+
+        if (g.skill && g.skill !== 'ALL') {
+            const assigned = empList.filter(emp => {
+                const skills = window.appState?.collaboratorSkills?.[emp] || [];
+                return Array.isArray(skills) && skills.includes(g.skill);
+            });
+            if (assigned.length > 0) empList = assigned;
+        }
 
         empList.forEach(emp => {
             const actualVal = calculateEmployeeMetricValue(emp, g.metric, g.skill, perfData, salesData, periodRange, g.weightMetric);
@@ -648,12 +656,12 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>${window.appState.isAnonymous ? 'Collab' : 'Collaboratore'}</th>
-                        <th>Metrica / Skill</th>
-                        <th>Target (Soglie)</th>
-                        <th>Valore Reale</th>
-                        <th>Scostamento</th>
-                        <th style="text-align:center;">Gravità</th>
+                        <th scope="col">${window.appState.isAnonymous ? 'Collab' : 'Collaboratore'}</th>
+                        <th scope="col">Metrica / Skill</th>
+                        <th scope="col">Target (Soglie)</th>
+                        <th scope="col">Valore Reale</th>
+                        <th scope="col">Scostamento</th>
+                        <th scope="col" style="text-align:center;">Gravità</th>
                     </tr>
                 </thead>
                 <tbody>

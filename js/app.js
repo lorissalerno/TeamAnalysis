@@ -75,8 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.nav-links a').forEach(a => {
             if (a.getAttribute('data-section') === sectionId) {
                 a.classList.add('active');
+                a.setAttribute('aria-current', 'page');
             } else {
                 a.classList.remove('active');
+                a.removeAttribute('aria-current');
             }
         });
 

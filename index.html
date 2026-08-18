@@ -18,10 +18,11 @@
     </script>
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Salta al contenuto</a>
     <!-- Copyright Signature -->
     <div id="copyright-signature" style="display:none;" data-author="Loris Salerno" data-sigla="taasalo3" data-email="Loris.Salerno@swisscom.com"></div>
     
-    <nav class="sidebar" id="app-sidebar">
+    <nav class="sidebar" id="app-sidebar" aria-label="Navigazione principale">
         <div class="sidebar-header">
             <div class="sidebar-brand">
                 <img src="https://avatars.githubusercontent.com/u/5754111?s=280&v=4" alt="Logo" class="sidebar-logo">
@@ -32,7 +33,7 @@
             </button>
         </div>
         <ul class="nav-links">
-            <li><a href="#" data-section="dashboard" class="active" title="Dashboard" data-tooltip="Dashboard"><svg viewBox="0 0 24 24" width="20" height="20" class="nav-icon"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg><span class="nav-label">Dashboard</span></a></li>
+            <li><a href="#" data-section="dashboard" class="active" aria-current="page" title="Dashboard" data-tooltip="Dashboard"><svg viewBox="0 0 24 24" width="20" height="20" class="nav-icon"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg><span class="nav-label">Dashboard</span></a></li>
             <li><a href="#" data-section="statistics" title="Statistiche" data-tooltip="Statistiche"><svg viewBox="0 0 24 24" width="20" height="20" class="nav-icon"><path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg><span class="nav-label">Statistiche</span></a></li>
             <li><a href="#" data-section="goals" title="Obiettivi" data-tooltip="Obiettivi"><svg viewBox="0 0 24 24" width="20" height="20" class="nav-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg><span class="nav-label">Obiettivi</span></a></li>
             <li><a href="#" data-section="database" title="Database" data-tooltip="Database"><svg viewBox="0 0 24 24" width="20" height="20" class="nav-icon"><path fill="currentColor" d="M12 3C7.58 3 4 4.79 4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7c0-2.21-3.58-4-8-4zm0 2c3.87 0 6 1.3 6 2s-2.13 2-6 2-6-1.3-6-2 2.13-2 6-2zm0 14c-3.87 0-6-1.3-6-2v-2.26c1.39.81 3.57 1.26 6 1.26s4.61-.45 6-1.26V17c0 .7-2.13 2-6 2zm0-5c-3.87 0-6-1.3-6-2v-2.26c1.39.81 3.57 1.26 6 1.26s4.61-.45 6-1.26V12c0 .7-2.13 2-6 2z"/></svg><span class="nav-label">Database</span></a></li>
@@ -70,7 +71,7 @@
         </div>
     </nav>
 
-    <main class="content">
+    <main class="content" id="main-content">
         <!-- Dashboard Section -->
         <section id="dashboard" class="page-section active">
             <div class="section-header">
@@ -78,19 +79,18 @@
             </div>
             
             <!-- Summary Stats Card (Total Collaborators + Breakdown per Skill) -->
-            <div id="dashboard-collab-summary" class="card" style="margin-bottom: 24px;">
+            <div id="dashboard-collab-summary" class="card">
                 <!-- Populated by JS -->
             </div>
 
             <!-- Team Goals & Progress Section -->
-            <div class="card" style="margin-bottom: 24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="card">
+                <div class="flex-between" style="margin-bottom:16px;">
+                    <div class="flex-center">
                         <h2 style="margin:0;">Obiettivi di Team e Raggiungimento</h2>
-                        <input type="text" id="dash-goals-search" placeholder="Cerca obiettivo (es. Voice Inbound)..." autocomplete="off" style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem; width:240px;">
+                        <input type="text" id="dash-goals-search" placeholder="Cerca obiettivo (es. Voice Inbound)..." autocomplete="off" class="search-input" style="width:240px;">
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <label for="dash-goals-period" style="font-size:0.85rem; color:var(--text-muted);"></label>
+                    <div class="flex-center">
                         <div id="dash-goals-period" class="period-btn-group" role="group" aria-label="Periodo">
                             <button type="button" class="period-btn" data-period="current">Mese corrente</button>
                             <button type="button" class="period-btn" data-period="last">Mese scorso</button>
@@ -106,15 +106,15 @@
             </div>
 
             <!-- Tolerance Violations Section -->
-            <div class="card" style="margin-bottom: 24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="card">
+                <div class="flex-between" style="margin-bottom:16px;">
+                    <div class="flex-center">
                         <h2 style="margin:0;">Sforamenti Tolleranza per Collaboratore</h2>
-                        <select id="dash-tolerance-filter-skill" style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                        <select id="dash-tolerance-filter-skill" class="search-input">
                             <!-- Populated by JS -->
                         </select>
                         <div style="position:relative;">
-                            <input type="text" id="dash-tolerance-search" placeholder="Cerca statistica (es. Voice Inbound)..." autocomplete="off" style="padding:6px 12px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem; width:260px;">
+                            <input type="text" id="dash-tolerance-search" placeholder="Cerca statistica (es. Voice Inbound)..." autocomplete="off" class="search-input" style="width:260px;">
                             <div id="dash-tolerance-dropdown" class="searchable-dropdown"></div>
                         </div>
                     </div>
@@ -134,7 +134,7 @@
 
         <!-- Database Section -->
         <section id="database" class="page-section">
-            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+            <div class="section-header flex-between">
                 <h1>Database</h1>
                 <button type="button" class="btn secondary" id="open-import-logs-btn" title="Storico Log Importazioni (Ultimi 7 giorni)" style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; font-size:0.9rem;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -143,7 +143,7 @@
             </div>
 
             <!-- Big Import Button Hero Box -->
-            <div class="card" style="text-align:center; padding:32px 24px; margin-bottom:24px; background:linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-base) 100%); border:1px solid var(--border);">
+            <div class="card" style="text-align:center; padding:32px 24px; background:linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-base) 100%); border:1px solid var(--border);">
                 <h2 style="margin-bottom:8px; font-size:1.4rem;">Importazione Dati CSV</h2>
                 <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:20px; max-width:600px; margin-left:auto; margin-right:auto;">
                     Importa rapidamente i tuoi file CSV di Performance o Sales tramite la procedura guidata semplice ed intuitiva.
@@ -155,7 +155,7 @@
             </div>
 
             <!-- List of Imported Data -->
-            <div class="card db-manager-card" style="margin-top: 24px;">
+            <div class="card db-manager-card">
                 <div class="db-card-header">
                     <div class="db-title-group">
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -201,31 +201,31 @@
                     <table class="data-table db-table-interactive" id="db-imported-table">
                         <thead>
                             <tr>
-                                <th class="db-sortable-th" data-sort="date" title="Clicca per ordinare per data">
+                                <th class="db-sortable-th" data-sort="date" title="Clicca per ordinare per data" scope="col">
                                     <div class="th-sort-inner">
                                         <span>Data</span>
                                         <span class="sort-icon-slot" data-sort-for="date"></span>
                                     </div>
                                 </th>
-                                <th class="db-sortable-th" data-sort="employee" id="db-th-employee" title="Clicca per ordinare per collaboratore">
+                                <th class="db-sortable-th" data-sort="employee" id="db-th-employee" title="Clicca per ordinare per collaboratore" scope="col">
                                     <div class="th-sort-inner">
                                         <span id="db-th-employee-label">Collaboratore</span>
                                         <span class="sort-icon-slot" data-sort-for="employee"></span>
                                     </div>
                                 </th>
-                                <th class="db-sortable-th" data-sort="skill" title="Clicca per ordinare per tipo / skill">
+                                <th class="db-sortable-th" data-sort="skill" title="Clicca per ordinare per tipo / skill" scope="col">
                                     <div class="th-sort-inner">
                                         <span>Tipo / Skill</span>
                                         <span class="sort-icon-slot" data-sort-for="skill"></span>
                                     </div>
                                 </th>
-                                <th class="db-sortable-th" data-sort="metric" title="Clicca per ordinare per metrica / prodotto">
+                                <th class="db-sortable-th" data-sort="metric" title="Clicca per ordinare per metrica / prodotto" scope="col">
                                     <div class="th-sort-inner">
                                         <span>Metrica / Prodotto</span>
                                         <span class="sort-icon-slot" data-sort-for="metric"></span>
                                     </div>
                                 </th>
-                                <th class="db-sortable-th" data-sort="value" title="Clicca per ordinare per valore" style="text-align:center;">
+                                <th class="db-sortable-th" data-sort="value" title="Clicca per ordinare per valore" style="text-align:center;" scope="col">
                                     <div class="th-sort-inner" style="justify-content:center;">
                                         <span>Valore</span>
                                         <span class="sort-icon-slot" data-sort-for="value"></span>
@@ -340,15 +340,15 @@
 
         <!-- Goals Section -->
         <section id="goals" class="page-section">
-            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-                <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+            <div class="section-header flex-between">
+                <div class="flex-center" style="gap:16px;">
                     <h1>Obiettivi</h1>
                     <div class="tabs" style="display:inline-flex;">
                         <button class="tab-btn active" id="goals-tab-list-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Performance</button>
                         <button class="tab-btn" id="goals-tab-sales-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Vendita</button>
                     </div>
                 </div>
-                <div id="goals-top-actions" style="display:flex; align-items:center; gap:8px;">
+                <div id="goals-top-actions" class="flex-center" style="gap:8px;">
                     <button class="btn primary" id="add-goal-btn">Nuovo Obiettivo</button>
                 </div>
             </div>
@@ -425,12 +425,12 @@
                 <table class="mapping-table" id="mapping-table">
                     <thead>
                         <tr>
-                            <th style="width: 4%; text-align:center;"><input type="checkbox" id="collab-select-all" title="Seleziona tutti"></th>
-                            <th style="width: 22%;">Nome Collaboratore</th>
-                            <th style="width: 11%; text-align:center;">ID Anonimo</th>
-                            <th style="width: 37%;">Skill Assegnate</th>
-                            <th style="width: 20%;">Template Statistiche</th>
-                            <th style="width: 6%; text-align: center;">Azione</th>
+                            <th style="width: 4%; text-align:center;" scope="col"><input type="checkbox" id="collab-select-all" title="Seleziona tutti"></th>
+                            <th style="width: 22%;" scope="col">Nome Collaboratore</th>
+                            <th style="width: 11%; text-align:center;" scope="col">ID Anonimo</th>
+                            <th style="width: 37%;" scope="col">Skill Assegnate</th>
+                            <th style="width: 20%;" scope="col">Template Statistiche</th>
+                            <th style="width: 6%; text-align: center;" scope="col">Azione</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

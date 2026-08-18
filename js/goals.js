@@ -367,10 +367,10 @@ async function renderSalesGoalsTable() {
                     <table class="sales-goals-table" data-table-id="${t.id}" style="width:auto; border-collapse:collapse; font-size:0.88rem; color:var(--text-main);">
                         <thead>
                             <tr style="background:var(--bg-base); border-bottom:2px solid var(--border);">
-                                <th style="padding:12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
-                                <th style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>
+                                <th scope="col" style="padding:12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
+                                <th scope="col" style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>
                                 ${products.map((p, idx) => `
-                                    <th style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px; position:relative;">
+                                    <th scope="col" style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px; position:relative;">
                                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
                                             ${editMode ? `
                                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
@@ -427,7 +427,7 @@ async function renderSalesGoalsTable() {
                                     </th>
                                 `).join('')}
                                 ${editMode ? `
-                                    <th style="padding:6px; text-align:center; width:50px; min-width:50px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
+                                    <th scope="col" style="padding:6px; text-align:center; width:50px; min-width:50px; background:rgba(99,102,241,0.05); border-right:1px solid var(--border);">
                                         <button class="btn primary add-table-col-header-btn" data-table-id="${t.id}" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; font-weight:700; cursor:pointer; margin:0 auto;" title="Aggiungi Obiettivo">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                                         </button>
