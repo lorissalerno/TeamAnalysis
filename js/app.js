@@ -315,17 +315,42 @@ async function commitSkillEdits(inputs) {
 }
 
 // Elimina uno skill e tutti i dati collegati, aggiorna la lista salvata e le viste.
-async function deleteSkillAndData(skillName, row) {
-    if (row) row.remove();
+async function deleteSkillAndData(skillName) {
     await appDb.deleteSkill(skillName);
     const skills = await getSkills();
     await appDb.setSetting('skills', skills.filter(s => s !== skillName));
     await populateSkillsUI();
+    document.querySelectorAll('#skills-manager-list .skill-edit-input, #skills-list-container .skill-edit-input').forEach(inp => {
+        if (inp.getAttribute('data-original') === skillName) {
+            const row = inp.closest('div');
+            if (row) row.remove();
+        }
+    });
     logImport(`Eliminato skill "${skillName}" e tutti i dati associati.`);
     await renderImportedData();
     if (window.renderStatistics) window.renderStatistics();
     if (window.renderGoals) window.renderGoals();
     if (window.renderDashboard) window.renderDashboard();
+}
+
+// Verifica quali collaboratori hanno dati associati SOLO allo skill da eliminare:
+// se hanno record anche sotto un altro skill, i loro dati restano dopo l'eliminazione.
+async function getEmployeesOnlyOnSkill(skillName) {
+    const employees = new Set();
+    const safe = new Set();
+    for (const storeName of ['performance', 'sales']) {
+        const all = await appDb.getAll(storeName);
+        for (const r of all) {
+            const emp = r.employee || r.name;
+            if (!emp) continue;
+            if (r.skill === skillName) {
+                employees.add(emp);
+            } else if (r.skill && r.skill !== skillName) {
+                safe.add(emp);
+            }
+        }
+    }
+    return Array.from(employees).filter(e => !safe.has(e));
 }
 
 // Delega i clic sui pulsanti di eliminazione skill: per gli skill esistenti chiede
@@ -343,12 +368,17 @@ function bindSkillRowDelete(container) {
             row.remove();
             return;
         }
+        let message = `Vuoi eliminare lo skill "${original}"?\n\nAttenzione: verranno eliminati definitivamente anche tutti i dati associati a questo skill (performance, vendite, statistiche e obiettivi). L'operazione non è reversibile.`;
+        const onlyEmployees = await getEmployeesOnlyOnSkill(original);
+        if (onlyEmployees.length > 0) {
+            message += `\n\nI seguenti collaboratori hanno dati SOLO su questo skill e, procedendo, perderanno tutti i loro dati:\n- ${onlyEmployees.join('\n- ')}\n\nSe vuoi conservare questi dati, annulla e assegna prima i loro dati a un altro skill (rinomina o riassegna). Altrimenti procedi: i loro dati verranno eliminati insieme allo skill, senza lasciare dati orfani.`;
+        }
         const confirmed = await appDialog.confirm(
-            `Vuoi eliminare lo skill "${original}"?\n\nAttenzione: verranno eliminati definitivamente anche tutti i dati associati a questo skill (performance, vendite, statistiche e obiettivi). L'operazione non è reversibile.`,
+            message,
             { title: 'Elimina Skill', okText: 'Elimina Skill', cancelText: 'Annulla' }
         );
         if (!confirmed) return;
-        await deleteSkillAndData(original, row);
+        await deleteSkillAndData(original);
     });
 }
 
