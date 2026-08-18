@@ -1604,3 +1604,18 @@ select option {
     padding-right: 8px !important;
 }
 
+/* Mini-card obiettivi Sales (dashboard e singolo collaboratore).
+   Niente .card per evitare il margin-top di .card + .card (prima card piu alta);
+   sfondo piu chiaro del contenitore per staccare i riquadri. */
+.goal-mini-card {
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-top: 0;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+

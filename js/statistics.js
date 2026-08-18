@@ -1882,7 +1882,7 @@ async function renderIndividualStats() {
         });
     }
 
-    // 2. Sezione Obiettivi di Vendita (Stile LolloData Dashboard)
+    // 2. Sezione Sales (Stile LolloData Dashboard)
     const goalCardsHtml = await buildIndividualGoalCardsHTML(employee, year, goals, perfData, salesData, customConfig);
     if (goalCardsHtml) {
         const goalsSection = document.createElement('div');
@@ -1891,8 +1891,8 @@ async function renderIndividualStats() {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0;">Sales</h3>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-                ${goalCardsHtml}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;${goalCardsHtml.gridMaxWidth || ''}">
+                ${goalCardsHtml.html}
             </div>
         `;
         container.appendChild(goalsSection);
@@ -2046,6 +2046,7 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
     }
 
     let cardsHtml = '';
+    let cardCount = 0;
 
     fallbackItems.forEach(item => {
         if (hiddenMap[item.key]) return;
@@ -2065,6 +2066,8 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
             : [];
         let monthlyAchieved = calcActualForMetric(metricsToUse, monthlyPerfData, monthlySalesData, employee, item.isCHF);
 
+        cardCount++;
+
         const formatVal = (v) => {
             if (item.isCHF) return 'CHF ' + Math.round(v).toLocaleString('de-CH');
             return Math.round(v).toString();
@@ -2076,15 +2079,15 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
         const annualPctClamped = Math.min(Math.max(annualPct, 0), 100);
 
         cardsHtml += `
-            <div class="card" style="padding: 12px 14px; border-radius: var(--radius); background: var(--bg-surface); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="goal-mini-card" style="justify-content:space-between;">
                 <div>
-                    <div style="font-weight: 700; font-size: 13px; color: ${item.color}; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 13px; color: ${item.color}; margin-bottom: 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                         <span>${item.label}</span>
                     </div>
                     
-                    <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
-                        <span style="font-size:11px; color:var(--text-muted);">Mensile ${latestMonthName}</span>
-                        <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(monthlyAchieved)} / ${formatVal(monthlyTarget)}</span>
+                    <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px; gap:6px;">
+                        <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">Mensile ${latestMonthName}</span>
+                        <span style="color:var(--text-muted); font-size:11px; font-weight:600; white-space:nowrap;">${formatVal(monthlyAchieved)} / ${formatVal(monthlyTarget)}</span>
                     </div>
                     <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:8px; position:relative;">
                         <div class="goal-progress-fill" style="width:${monthPctClamped}%; height:100%; background:${item.color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
@@ -2092,9 +2095,9 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
                         </div>
                     </div>
 
-                    <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
-                        <span style="font-size:11px; color:var(--text-muted);">Annuale</span>
-                        <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(annualAchieved)} / ${formatVal(annualTarget)}</span>
+                    <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px; gap:6px;">
+                        <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">Annuale</span>
+                        <span style="color:var(--text-muted); font-size:11px; font-weight:600; white-space:nowrap;">${formatVal(annualAchieved)} / ${formatVal(annualTarget)}</span>
                     </div>
                     <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative;">
                         <div class="goal-progress-fill" style="width:${annualPctClamped}%; height:100%; background:${item.color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
@@ -2106,7 +2109,10 @@ async function buildIndividualGoalCardsHTML(employee, year, goals, perfData, sal
         `;
     });
 
-    return cardsHtml;
+    return {
+        html: cardsHtml,
+        gridMaxWidth: cardCount === 1 ? ' max-width:420px;' : ''
+    };
 }
 
 async function buildIndividualMonthlyTypesTable(employee, year, salesData, perfData) {

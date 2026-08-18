@@ -376,6 +376,7 @@ async function renderTeamSalesGoals(perfData, salesData) {
 
         let cardsHtml = '';
         let hasCards = false;
+        let cardCount = 0;
 
         (products || []).forEach((product, idx) => {
             const label = product.label || product.key || 'Obiettivo';
@@ -391,6 +392,8 @@ async function renderTeamSalesGoals(perfData, salesData) {
                 ? Number(savedTargets['TEAM_' + product.key] || 0)
                 : Number(savedTargets['INDIV_TOTAL_' + product.key] || 0);
             if (annualTarget <= 0 && (!mappedMetrics || mappedMetrics.length === 0)) return;
+
+            cardCount++;
 
             const monthlyTarget = annualTarget > 0 ? Math.round(annualTarget / 12) : 0;
             const metricsToUse = mappedMetrics.length > 0 ? mappedMetrics : [label];
@@ -412,15 +415,15 @@ async function renderTeamSalesGoals(perfData, salesData) {
             const annualPctClamped = Math.min(Math.max(annualPct, 0), 100);
 
             cardsHtml += `
-                <div class="card" style="padding: 12px 14px; border-radius: var(--radius); background: var(--bg-surface); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="goal-mini-card" style="justify-content:space-between;">
                     <div>
-                        <div style="font-weight: 700; font-size: 13px; color: ${color}; margin-bottom: 8px;">
+                        <div style="font-weight: 700; font-size: 13px; color: ${color}; margin-bottom: 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                             <span>${label}</span>
                         </div>
 
-                        <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
-                            <span style="font-size:11px; color:var(--text-muted);">Mensile ${latestMonthName}</span>
-                            <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(monthlyAchieved)} / ${formatVal(monthlyTarget)}</span>
+                        <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px; gap:6px;">
+                            <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">Mensile ${latestMonthName}</span>
+                            <span style="color:var(--text-muted); font-size:11px; font-weight:600; white-space:nowrap;">${formatVal(monthlyAchieved)} / ${formatVal(monthlyTarget)}</span>
                         </div>
                         <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:8px; position:relative;">
                             <div class="goal-progress-fill" style="width:${monthPctClamped}%; height:100%; background:${color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
@@ -428,9 +431,9 @@ async function renderTeamSalesGoals(perfData, salesData) {
                             </div>
                         </div>
 
-                        <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px;">
-                            <span style="font-size:11px; color:var(--text-muted);">Annuale</span>
-                            <span style="color:var(--text-muted); font-size:11px; font-weight:600;">${formatVal(annualAchieved)} / ${formatVal(annualTarget)}</span>
+                        <div class="goal-info-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px; gap:6px;">
+                            <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">Annuale</span>
+                            <span style="color:var(--text-muted); font-size:11px; font-weight:600; white-space:nowrap;">${formatVal(annualAchieved)} / ${formatVal(annualTarget)}</span>
                         </div>
                         <div class="goal-progress-track" style="height:16px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px; overflow:hidden; position:relative;">
                             <div class="goal-progress-fill" style="width:${annualPctClamped}%; height:100%; background:${color}; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px; font-weight:700; transition: width 0.3s ease;">
@@ -446,13 +449,14 @@ async function renderTeamSalesGoals(perfData, salesData) {
         if (!hasCards) continue;
 
         const skillLabel = table.name || table.skill || 'Tutte le Skill';
+        const gridMaxWidth = cardCount === 1 ? ' max-width:420px;' : '';
         html += `
             <div style="margin-bottom:16px;">
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
                     <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--primary); flex-shrink:0;"></span>
                     <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">${skillLabel}</span>
                 </div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;${gridMaxWidth}">
                     ${cardsHtml}
                 </div>
             </div>
