@@ -427,13 +427,15 @@ async function populateSkillsUI() {
 
 // --- STATE MANAGEMENT ---
 async function refreshYearsList() {
-    // Get unique years from performance and sales
+    // Get unique years from performance, sales and stati
     const perf = await appDb.getAll('performance');
     const sales = await appDb.getAll('sales');
+    const stati = await appDb.getAll('stati');
     const years = new Set([new Date().getFullYear().toString()]);
     
     perf.forEach(p => years.add(p.year));
     sales.forEach(s => years.add(s.year));
+    stati.forEach(s => years.add(s.year));
     
     const select = document.getElementById('active-year');
     select.innerHTML = '';
@@ -582,9 +584,6 @@ function setupImports() {
 
             const searchInput = document.getElementById('db-search-input');
             const searchTerm = (searchInput ? searchInput.value : '').toLowerCase().trim();
-
-            const perfRecords = await appDb.getAll('performance', 'year', activeYear);
-            const salesRecords = await appDb.getAll('sales', 'year', activeYear);
 
             const matchesSearch = (r, store) => {
                 if (!searchTerm) return true;
@@ -973,6 +972,7 @@ async function renderImportedData() {
 
     const perfRecords = await appDb.getAll('performance', 'year', activeYear);
     const salesRecords = await appDb.getAll('sales', 'year', activeYear);
+    const statiRecords = await appDb.getAll('stati', 'year', activeYear);
     
     const searchInput = document.getElementById('db-search-input');
     const searchClearBtn = document.getElementById('db-search-clear');
@@ -985,6 +985,7 @@ async function renderImportedData() {
     const skillCounts = {};
     let totalPerf = 0;
     let totalSales = 0;
+    let totalStati = 0;
 
     perfRecords.forEach(r => {
         totalPerf++;
@@ -994,13 +995,19 @@ async function renderImportedData() {
     salesRecords.forEach(() => {
         totalSales++;
     });
+    statiRecords.forEach(() => {
+        totalStati++;
+    });
 
-    const totalImportazioni = totalPerf + totalSales;
+    const totalImportazioni = totalPerf + totalSales + totalStati;
 
     // Categorie disponibili per l'anno corrente
     const availableCategories = Object.keys(skillCounts);
     if (totalSales > 0) {
         availableCategories.push('Sales');
+    }
+    if (totalStati > 0) {
+        availableCategories.push('Stati');
     }
 
     // Inizializzazione o sincronizzazione del set di filtri categoria
@@ -1094,6 +1101,34 @@ async function renderImportedData() {
             });
             badgesContainer.appendChild(salesChip);
         }
+
+        // Chip per Stati
+        if (totalStati > 0) {
+            const isStatiActive = window.appState.dbCategoryFilters.has('Stati');
+            const statiChip = document.createElement('button');
+            statiChip.type = 'button';
+            statiChip.className = `db-filter-chip chip-stati ${isStatiActive ? 'active' : 'inactive'}`;
+            statiChip.title = isStatiActive ? 'Disattiva visualizzazione Stati' : 'Attiva visualizzazione Stati';
+            statiChip.innerHTML = `
+                <span class="chip-state-icon">
+                    ${isStatiActive 
+                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' 
+                        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+                    }
+                </span>
+                <span>Stati</span>
+                <span class="chip-count">${totalStati}</span>
+            `;
+            statiChip.addEventListener('click', () => {
+                if (window.appState.dbCategoryFilters.has('Stati')) {
+                    window.appState.dbCategoryFilters.delete('Stati');
+                } else {
+                    window.appState.dbCategoryFilters.add('Stati');
+                }
+                renderImportedData();
+            });
+            badgesContainer.appendChild(statiChip);
+        }
     }
 
     // Aggiornamento etichetta intestazione Collaboratore (rispetta anonimo)
@@ -1182,6 +1217,27 @@ async function renderImportedData() {
             value: Math.round(value),
             isManual: isMan
         });
+    });
+
+    statiRecords.forEach(r => {
+        if (r.data && typeof r.data === 'object') {
+            Object.entries(r.data).forEach(([metricName, val]) => {
+                const isMan = Boolean(r.isManual && (!r.manualMetrics || r.manualMetrics[metricName] !== false));
+                singleRows.push({
+                    recordId: r.id,
+                    store: 'stati',
+                    date: r.date,
+                    employee: r.employee,
+                    type: 'Stati',
+                    skill: 'Stati',
+                    filterCategory: 'Stati',
+                    metric: metricName,
+                    qty: '-',
+                    value: val,
+                    isManual: isMan
+                });
+            });
+        }
     });
 
     const totalRawRows = singleRows.length;
@@ -1319,7 +1375,9 @@ async function renderImportedData() {
 
         const skillBadge = r.store === 'performance' 
             ? `<span style="padding:3px 8px; border-radius:4px; background:var(--primary); color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`
-            : `<span style="padding:3px 8px; border-radius:4px; background:#10b981; color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`;
+            : r.store === 'stati'
+                ? `<span style="padding:3px 8px; border-radius:4px; background:#8b5cf6; color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`
+                : `<span style="padding:3px 8px; border-radius:4px; background:#10b981; color:#fff; font-size:0.75rem; font-weight:600;">${r.skill}</span>`;
 
         const manualBadge = r.isManual 
             ? `<span class="db-manual-tag" title="Dato inserito o modificato manualmente"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Manuale</span>`
@@ -1344,12 +1402,11 @@ async function renderImportedData() {
             </td>
             <td style="font-weight:600; text-align:center;">${r.value}</td>
             <td style="text-align:center; white-space:nowrap;">
-                <button class="icon-btn edit-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metricKey || r.metric}" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px; display:inline-flex; align-items:center; justify-content:center;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>
-                <button class="icon-btn delete-metric-row-btn" data-store="${r.store}" data-id="${r.recordId}" data-metric="${r.metric}" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px; display:inline-flex; align-items:center; justify-content:center;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
+                ${r.store === 'stati'
+                    ? '<button class="icon-btn delete-metric-row-btn" data-store="' + r.store + '" data-id="' + r.recordId + '" data-metric="' + r.metric + '" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px; display:inline-flex; align-items:center; justify-content:center;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>'
+                    : '<button class="icon-btn edit-metric-row-btn" data-store="' + r.store + '" data-id="' + r.recordId + '" data-metric="' + (r.metricKey || r.metric) + '" title="Modifica questa riga" style="color:var(--primary); border-radius:4px; padding:4px; margin-right:4px; display:inline-flex; align-items:center; justify-content:center;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>'
+                    + '<button class="icon-btn delete-metric-row-btn" data-store="' + r.store + '" data-id="' + r.recordId + '" data-metric="' + r.metric + '" title="Elimina questa riga" style="color:var(--danger, #ef4444); border-radius:4px; padding:4px; display:inline-flex; align-items:center; justify-content:center;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>'
+                }
             </td>
         `;
         fragment.appendChild(tr);
@@ -2484,18 +2541,27 @@ function updateWizardStepUI(step) {
         const descEl = document.getElementById('wizard-step-2-desc');
         const perfSection = document.getElementById('wizard-perf-skill-section');
         const salesSection = document.getElementById('wizard-sales-info-section');
+        const statiSection = document.getElementById('wizard-stati-info-section');
 
         if (wizardState.type === 'performance') {
             if (titleEl) titleEl.textContent = 'Passaggio 2: Seleziona lo Skill Performance';
             if (descEl) descEl.textContent = 'Scegli a quale Skill associare i dati delle performance da importare.';
             if (perfSection) perfSection.style.display = 'block';
             if (salesSection) salesSection.style.display = 'none';
+            if (statiSection) statiSection.style.display = 'none';
             populateSkillsUI();
-        } else {
+        } else if (wizardState.type === 'sales') {
             if (titleEl) titleEl.textContent = 'Passaggio 2: Seleziona Tipo Report Sales';
             if (descEl) descEl.textContent = 'Seleziona se intendi importare un report AOIT oppure Nuovi Abo & RET.';
             if (perfSection) perfSection.style.display = 'none';
             if (salesSection) salesSection.style.display = 'block';
+            if (statiSection) statiSection.style.display = 'none';
+        } else {
+            if (titleEl) titleEl.textContent = 'Passaggio 2: Dati Stati';
+            if (descEl) descEl.textContent = 'I dati Stati non richiedono uno skill: valgono per tutti i collaboratori.';
+            if (perfSection) perfSection.style.display = 'none';
+            if (salesSection) salesSection.style.display = 'none';
+            if (statiSection) statiSection.style.display = 'block';
         }
     }
 
@@ -2520,6 +2586,7 @@ function setupImportWizard() {
 
     const optPerf = document.getElementById('type-opt-performance');
     const optSales = document.getElementById('type-opt-sales');
+    const optStati = document.getElementById('type-opt-stati');
 
     if (openBtn) {
         openBtn.addEventListener('click', () => {
@@ -2532,11 +2599,13 @@ function setupImportWizard() {
                 file: null
             };
             
-            if (optPerf && optSales) {
+            if (optPerf && optSales && optStati) {
                 optPerf.classList.add('active');
                 optPerf.style.borderColor = 'var(--primary)';
                 optSales.classList.remove('active');
                 optSales.style.borderColor = 'var(--border)';
+                optStati.classList.remove('active');
+                optStati.style.borderColor = 'var(--border)';
             }
 
             const fileNameEl = document.getElementById('wizard-file-name');
@@ -2587,13 +2656,15 @@ function setupImportWizard() {
     if (closeBtn) closeBtn.addEventListener('click', closeModalFunc);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModalFunc);
 
-    if (optPerf && optSales) {
+    if (optPerf && optSales && optStati) {
         optPerf.addEventListener('click', () => {
             wizardState.type = 'performance';
             optPerf.classList.add('active');
             optPerf.style.borderColor = 'var(--primary)';
             optSales.classList.remove('active');
             optSales.style.borderColor = 'var(--border)';
+            optStati.classList.remove('active');
+            optStati.style.borderColor = 'var(--border)';
             updateWizardStepUI(wizardState.currentStep);
         });
 
@@ -2603,6 +2674,19 @@ function setupImportWizard() {
             optSales.style.borderColor = 'var(--primary)';
             optPerf.classList.remove('active');
             optPerf.style.borderColor = 'var(--border)';
+            optStati.classList.remove('active');
+            optStati.style.borderColor = 'var(--border)';
+            updateWizardStepUI(wizardState.currentStep);
+        });
+
+        optStati.addEventListener('click', () => {
+            wizardState.type = 'stati';
+            optStati.classList.add('active');
+            optStati.style.borderColor = 'var(--primary)';
+            optPerf.classList.remove('active');
+            optPerf.style.borderColor = 'var(--border)';
+            optSales.classList.remove('active');
+            optSales.style.borderColor = 'var(--border)';
             updateWizardStepUI(wizardState.currentStep);
         });
     }
@@ -2758,7 +2842,7 @@ function setupImportWizard() {
             submitBtn.disabled = true;
 
             try {
-                const storeName = wizardState.type === 'performance' ? 'performance' : 'sales';
+                const storeName = wizardState.type === 'performance' ? 'performance' : wizardState.type === 'stati' ? 'stati' : 'sales';
                 
                 let selectedSkill = '';
                 let targetSkillFilter = null;
@@ -2772,9 +2856,11 @@ function setupImportWizard() {
                     }
                     targetSkillFilter = selectedSkill;
                     logImport(`Avvio importazione file ${wizardState.file.name} per lo skill "${selectedSkill}"...`);
-                } else {
+                } else if (wizardState.type === 'sales') {
                     targetSkillFilter = wizardState.salesType === 'aoit' ? 'AOIT' : 'Nuovi Abo';
                     logImport(`Avvio importazione file ${wizardState.file.name} per Sales ("${targetSkillFilter}")...`);
+                } else {
+                    logImport(`Avvio importazione file ${wizardState.file.name} per Stati (tutti i collaboratori)...`);
                 }
 
                 const conflictDecision = await checkManualDataConflict(storeName, window.appState.activeYear, startDate, targetSkillFilter);
@@ -2807,16 +2893,26 @@ function setupImportWizard() {
                     if (wizardState.type === 'performance') {
                         await appDb.deleteFromDate('performance', startDate, selectedSkill);
                         logImport(`Eliminati vecchi dati performance ("${selectedSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
-                    } else {
+                    } else if (wizardState.type === 'sales') {
                         const salesSkill = wizardState.salesType === 'aoit' ? 'AOIT' : 'Nuovi Abo';
                         await appDb.deleteFromDate('sales', startDate, salesSkill);
                         logImport(`Eliminati vecchi dati Sales ("${salesSkill}") da mese ${monthVal}/${window.appState.activeYear} in poi.`);
+                    } else {
+                        await appDb.deleteFromDate('stati', startDate);
+                        logImport(`Eliminati vecchi dati Stati da mese ${monthVal}/${window.appState.activeYear} in poi.`);
                     }
                 }
 
                 const skipped = await appDb.addMultiple(storeName, parsed.data);
                 const addedCount = parsed.data.length - skipped;
-                let logMsg = `Importazione conclusa con successo! Registrati ${addedCount} record in ${storeName === 'performance' ? `Performance ("${selectedSkill}")` : 'Sales'}.`;
+                let logMsg = '';
+                if (wizardState.type === 'performance') {
+                    logMsg = `Importazione conclusa con successo! Registrati ${addedCount} record in Performance ("${selectedSkill}").`;
+                } else if (wizardState.type === 'sales') {
+                    logMsg = `Importazione conclusa con successo! Registrati ${addedCount} record in Sales.`;
+                } else {
+                    logMsg = `Importazione conclusa con successo! Registrati ${addedCount} record in Stati.`;
+                }
                 if (skipped > 0) {
                     logMsg += ` ${skipped} record duplicati ignorati.`;
                 }

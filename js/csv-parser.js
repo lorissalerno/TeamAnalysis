@@ -19,40 +19,49 @@ class CSVParser {
                 const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
                 if (lines.length === 0) return reject("File vuoto");
 
-                // Clean the lines (remove full-line wrapping quotes and unescape)
-                const cleanedLines = lines.map(line => {
-                    let cLine = line.trim();
-                    if (cLine.startsWith('"') && cLine.endsWith('"')) {
-                        let hasUnquotedComma = false;
-                        let inQuotes = false;
-                        for(let i=0; i<cLine.length; i++) {
-                            if(cLine[i] === '"') {
-                                if(i+1 < cLine.length && cLine[i+1] === '"') {
-                                    i++; // skip escaped quote
-                                } else {
-                                    inQuotes = !inQuotes;
-                                }
-                            } else if(cLine[i] === ',' && !inQuotes) {
-                                hasUnquotedComma = true;
-                                break;
-                            }
-                        }
-                        if (!hasUnquotedComma) {
-                            cLine = cLine.substring(1, cLine.length - 1).replace(/""/g, '"');
-                        }
-                    }
-                    return cLine;
-                });
-
-                // Auto-detect type from first few rows
+                // Auto-detect type from first row (raw, prima di ogni pulizia)
                 let type = 'unknown';
-                const headerLower = cleanedLines[0].toLowerCase();
+                const headerLower = (lines[0] || '').toLowerCase();
                 if (headerLower.includes("voice inbound")) {
                     type = 'performance';
                 } else if (headerLower.includes("aoit")) {
                     type = 'sales_aoit';
                 } else if (headerLower.includes("open year sales event")) {
                     type = 'sales_nuovi';
+                } else if (headerLower.includes("login duration") || headerLower.includes("state rcode") || headerLower.includes("state duration")) {
+                    type = 'stati';
+                }
+
+                // Per gli stati ogni riga è una singola cella incapsulata: cleanLine
+                // de-escaperebbe le virgolette e romperebbe il campo nome (con virgola interna).
+                // Quindi per 'stati' NON applichiamo cleanLine e processiamo le righe raw.
+                let cleanedLines;
+                if (type === 'stati') {
+                    cleanedLines = lines;
+                } else {
+                    cleanedLines = lines.map(line => {
+                        let cLine = line.trim();
+                        if (cLine.startsWith('"') && cLine.endsWith('"')) {
+                            let hasUnquotedComma = false;
+                            let inQuotes = false;
+                            for(let i=0; i<cLine.length; i++) {
+                                if(cLine[i] === '"') {
+                                    if(i+1 < cLine.length && cLine[i+1] === '"') {
+                                        i++; // skip escaped quote
+                                    } else {
+                                        inQuotes = !inQuotes;
+                                    }
+                                } else if(cLine[i] === ',' && !inQuotes) {
+                                    hasUnquotedComma = true;
+                                    break;
+                                }
+                            }
+                            if (!hasUnquotedComma) {
+                                cLine = cLine.substring(1, cLine.length - 1).replace(/""/g, '"');
+                            }
+                        }
+                        return cLine;
+                    });
                 }
 
                 try {
@@ -63,6 +72,8 @@ class CSVParser {
                         parsedData = this.parseSalesAOIT(cleanedLines);
                     } else if (type === 'sales_nuovi') {
                         parsedData = this.parseSalesNuovi(cleanedLines);
+                    } else if (type === 'stati') {
+                        parsedData = this.parseStati(cleanedLines);
                     } else {
                         throw new Error(`Formato CSV non riconosciuto. Intestazione trovata: "${cleanedLines[0].substring(0, 50)}..."`);
                     }
@@ -178,6 +189,76 @@ class CSVParser {
             results.push({ year: year.toString(), date, employee, data: dataObj, category: 'performance' });
         }
         return results;
+    }
+
+    static parseStati(lines) {
+        const headers = this.parseStatiHeader(lines[0]);
+        const employeeIdx = headers.findIndex(h => h.includes("Employee") && !h.includes("Org"));
+        const monthIdx = headers.findIndex(h => h.includes("Month"));
+        if (employeeIdx === -1 || monthIdx === -1) throw new Error("Header Stati non validi");
+
+        const results = [];
+        for (let i = 1; i < lines.length; i++) {
+            // Ogni riga dati è una singola cella incapsulata: "Nome""202601"",""110"",...
+            // Togliamo il wrapper e de-escapiamo, ottenendo: Nome"202601","110","85,1%",...
+            let line = lines[i].trim();
+            if (line.startsWith('"') && line.endsWith('"')) {
+                line = line.substring(1, line.length - 1).replace(/""/g, '"');
+            }
+
+            let employee = '';
+            let dateStr = '';
+            let valueCols;
+            let headerOffset = 0;
+
+            // Nel formato incapsulato il primo "campo" contiene nome e mese uniti:
+            // Nome"202601" seguito dai valori "110","85,1%",...
+            const firstSep = line.indexOf('","');
+            if (firstSep !== -1) {
+                const empMonthField = line.slice(0, firstSep + 1);
+                const inner = empMonthField.split('"');
+                employee = (inner[0] || '').trim();
+                dateStr = (inner[1] || '').trim();
+                const rest = line.slice(firstSep + 1);
+                valueCols = this.parseLine(rest);
+                headerOffset = 1;
+                // valueCols[0] è vuoto (virgola iniziale): i valori partono da idx 1
+            } else {
+                const cols = this.parseLine(line);
+                employee = (cols[employeeIdx] || '').trim();
+                dateStr = (cols[monthIdx] || '').trim();
+                valueCols = cols;
+            }
+
+            if (!employee || !dateStr || dateStr.toLowerCase() === 'total') continue;
+
+            const year = parseInt(dateStr.substring(0, 4));
+            const month = parseInt(dateStr.substring(4, 6));
+            if (isNaN(year) || isNaN(month)) continue;
+            const date = this.getDateFromMonth(year, month);
+
+            const dataObj = {};
+            const startIdx = headerOffset === 1 ? 1 : (monthIdx + 1);
+            for (let j = startIdx; j < valueCols.length && (j + headerOffset) < headers.length; j++) {
+                const hKey = headers[j + headerOffset];
+                if (!hKey || hKey.includes("Org")) continue;
+                const key = hKey.replace(/^State Duration /, '');
+                const val = parseFloat((valueCols[j] || '').replace(/\./g, '').replace(',', '.'));
+                dataObj[key] = isNaN(val) ? 0 : val;
+            }
+
+            results.push({ year: year.toString(), date, employee, data: dataObj, category: 'stati' });
+        }
+        return results;
+    }
+
+    // Estrae gli header degli stati gestendo la riga header incapsulata
+    static parseStatiHeader(line) {
+        let headerLine = line;
+        if (headerLine.startsWith('"') && headerLine.endsWith('"')) {
+            headerLine = headerLine.substring(1, headerLine.length - 1).replace(/""/g, '"');
+        }
+        return this.parseLine(headerLine);
     }
 
     static parseSalesAOIT(lines) {

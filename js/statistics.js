@@ -777,7 +777,7 @@ const DISTINCT_COLORS = [
     '#EC4899', '#06B6D4', '#F59E0B', '#EF4444', '#64748B'
 ];
 
-// Origine dati selezionata nel modal statistiche: 'performance' | 'sales'
+// Origine dati selezionata nel modal statistiche: 'performance' | 'sales' | 'stati'
 let currentStatSource = 'performance';
 
 // Tipi di visualizzazione disponibili per ciascuna origine dati
@@ -794,6 +794,12 @@ const STAT_SOURCE_TYPES = {
         { value: 'table', label: 'Tabella Dati' },
         { value: 'pie', label: 'Grafico a Torta' },
         { value: 'goals_table', label: 'Tabella Obiettivi Vendita' }
+    ],
+    stati: [
+        { value: 'bar', label: 'Grafico a Barre' },
+        { value: 'line', label: 'Grafico a Linee' },
+        { value: 'table', label: 'Tabella Dati' },
+        { value: 'pie', label: 'Grafico a Torta' }
     ]
 };
 
@@ -814,6 +820,7 @@ async function openStatModal(editingStat = null) {
     const year = window.appState.activeYear;
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
+    const statiData = await appDb.getAll('stati', 'year', year);
     
     const metrics = new Set();
     perfData.forEach(d => Object.keys(d.data).forEach(k => metrics.add(`Performance: ${k}`)));
@@ -821,6 +828,9 @@ async function openStatModal(editingStat = null) {
         Object.keys(d.data).forEach(k => {
             if(k !== 'Product') metrics.add(`Sales: ${k}`);
         });
+    });
+    statiData.forEach(d => {
+        Object.keys(d.data).forEach(k => metrics.add(`Stati: ${k}`));
     });
     
     const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
@@ -909,6 +919,8 @@ async function openStatModal(editingStat = null) {
             currentStatSource = 'sales';
         } else if (editingStat.metric && editingStat.metric.startsWith('Sales: ')) {
             currentStatSource = 'sales';
+        } else if (editingStat.metric && editingStat.metric.startsWith('Stati: ')) {
+            currentStatSource = 'stati';
         } else if (editingStat.metric && editingStat.metric.startsWith('Performance: ')) {
             currentStatSource = 'performance';
         } else if (editingStat.metric) {
@@ -921,6 +933,9 @@ async function openStatModal(editingStat = null) {
         if (currentStatSource === 'sales') {
             return allMetrics.filter(m => m.startsWith('Sales: ') || m.startsWith('Tabella Obiettivi: '));
         }
+        if (currentStatSource === 'stati') {
+            return allMetrics.filter(m => m.startsWith('Stati: '));
+        }
         return allMetrics.filter(m => m.startsWith('Performance: '));
     }
 
@@ -930,6 +945,9 @@ async function openStatModal(editingStat = null) {
         if (!fullValue) return '';
         if (currentStatSource === 'sales') {
             return fullValue.replace(/^Sales: /, '');
+        }
+        if (currentStatSource === 'stati') {
+            return fullValue.replace(/^Stati: /, '');
         }
         return fullValue.replace(/^Performance: /, '');
     }
@@ -1144,6 +1162,7 @@ async function openStatModal(editingStat = null) {
         const yr = window.appState.activeYear || new Date().getFullYear().toString();
         const pData = await appDb.getAll('performance', 'year', yr);
         const sData = await appDb.getAll('sales', 'year', yr);
+        const stData = await appDb.getAll('stati', 'year', yr);
         const gData = await appDb.getAll('goals', 'year', yr);
 
         const tempStatConfig = {
@@ -1156,7 +1175,7 @@ async function openStatModal(editingStat = null) {
             goalsTableId: goalsTableId,
             pieMode: document.getElementById('stat-pie-mode')?.value || 'collaboratori',
             pieGoalCenter: document.getElementById('pie-goal-center')?.checked || false,
-            title: isGoalsTable ? 'Tabella Obiettivi Vendita' : (selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', '')),
+            title: isGoalsTable ? 'Tabella Obiettivi Vendita' : (selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '')),
             yMax: customYMax,
             y2Max: customY2Max
         };
@@ -1168,7 +1187,7 @@ async function openStatModal(editingStat = null) {
         });
 
         container.innerHTML = '';
-        const cardNode = await buildStatCard(tempStatConfig, pData, sData, gData, isIndividualView, selectedEmployee, teamAvgOnly, showTeamAvg, showTeamGoal, true);
+        const cardNode = await buildStatCard(tempStatConfig, pData, sData, stData, gData, isIndividualView, selectedEmployee, teamAvgOnly, showTeamAvg, showTeamGoal, true);
         if (cardNode) {
             container.appendChild(cardNode);
         }
@@ -1215,6 +1234,7 @@ async function openStatModal(editingStat = null) {
     const yScaleGroup = document.getElementById('y-scale-custom-group');
     const sourcePerfBtn = document.getElementById('stat-source-performance');
     const sourceSalesBtn = document.getElementById('stat-source-sales');
+    const sourceStatiBtn = document.getElementById('stat-source-stati');
 
     // Popola il select tipo di visualizzazione in base all'origine dati
     function populateTypeSelect(source) {
@@ -1301,13 +1321,19 @@ async function openStatModal(editingStat = null) {
         if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
         const pieGoalCenterCb = document.getElementById('pie-goal-center');
         if (pieGoalCenterCb) pieGoalCenterCb.checked = !!editingStat.pieGoalCenter;
-        if (sourcePerfBtn && sourceSalesBtn) {
+        if (sourcePerfBtn && sourceSalesBtn && sourceStatiBtn) {
             if (currentStatSource === 'sales') {
                 sourceSalesBtn.classList.add('active');
                 sourcePerfBtn.classList.remove('active');
+                sourceStatiBtn.classList.remove('active');
+            } else if (currentStatSource === 'stati') {
+                sourceStatiBtn.classList.add('active');
+                sourcePerfBtn.classList.remove('active');
+                sourceSalesBtn.classList.remove('active');
             } else {
                 sourcePerfBtn.classList.add('active');
                 sourceSalesBtn.classList.remove('active');
+                sourceStatiBtn.classList.remove('active');
             }
         }
         populateTypeSelect(currentStatSource);
@@ -1322,6 +1348,7 @@ async function openStatModal(editingStat = null) {
         currentStatSource = source;
         if (sourcePerfBtn) sourcePerfBtn.classList.toggle('active', source === 'performance');
         if (sourceSalesBtn) sourceSalesBtn.classList.toggle('active', source === 'sales');
+        if (sourceStatiBtn) sourceStatiBtn.classList.toggle('active', source === 'stati');
         // Ricrea le righe metrica per il nuovo filtro origine dati
         metricsContainer.innerHTML = '';
         createMetricRow();
@@ -1332,6 +1359,7 @@ async function openStatModal(editingStat = null) {
 
     if (sourcePerfBtn) sourcePerfBtn.addEventListener('click', () => switchStatSource('performance'));
     if (sourceSalesBtn) sourceSalesBtn.addEventListener('click', () => switchStatSource('sales'));
+    if (sourceStatiBtn) sourceStatiBtn.addEventListener('click', () => switchStatSource('stati'));
 
     // Sincronizza l'evidenziazione dei pulsanti tipo con il valore corrente del select
     function syncTypeSelectorButtons() {
@@ -1442,6 +1470,10 @@ function createStatModalHTML() {
                         <button type="button" class="stat-source-btn" id="stat-source-sales" data-source="sales" style="flex:1; justify-content:center;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                             Vendita
+                        </button>
+                        <button type="button" class="stat-source-btn" id="stat-source-stati" data-source="stati" style="flex:1; justify-content:center;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            Stati
                         </button>
                     </div>
                 </div>
@@ -1605,7 +1637,7 @@ async function saveNewStat() {
     }
 
     const primaryMetric = selectedMetrics[0];
-    const rawKeys = selectedMetrics.map(m => m.replace('Performance: ', '').replace('Sales: ', ''));
+    const rawKeys = selectedMetrics.map(m => m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace('Stati: ', ''));
     const title = rawKeys.join('  +  ');
     const skill = document.getElementById('stat-skill').value;
     const product = '';
@@ -1688,12 +1720,13 @@ async function renderTeamStats() {
     
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
+    const statiData = await appDb.getAll('stati', 'year', year);
     const goals = await appDb.getAll('goals', 'year', year);
     
     const teamAvgOnly = (teamViewMode === 'avg');
     const cards = [];
     for (const stat of stats) {
-        const card = await buildStatCard(stat, perfData, salesData, goals, false, '', teamAvgOnly, showTeamAvgInTeam, showTeamGoalInTeam);
+        const card = await buildStatCard(stat, perfData, salesData, statiData, goals, false, '', teamAvgOnly, showTeamAvgInTeam, showTeamGoalInTeam);
         if (card) cards.push(card);
     }
 
@@ -1796,6 +1829,7 @@ async function renderIndividualStats() {
 
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
+    const statiData = await appDb.getAll('stati', 'year', year);
     const goals = await appDb.getAll('goals', 'year', year);
 
     // Configurazione personalizzata degli obiettivi per questo collaboratore
@@ -1922,7 +1956,7 @@ async function renderIndividualStats() {
         statsGrid.innerHTML = '<p style="color:var(--text-muted)">Nessuna statistica in questo template.</p>';
     } else {
         for (const stat of stats) {
-            const card = await buildStatCard(stat, perfData, salesData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
+            const card = await buildStatCard(stat, perfData, salesData, statiData, goals, true, employee, false, showIndividualTeamAvg, showIndividualTeamGoal);
             if (card) statsGrid.appendChild(card);
         }
     }
@@ -2708,7 +2742,7 @@ function generateHarmoniousColors(hex, count) {
     return colors;
 }
 
-async function buildStatCard(statConfig, perfData, salesData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false, isPreview = false) {
+async function buildStatCard(statConfig, perfData, salesData, statiData, goals, isIndividual, employeeName = '', teamAvgOnly = false, showTeamAvg = false, showTeamGoal = false, isPreview = false) {
     const card = document.createElement('div');
     card.className = 'card stat-card';
     card.style.position = 'relative';
@@ -2774,7 +2808,8 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
     }
 
     const isPerf = statConfig.metric.startsWith('Performance: ');
-    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '');
+    const isStati = statConfig.metric.startsWith('Stati: ');
+    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace('Stati: ', '');
     
     const title = document.createElement('h3');
     const rawTitleText = statConfig.title || rawKey;
@@ -2899,7 +2934,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
     card.appendChild(canvasContainer);
     
     // Process Data
-    const sourceData = isPerf ? perfData : salesData;
+    const sourceData = isStati ? statiData : (isPerf ? perfData : salesData);
     
     const activeYr = window.appState.activeYear || new Date().getFullYear().toString();
     const datesSet = new Set();
@@ -2998,7 +3033,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                        candidateGoals.find(g => !g.employee && (!g.skill || g.skill === 'ALL'));
     }    function getTeamAvgPtsForMetric(m) {
         const isP = m.startsWith('Performance: ');
-        const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+        const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
         const sData = isP ? perfData : salesData;
         const empMap = {};
         sData.forEach(row => {
@@ -3041,7 +3076,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
 
             metricsList.forEach(m => {
                 const isP = m.startsWith('Performance: ');
-                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                 const sData = isP ? perfData : salesData;
                 const agg = {};
                 sData.forEach(row => {
@@ -3115,7 +3150,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             html += '</tr></thead><tbody>';
 
             metricsList.forEach(m => {
-                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                 const avgPts = getTeamAvgPtsForMetric(m);
                 const labelText = metricsList.length > 1 ? `Media Team (${rKey})` : 'Media Team';
                 html += '<tr style="font-weight:700;">';
@@ -3275,9 +3310,9 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
         const matchesGoalMetric = (g) => {
             if (!g) return false;
             const gMetric = g.metric || '';
-            const gRaw = gMetric.replace('Performance: ', '').replace('Sales: ', '');
+            const gRaw = gMetric.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
             if (gMetric === metricKey || gRaw === rawMetricKey || gMetric === rawMetricKey || gRaw === metricKey) return true;
-            if (Array.isArray(g.mappedMetrics) && (g.mappedMetrics.includes(metricKey) || g.mappedMetrics.includes(rawMetricKey) || g.mappedMetrics.some(m => m.replace('Performance: ', '').replace('Sales: ', '') === rawMetricKey))) return true;
+            if (Array.isArray(g.mappedMetrics) && (g.mappedMetrics.includes(metricKey) || g.mappedMetrics.includes(rawMetricKey) || g.mappedMetrics.some(m => m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '') === rawMetricKey))) return true;
             if (g.id && (g.id.endsWith('_' + rawMetricKey) || g.id.includes('_' + rawMetricKey + '_') || g.id.includes('_' + rawMetricKey))) return true;
             return false;
         };
@@ -3458,7 +3493,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             const metricTotals = {};
             metricsList.forEach(m => {
                 const isP = m.startsWith('Performance: ');
-                const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                 const sData = isP ? perfData : salesData;
                 let sum = 0;
                 sData.forEach(row => {
@@ -3564,7 +3599,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             if (isIndividual) {
                 metricsList.forEach((m, idx) => {
                     const isP = m.startsWith('Performance: ');
-                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                     const sData = isP ? perfData : salesData;
                     const dateAgg = {};
                     sData.forEach(row => {
@@ -3601,7 +3636,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                 if (showTeamAvg) {
                     if (metricsList.length > 1) {
                         metricsList.forEach((m, idx) => {
-                            const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                            const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                             const avgPts = getTeamAvgPtsForMetric(m);
                             const baseColor = colorsList[idx % colorsList.length];
                             const lineColor = getMediaTeamLineColor(baseColor);
@@ -3650,7 +3685,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             } else {
                 metricsList.forEach((m, idx) => {
                     const isP = m.startsWith('Performance: ');
-                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                     const sData = isP ? perfData : salesData;
                     const empMap = {};
                     sData.forEach(row => {
@@ -3697,7 +3732,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
 
                 if (showTeamAvg) {
                     metricsList.forEach((m, idx) => {
-                        const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                        const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                         const avgPts = getTeamAvgPtsForMetric(m);
                         const baseColor = colorsList[idx % colorsList.length];
                         const lineColor = getMediaTeamLineColor(baseColor);
@@ -3764,7 +3799,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
             // Solo Media Team
             if (metricsList.length > 1) {
                 metricsList.forEach((m, idx) => {
-                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                     const avgPts = getTeamAvgPtsForMetric(m);
                     const baseColor = colorsList[idx % colorsList.length];
                     const yAxisID = idx > 0 ? 'y2' : 'y';
@@ -4026,7 +4061,7 @@ async function buildStatCard(statConfig, perfData, salesData, goals, isIndividua
                                 const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#e2e8f0';
                                 if (metricsList.length > 1) {
                                     return metricsList.map((m, idx) => {
-                                        const rKey = m.replace('Performance: ', '').replace('Sales: ', '');
+                                        const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
                                         const color = colorsList[idx % colorsList.length];
                                         const firstDsIndex = (!isIndividual && !teamAvgOnly) ? idx * employees.length : idx;
                                         const isHidden = !chart.isDatasetVisible(firstDsIndex);

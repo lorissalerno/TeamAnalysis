@@ -50,26 +50,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // Gestione Tab Obiettivi (Tabella Obiettivi Vendita vs Tutti gli Obiettivi)
     const tabSalesBtn = document.getElementById('goals-tab-sales-btn');
     const tabListBtn = document.getElementById('goals-tab-list-btn');
+    const tabStatiBtn = document.getElementById('goals-tab-stati-btn');
     const containerSales = document.getElementById('goals-sales-container');
     const containerList = document.getElementById('goals-list-container');
+    const containerStati = document.getElementById('goals-stati-container');
 
     if (tabSalesBtn && tabListBtn) {
         tabSalesBtn.addEventListener('click', () => {
             tabSalesBtn.classList.add('active');
             tabListBtn.classList.remove('active');
+            if (tabStatiBtn) tabStatiBtn.classList.remove('active');
             if (containerSales) containerSales.style.display = 'block';
             if (containerList) containerList.style.display = 'none';
+            if (containerStati) containerStati.style.display = 'none';
             if (addBtn) addBtn.style.display = 'none';
-            renderSalesGoalsTable();
+            renderSalesGoalsTable('sales');
         });
 
         tabListBtn.addEventListener('click', () => {
             tabListBtn.classList.add('active');
             tabSalesBtn.classList.remove('active');
+            if (tabStatiBtn) tabStatiBtn.classList.remove('active');
             if (containerList) containerList.style.display = 'block';
             if (containerSales) containerSales.style.display = 'none';
+            if (containerStati) containerStati.style.display = 'none';
             if (addBtn) addBtn.style.display = 'inline-flex';
             if (window.renderGoals) window.renderGoals();
+        });
+    }
+
+    if (tabStatiBtn) {
+        tabStatiBtn.addEventListener('click', () => {
+            tabStatiBtn.classList.add('active');
+            tabListBtn.classList.remove('active');
+            tabSalesBtn.classList.remove('active');
+            if (containerStati) containerStati.style.display = 'block';
+            if (containerList) containerList.style.display = 'none';
+            if (containerSales) containerSales.style.display = 'none';
+            if (addBtn) addBtn.style.display = 'none';
+            renderSalesGoalsTable('stati');
         });
     }
 
@@ -193,25 +212,49 @@ document.addEventListener('DOMContentLoaded', () => {
 const salesTableEditModes = {};
 let activeSalesTableId = 'default';
 
-async function getSalesTablesList(year) {
-    let tables = await appDb.getSetting(`sales_tables_list_${year}`, null);
+async function getSalesTablesList(year, kind = 'sales') {
+    const prefix = kind === 'stati' ? 'stati_tables_list_' : 'sales_tables_list_';
+    let tables = await appDb.getSetting(`${prefix}${year}`, null);
     if (!tables || !Array.isArray(tables)) {
         tables = [];
     }
     const filtered = tables.filter(t => t.name !== 'Tabella Principale Obiettivi' && t.name !== 'Tabella Principale');
     if (filtered.length !== tables.length) {
         tables = filtered;
-        await appDb.setSetting(`sales_tables_list_${year}`, tables);
+        await appDb.setSetting(`${prefix}${year}`, tables);
     }
     return tables;
 }
 
-async function renderSalesGoalsTable() {
-    const container = document.getElementById('goals-sales-table-container');
+async function renderSalesGoalsTable(kind = 'sales') {
+    const isStati = kind === 'stati';
+    const TK = isStati ? {
+        containerId: 'goals-stati-table-container',
+        list: 'stati_tables_list_',
+        products: 'stati_table_products_',
+        targets: 'stati_table_targets_',
+        collabs: 'stati_table_collabs_',
+        workPcts: 'stati_work_pcts',
+        goalsPrefix: 'statitable_',
+        metricPrefix: 'Stati: ',
+        label: 'Stati'
+    } : {
+        containerId: 'goals-sales-table-container',
+        list: 'sales_tables_list_',
+        products: 'sales_table_products_',
+        targets: 'sales_table_targets_',
+        collabs: 'sales_table_collabs_',
+        workPcts: 'collab_work_pcts',
+        goalsPrefix: 'salestable_',
+        metricPrefix: 'Sales: ',
+        label: 'Sales'
+    };
+
+    const container = document.getElementById(TK.containerId);
     if (!container) return;
 
     const year = window.appState?.activeYear || new Date().getFullYear();
-    const tablesList = await getSalesTablesList(year);
+    const tablesList = await getSalesTablesList(year, kind);
     const configuredSkills = (await appDb.getSetting('skills', [])) || [];
 
     if (tablesList.length === 0) {
@@ -220,7 +263,7 @@ async function renderSalesGoalsTable() {
                 <div style="padding:48px 20px; text-align:center; color:var(--text-muted);">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:12px; opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
                     <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-bottom:6px;">Nessuna Tabella Obiettivi</h3>
-                    <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi sales per skill.</p>
+                    <p style="font-size:0.85rem; margin-bottom:18px;">Crea una nuova tabella obiettivi ${TK.label === 'Stati' ? 'Stati' : 'sales per skill'}.</p>
                     <button class="btn primary" id="empty-add-table-btn" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:8px 18px;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Aggiungi Tabella Obiettivi
@@ -230,14 +273,15 @@ async function renderSalesGoalsTable() {
         `;
         const emptyTabBtn = container.querySelector('#empty-add-table-btn');
         if (emptyTabBtn) {
-            emptyTabBtn.onclick = () => openCreateNewTableModal(year, configuredSkills, tablesList);
+            emptyTabBtn.onclick = () => openCreateNewTableModal(year, configuredSkills, tablesList, kind);
         }
         return;
     }
 
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
-    const collabWorkPcts = (await appDb.getSetting('collab_work_pcts', {})) || {};
+    const statiData = await appDb.getAll('stati', 'year', year);
+    const collabWorkPcts = (await appDb.getSetting(TK.workPcts, {})) || {};
 
     const salesMetricsSet = new Set(['AOIT', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
     salesData.forEach(d => {
@@ -250,7 +294,11 @@ async function renderSalesGoalsTable() {
     perfData.forEach(d => {
         Object.keys(d.data || {}).forEach(k => salesMetricsSet.add(k));
     });
-    const availableSalesMetrics = Array.from(salesMetricsSet).sort();
+    const statiMetricsSet = new Set();
+    statiData.forEach(d => {
+        Object.keys(d.data || {}).forEach(k => statiMetricsSet.add(k));
+    });
+    const availableSalesMetrics = (isStati ? Array.from(statiMetricsSet) : Array.from(salesMetricsSet)).sort();
 
     // Rendi tutte le tabelle in fila una sotto l'altra
     container.innerHTML = `
@@ -265,29 +313,29 @@ async function renderSalesGoalsTable() {
 
     const stackDiv = container.querySelector('#sales-tables-stack');
 
-    const addTableBtn = container.querySelector('#create-new-table-btn');
+        const addTableBtn = container.querySelector('#create-new-table-btn');
     if (addTableBtn) {
-        addTableBtn.onclick = () => openCreateNewTableModal(year, configuredSkills, tablesList);
+        addTableBtn.onclick = () => openCreateNewTableModal(year, configuredSkills, tablesList, kind);
     }
 
     for (const t of tablesList) {
-        let products = await appDb.getSetting(`sales_table_products_${t.id}`, null);
+        let products = await appDb.getSetting(`${TK.products}${t.id}`, null);
         if (!products || !Array.isArray(products)) {
             products = [];
-            await appDb.setSetting(`sales_table_products_${t.id}`, products);
+            await appDb.setSetting(`${TK.products}${t.id}`, products);
         }
 
-        const savedTargets = (await appDb.getSetting(`sales_table_targets_${year}_${t.id}`, {})) || {};
+        const savedTargets = (await appDb.getSetting(`${TK.targets}${year}_${t.id}`, {})) || {};
         // Support backward-compatible keys: some codepaths stored manual collabs
         // under the table id, others under the skill name. Try table id first,
         // then fallback to skill, then to a global ALL key.
-        let manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.id}`, null)) || null;
+        let manualCollabs = (await appDb.getSetting(`${TK.collabs}${year}_${t.id}`, null)) || null;
         if (!manualCollabs) {
-            manualCollabs = (await appDb.getSetting(`sales_table_collabs_${year}_${t.skill || 'ALL'}`, null)) || null;
+            manualCollabs = (await appDb.getSetting(`${TK.collabs}${year}_${t.skill || 'ALL'}`, null)) || null;
         }
 
         const empSet = new Set();
-        const skillFilter = t.skill || 'ALL';
+        const skillFilter = isStati ? 'ALL' : (t.skill || 'ALL');
         const configuredEmployees = Object.keys(window.appState.anonymousMap || {});
         const matchingConfiguredEmployees = configuredEmployees.filter(name => {
             if (skillFilter === 'ALL') return true;
@@ -453,7 +501,7 @@ async function renderSalesGoalsTable() {
         if (toggleEditBtn) {
             toggleEditBtn.onclick = () => {
                 salesTableEditModes[t.id] = !salesTableEditModes[t.id];
-                renderSalesGoalsTable();
+                renderSalesGoalsTable(kind);
             };
         }
 
@@ -462,15 +510,15 @@ async function renderSalesGoalsTable() {
             deleteBtn.onclick = async () => {
                 if (!await appDialog.confirm(`Sei sicuro di voler eliminare la tabella "${t.name}"?`)) return;
 
-                await appDb.setSetting(`sales_table_products_${t.id}`, []);
-                await appDb.setSetting(`sales_table_targets_${year}_${t.id}`, {});
-                await appDb.setSetting(`sales_table_collabs_${year}_${t.id}`, []);
+                await appDb.setSetting(`${TK.products}${t.id}`, []);
+                await appDb.setSetting(`${TK.targets}${year}_${t.id}`, {});
+                await appDb.setSetting(`${TK.collabs}${year}_${t.id}`, []);
 
                 const idx = tablesList.findIndex(item => item.id === t.id);
                 if (idx !== -1) tablesList.splice(idx, 1);
-                await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+                await appDb.setSetting(`${TK.list}${year}`, tablesList);
 
-                renderSalesGoalsTable();
+                renderSalesGoalsTable(kind);
             };
         }
 
@@ -493,7 +541,7 @@ async function renderSalesGoalsTable() {
                     const newName = inp.value.trim() || currentName;
                     const tIdx = tablesList.findIndex(item => item.id === t.id);
                     if (tIdx !== -1) tablesList[tIdx].name = newName;
-                    await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
+                    await appDb.setSetting(`${TK.list}${year}`, tablesList);
                     h2.textContent = newName;
                 };
                 inp.onblur = save;
@@ -518,8 +566,8 @@ async function renderSalesGoalsTable() {
                 const idx = parseInt(e.target.dataset.idx, 10);
                 if (products[idx]) {
                     products[idx].label = e.target.value.trim() || products[idx].key;
-                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
-                    await saveSalesTableData(tableCard, t.id, products, employees, year, t.skill);
+                    await appDb.setSetting(`${TK.products}${t.id}`, products);
+                    await saveSalesTableData(tableCard, t.id, products, employees, year, t.skill, kind);
                 }
             };
         });
@@ -529,8 +577,8 @@ async function renderSalesGoalsTable() {
                 const idx = parseInt(btn.dataset.idx, 10);
                 if (!isNaN(idx) && products[idx]) {
                     products.splice(idx, 1);
-                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
-                    await renderSalesGoalsTable();
+                    await appDb.setSetting(`${TK.products}${t.id}`, products);
+                    await renderSalesGoalsTable(kind);
                 }
             };
         });
@@ -540,8 +588,8 @@ async function renderSalesGoalsTable() {
                 const idx = parseInt(btn.dataset.idx, 10);
                 if (!isNaN(idx) && products[idx]) {
                     products[idx].mode = products[idx].mode === 'team' ? 'individual' : 'team';
-                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
-                    await renderSalesGoalsTable();
+                    await appDb.setSetting(`${TK.products}${t.id}`, products);
+                    await renderSalesGoalsTable(kind);
                 }
             };
         });
@@ -551,8 +599,8 @@ async function renderSalesGoalsTable() {
                 const idx = parseInt(btn.dataset.idx, 10);
                 if (!isNaN(idx) && products[idx]) {
                     products[idx].isCHF = !products[idx].isCHF;
-                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
-                    await renderSalesGoalsTable();
+                    await appDb.setSetting(`${TK.products}${t.id}`, products);
+                    await renderSalesGoalsTable(kind);
                 }
             };
         });
@@ -599,7 +647,7 @@ async function renderSalesGoalsTable() {
                     const checked = Array.from(tableCard.querySelectorAll(`.metric-cb[data-idx="${idx}"]:checked`)).map(c => c.dataset.metric);
                     products[idx].mappedMetrics = checked;
                     products[idx].mappedMetric = checked.join(', ');
-                    await appDb.setSetting(`sales_table_products_${t.id}`, products);
+                    await appDb.setSetting(`${TK.products}${t.id}`, products);
 
                     const labelEl = tableCard.querySelector(`.col-metrics-btn[data-idx="${idx}"] .col-metrics-label`);
                     if (labelEl) {
@@ -621,8 +669,8 @@ async function renderSalesGoalsTable() {
                     isCHF: false,
                     mode: 'individual'
                 });
-                await appDb.setSetting(`sales_table_products_${t.id}`, products);
-                await renderSalesGoalsTable();
+                await appDb.setSetting(`${TK.products}${t.id}`, products);
+                await renderSalesGoalsTable(kind);
 
                 setTimeout(() => {
                     const newInp = container.querySelector(`.header-col-label-input[data-table-id="${t.id}"][data-idx="${newIdx}"]`);
@@ -635,7 +683,7 @@ async function renderSalesGoalsTable() {
         }
 
         if (employees.length > 0) {
-            buildTableBodyAndFoot(tableCard, t.id, products, employees, savedTargets, collabWorkPcts, t.skill, editMode);
+            buildTableBodyAndFoot(tableCard, t.id, products, employees, savedTargets, collabWorkPcts, t.skill, editMode, kind);
         }
     }
 
@@ -648,7 +696,7 @@ async function renderSalesGoalsTable() {
     });
 }
 
-function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTargets, collabWorkPcts, skillFilter, editMode) {
+function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTargets, collabWorkPcts, skillFilter, editMode, kind = 'sales') {
     const tbody = tableCard.querySelector('.sales-goals-tbody');
     const tfoot = tableCard.querySelector('.sales-goals-tfoot');
     if (!tbody || !tfoot) return;
@@ -790,7 +838,7 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
             }
         });
 
-        await saveSalesTableData(tableCard, tableId, products, employees, year, skillFilter);
+        await saveSalesTableData(tableCard, tableId, products, employees, year, skillFilter, kind);
     };
 
     tableCard.querySelectorAll('.sales-team-target-input, .sales-indiv-total-input, .collab-work-pct-input').forEach(inp => {
@@ -799,7 +847,12 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
     });
 }
 
-async function saveSalesTableData(tableCard, tableId, products, employees, year, activeSkillFilter) {
+async function saveSalesTableData(tableCard, tableId, products, employees, year, activeSkillFilter, kind = 'sales') {
+    const isStati = kind === 'stati';
+    const workPctsKey = isStati ? 'stati_work_pcts' : 'collab_work_pcts';
+    const targetsKey = (isStati ? 'stati_table_targets_' : 'sales_table_targets_');
+    const goalsPrefix = isStati ? 'statitable_' : 'salestable_';
+    const metricPrefix = isStati ? 'Stati: ' : 'Sales: ';
     const collabWorkPcts = {};
     const savedTargets = {};
 
@@ -821,8 +874,8 @@ async function saveSalesTableData(tableCard, tableId, products, employees, year,
         savedTargets['INDIV_TOTAL_' + key] = val;
     });
 
-    await appDb.setSetting('collab_work_pcts', collabWorkPcts);
-    await appDb.setSetting(`sales_table_targets_${year}_${tableId}`, savedTargets);
+    await appDb.setSetting(workPctsKey, collabWorkPcts);
+    await appDb.setSetting(`${targetsKey}${year}_${tableId}`, savedTargets);
 
     // Sincronizza lo store 'goals' IndexedDB
     const goalsToSave = [];
@@ -831,7 +884,7 @@ async function saveSalesTableData(tableCard, tableId, products, employees, year,
             const tgt = savedTargets['TEAM_' + p.key];
             if (tgt && tgt > 0) {
                 goalsToSave.push({
-                    id: `salestable_${year}_${tableId}_TEAM_${p.key}`,
+                    id: `${goalsPrefix}${year}_${tableId}_TEAM_${p.key}`,
                     year: year,
                     metric: p.mappedMetric || p.label,
                     mappedMetrics: p.mappedMetrics || [],
@@ -853,7 +906,7 @@ async function saveSalesTableData(tableCard, tableId, products, employees, year,
                 const calcVal = totalWork > 0 ? Math.round(indivTotal * (workPct / totalWork)) : 0;
                 if (calcVal > 0) {
                     goalsToSave.push({
-                        metric: `Sales: ${p.key}`,
+                        metric: `${metricPrefix}${p.key}`,
                         skill: activeSkillFilter,
                         employee: emp,
                         target: calcVal,
@@ -1631,7 +1684,8 @@ async function saveNewGoal() {
     }
 }
 
-async function openCreateNewTableModal(year, configuredSkills, tablesList) {
+async function openCreateNewTableModal(year, configuredSkills, tablesList, kind = 'sales') {
+    const isStati = kind === 'stati';
     let modal = document.getElementById('create-table-modal');
     if (!modal) {
         modal = document.createElement('div');
@@ -1645,18 +1699,26 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
 
     modal.innerHTML = `
         <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
-            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Aggiungi Tabella Obiettivi Sales</h2>
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Aggiungi Tabella Obiettivi ${isStati ? 'Stati' : 'Sales'}</h2>
             <button class="close-modal" id="close-create-tab-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <div class="modal-body" style="padding:20px; max-height:68vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px;">
-            <div>
-                <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Skill:</label>
-                <select id="new-table-skill-select" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.88rem;">
-                    <option value="ALL">Tutte le Skill</option>
-                    ${configuredSkills.map(s => `<option value="${s}">${s}</option>`).join('')}
-                </select>
-                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:6px;">Il nome della tabella corrisponderà allo skill selezionato.</p>
-            </div>
+            ${isStati ? `
+                <div>
+                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Nome Tabella:</label>
+                    <input type="text" id="new-table-name-input" placeholder="Es. Obiettivi Stati" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.88rem;">
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:6px;">Gli obiettivi Stati valgono per tutti i collaboratori.</p>
+                </div>
+            ` : `
+                <div>
+                    <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">Skill:</label>
+                    <select id="new-table-skill-select" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:0.88rem;">
+                        <option value="ALL">Tutte le Skill</option>
+                        ${configuredSkills.map(s => `<option value="${s}">${s}</option>`).join('')}
+                    </select>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-top:6px;">Il nome della tabella corrisponderà allo skill selezionato.</p>
+                </div>
+            `}
         </div>
         <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:16px 20px; border-top:1px solid var(--border);">
             <button class="btn secondary" id="cancel-create-tab-btn">Annulla</button>
@@ -1673,18 +1735,27 @@ async function openCreateNewTableModal(year, configuredSkills, tablesList) {
     modal.querySelector('#cancel-create-tab-btn').onclick = closeModal;
 
     modal.querySelector('#confirm-create-tab-btn').onclick = async () => {
-        const skill = modal.querySelector('#new-table-skill-select').value;
-        const name = skill === 'ALL' ? 'Tutte le Skill' : skill;
+        const listPrefix = isStati ? 'stati_tables_list_' : 'sales_tables_list_';
+        const productsPrefix = isStati ? 'stati_table_products_' : 'sales_table_products_';
+        let name;
+        let skill;
+        if (isStati) {
+            skill = 'ALL';
+            name = (modal.querySelector('#new-table-name-input')?.value || '').trim() || 'Obiettivi Stati';
+        } else {
+            skill = modal.querySelector('#new-table-skill-select').value;
+            name = skill === 'ALL' ? 'Tutte le Skill' : skill;
+        }
 
         const newId = 'table_' + Date.now();
         tablesList.push({ id: newId, name: name, skill: skill });
 
-        await appDb.setSetting(`sales_tables_list_${year}`, tablesList);
-        await appDb.setSetting(`sales_table_products_${newId}`, []);
+        await appDb.setSetting(`${listPrefix}${year}`, tablesList);
+        await appDb.setSetting(`${productsPrefix}${newId}`, []);
 
         activeSalesTableId = newId;
         closeModal();
-        renderSalesGoalsTable();
+        renderSalesGoalsTable(kind);
     };
 
     modal.classList.add('open');

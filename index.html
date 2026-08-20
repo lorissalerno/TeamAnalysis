@@ -393,6 +393,7 @@
                     <div class="tabs" style="display:inline-flex;">
                         <button class="tab-btn active" id="goals-tab-list-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Efficienza</button>
                         <button class="tab-btn" id="goals-tab-sales-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Vendita</button>
+                        <button class="tab-btn" id="goals-tab-stati-btn" style="padding:6px 14px; font-size:0.85rem; font-weight:700;">Stati</button>
                     </div>
                 </div>
                 <div id="goals-top-actions" class="flex-center" style="gap:8px;">
@@ -411,6 +412,11 @@
             <!-- Vista Tabella Obiettivi Vendita (Stile Excel) -->
             <div id="goals-sales-container" class="goals-tab-content" style="display:none;">
                 <div id="goals-sales-table-container"></div>
+            </div>
+
+            <!-- Vista Tabella Obiettivi Stati -->
+            <div id="goals-stati-container" class="goals-tab-content" style="display:none;">
+                <div id="goals-stati-table-container"></div>
             </div>
             <footer class="page-footer">
                 © Copyright 2026&nbsp;&nbsp;|&nbsp;&nbsp;Loris Salerno&nbsp;&nbsp;SCS-B2C-CUC-SCT-OP2&nbsp;&nbsp;|&nbsp;&nbsp;<a href="mailto:loris.salerno@swisscom.com?subject=Feedback%20TeamAnalysis">Feedback</a>
@@ -695,9 +701,9 @@
             <!-- Step 1: Tipo Dati -->
             <div class="wizard-step-content" id="wizard-step-1">
                 <h3 style="font-size:1.05rem; margin-bottom:12px;">Passaggio 1: Seleziona il tipo di dati da importare</h3>
-                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">Scegli se stai importando un report sulle Efficienza della squadra o sulle vendite (Sales).</p>
+                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">Scegli se stai importando un report sulle Efficienza della squadra, sulle vendite (Sales) o sugli Stati (tempi di lavoro, pause, meeting, ecc.).</p>
                 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px;">
                     <div class="wizard-option-card active" id="type-opt-performance" style="border:2px solid var(--primary); padding:16px; border-radius:8px; cursor:pointer; background:var(--bg-base); text-align:center;">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
                         <h4 style="margin:0 0 4px 0;">Efficienza</h4>
@@ -707,6 +713,11 @@
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                         <h4 style="margin:0 0 4px 0;">Sales</h4>
                         <span style="font-size:0.8rem; color:var(--text-muted);">AOIT, Nuovi Abo & RET</span>
+                    </div>
+                    <div class="wizard-option-card" id="type-opt-stati" style="border:1px solid var(--border); padding:16px; border-radius:8px; cursor:pointer; background:var(--bg-base); text-align:center;">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <h4 style="margin:0 0 4px 0;">Stati</h4>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">Ready, Not Ready, Pause, Meeting, ecc.</span>
                     </div>
                 </div>
             </div>
@@ -742,9 +753,15 @@
                         </div>
                     </div>
                 </div>
+            <!-- Container per Stati (info: nessuno skill richiesto) -->
+                <div id="wizard-stati-info-section" style="display:none;">
+                    <div style="border:1px dashed var(--border); border-radius:8px; padding:16px; background:var(--bg-base); text-align:center;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <h4 style="margin:0 0 4px 0;">Dati Stati</h4>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Nessuno skill richiesto: i dati Stati valgono per tutti i collaboratori.</p>
+                    </div>
+                </div>
             </div>
-
-            <!-- Step 3: Mese Sovrascrittura -->
             <div class="wizard-step-content" id="wizard-step-3" style="display:none;">
                 <h3 style="font-size:1.05rem; margin-bottom:12px;" id="wizard-step-3-title">Passaggio 3: Seleziona il mese di sovrascrittura</h3>
                 <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px;">

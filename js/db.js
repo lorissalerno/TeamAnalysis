@@ -4,7 +4,7 @@
  * Tutti i diritti riservati.
  */
 const DB_NAME = 'TeamAnalysisDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 const db = {
     _db: null,
@@ -31,6 +31,12 @@ const db = {
                     const salesStore = database.createObjectStore('sales', { keyPath: 'id', autoIncrement: true });
                     salesStore.createIndex('year', 'year', { unique: false });
                     salesStore.createIndex('date', 'date', { unique: false });
+                }
+                // Stati store: id, year, date, employee, data{} (tempi di lavoro/pause/meeting ecc.)
+                if (!database.objectStoreNames.contains('stati')) {
+                    const statiStore = database.createObjectStore('stati', { keyPath: 'id', autoIncrement: true });
+                    statiStore.createIndex('year', 'year', { unique: false });
+                    statiStore.createIndex('date', 'date', { unique: false });
                 }
                 // Anonymous mapping: id, year, realName, anonId
                 if (!database.objectStoreNames.contains('anonymous_map')) {
@@ -87,6 +93,26 @@ const db = {
                             };
                         }
                     });
+                }
+
+                // Migration v4 -> v5: add dedupKey index to stati
+                if (oldVersion < 5 && database.objectStoreNames.contains('stati')) {
+                    const statiStore = event.currentTarget.transaction.objectStore('stati');
+                    if (!statiStore.indexNames.contains('dedupKey')) {
+                        statiStore.createIndex('dedupKey', 'dedupKey', { unique: false });
+                    }
+                    const statiCursorReq = statiStore.openCursor();
+                    statiCursorReq.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            const item = cursor.value;
+                            if (!item.dedupKey) {
+                                item.dedupKey = db.buildDedupKey(item);
+                                cursor.update(item);
+                            }
+                            cursor.continue();
+                        }
+                    };
                 }
             };
 
@@ -400,9 +426,9 @@ const db = {
     
     // Gruppi di store per i tre tipi di backup
     backupGroups: {
-        full: ['settings', 'performance', 'sales', 'anonymous_map', 'dashboard_widgets', 'custom_stats', 'goals'],
+        full: ['settings', 'performance', 'sales', 'stati', 'anonymous_map', 'dashboard_widgets', 'custom_stats', 'goals'],
         structure: ['settings', 'dashboard_widgets', 'custom_stats', 'goals'],
-        database: ['performance', 'sales', 'anonymous_map']
+        database: ['performance', 'sales', 'stati', 'anonymous_map']
     },
 
     // Backup to JSON: group = 'full' (tutto) | 'structure' (template/grafici, senza dati e collaboratori) | 'database' (solo dati e collaboratori)

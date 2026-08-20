@@ -111,6 +111,7 @@ window.Anonymizer = (function() {
         if (headerLower.includes("voice inbound")) return 'performance';
         if (headerLower.includes("aoit")) return 'sales_aoit';
         if (headerLower.includes("open year sales event")) return 'sales_nuovi';
+        if (headerLower.includes("login duration") || headerLower.includes("state rcode") || headerLower.includes("state duration")) return 'stati';
         return 'unknown';
     }
 
@@ -120,6 +121,9 @@ window.Anonymizer = (function() {
             const employeeIdx = headers.findIndex(h => h.includes("Employee") && !h.includes("Org"));
             if (employeeIdx === -1) return null;
             return { employeeIdx, dataStartIdx: 1 };
+        }
+        if (type === 'stati') {
+            return { employeeIdx: 0, dataStartIdx: 1 };
         }
         if (type === 'sales_aoit') {
             let dateRowIdx = -1;
@@ -234,10 +238,15 @@ window.Anonymizer = (function() {
         const seen = new Set();
         for (const f of files) {
             for (let i = f.layout.dataStartIdx; i < f.cleanLines.length; i++) {
-                const cols = window.CSVParser.parseLine(f.cleanLines[i]);
-                const emp = cols[f.layout.employeeIdx];
-                if (!emp) continue;
-                const t = emp.trim();
+                let t = '';
+                if (f.type === 'stati') {
+                    const m = (f.lines[i] || '').match(/^"([^"]*)"/);
+                    t = m ? m[1].trim() : '';
+                } else {
+                    const cols = window.CSVParser.parseLine(f.cleanLines[i]);
+                    const emp = cols[f.layout.employeeIdx];
+                    t = (emp || '').trim();
+                }
                 if (!t || t.toLowerCase() === 'total') continue;
                 if (!seen.has(t)) {
                     seen.add(t);
@@ -258,6 +267,20 @@ window.Anonymizer = (function() {
             for (let i = f.layout.dataStartIdx; i < f.lines.length; i++) {
                 const rawLine = f.lines[i];
                 if (!rawLine) continue;
+
+                // Per gli stati il primo campo contiene nome e mese insieme
+                // (es. "Nome""202601""): sostituisce solo la parte nome.
+                if (f.type === 'stati') {
+                    const m = rawLine.match(/^"([^"]*)"/);
+                    if (!m) continue;
+                    const emp = m[1].trim();
+                    if (!emp || emp.toLowerCase() === 'total') continue;
+                    const anon = mapping[emp];
+                    if (!anon) continue;
+                    outLines[i] = `"${anon}"` + rawLine.slice(m[0].length);
+                    continue;
+                }
+
                 const clean = cleanLine(rawLine);
                 const ranges = findFieldRanges(clean);
                 const empRange = ranges[f.layout.employeeIdx];
