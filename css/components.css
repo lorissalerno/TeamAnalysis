@@ -878,8 +878,22 @@ input:checked + .slider:before {
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
 }
 
+.db-filter-chip.chip-stati.active {
+    background: #8b5cf6;
+    color: #ffffff;
+    border-color: #8b5cf6;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
+}
+
+.db-filter-chip.chip-stati.inactive {
+    background: transparent;
+    border-color: rgba(139, 92, 246, 0.5);
+    color: #8b5cf6;
+}
+
 .db-filter-chip.inactive {
-    opacity: 0.45;
+    opacity: 0.75;
     background: transparent;
     border-style: dashed;
     border-color: var(--border);
@@ -887,7 +901,7 @@ input:checked + .slider:before {
 }
 
 .db-filter-chip.inactive:hover {
-    opacity: 0.8;
+    opacity: 1;
     border-style: solid;
 }
 
@@ -903,7 +917,8 @@ input:checked + .slider:before {
 }
 
 .db-filter-chip.chip-skill.active .chip-count,
-.db-filter-chip.chip-sales.active .chip-count {
+.db-filter-chip.chip-sales.active .chip-count,
+.db-filter-chip.chip-stati.active .chip-count {
     background: rgba(255, 255, 255, 0.25);
     color: #ffffff;
 }

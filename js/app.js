@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeYear: new Date().getFullYear().toString(),
         anonymousMap: {}, // { "Loris Salerno": 1, ... }
         dbCategoryFilters: null,
+        _dbKnownCategories: null,
         dbSort: { column: 'date', direction: 'desc' },
         dbPage: 1,
         _dbFilterSig: null
@@ -981,22 +982,27 @@ async function renderImportedData() {
         searchClearBtn.style.display = searchTerm ? 'flex' : 'none';
     }
 
-    // Calcolo conteggi per ciascuna fonte
+    // Calcolo conteggi per ciascuna fonte: conto le righe che verranno
+    // effettivamente visualizzate in tabella (una riga per coppia metrica-valore,
+    // non i record grezzi). Per Performance e Stati ogni metrica genera una riga,
+    // per Sales ogni record genera una sola riga.
     const skillCounts = {};
     let totalPerf = 0;
     let totalSales = 0;
     let totalStati = 0;
 
     perfRecords.forEach(r => {
-        totalPerf++;
         const sk = r.skill || 'Performance (Generale)';
-        skillCounts[sk] = (skillCounts[sk] || 0) + 1;
+        const n = (r.data && typeof r.data === 'object') ? Object.keys(r.data).length : 0;
+        totalPerf += n;
+        skillCounts[sk] = (skillCounts[sk] || 0) + n;
     });
     salesRecords.forEach(() => {
         totalSales++;
     });
-    statiRecords.forEach(() => {
-        totalStati++;
+    statiRecords.forEach(r => {
+        const n = (r.data && typeof r.data === 'object') ? Object.keys(r.data).length : 0;
+        totalStati += n;
     });
 
     const totalImportazioni = totalPerf + totalSales + totalStati;
@@ -1013,11 +1019,19 @@ async function renderImportedData() {
     // Inizializzazione o sincronizzazione del set di filtri categoria
     if (!window.appState.dbCategoryFilters || window.appState._dbCategoryYear !== activeYear) {
         window.appState.dbCategoryFilters = new Set(availableCategories);
+        window.appState._dbKnownCategories = new Set(availableCategories);
         window.appState._dbCategoryYear = activeYear;
     } else {
         // Le categorie appena importate vanno aggiunte attive al set esistente,
-        // altrimenti i nuovi record restano nascosti fino al reload della pagina
-        availableCategories.forEach(cat => window.appState.dbCategoryFilters.add(cat));
+        // altrimenti i nuovi record restano nascosti fino al reload della pagina.
+        // Attenzione: solo le categorie mai viste prima (veramente nuove) vengono
+        // auto-aggiunte; le categorie disattivate dall'utente restano disattivate.
+        availableCategories.forEach(cat => {
+            if (!window.appState._dbKnownCategories.has(cat)) {
+                window.appState.dbCategoryFilters.add(cat);
+            }
+            window.appState._dbKnownCategories.add(cat);
+        });
     }
 
     // Render delle chip / pulsanti interattivi di attivazione/disattivazione
@@ -1029,7 +1043,7 @@ async function renderImportedData() {
         const allChip = document.createElement('button');
         allChip.type = 'button';
         allChip.className = `db-filter-chip chip-all ${isAllActive ? 'active' : 'inactive'}`;
-        allChip.title = isAllActive ? 'Tutte le fonti sono visualizzate' : 'Clicca per mostrare tutte le fonti';
+        allChip.title = isAllActive ? 'Clicca per nascondere tutte le fonti' : 'Clicca per mostrare tutte le fonti';
         allChip.innerHTML = `
             <span class="chip-state-icon">
                 ${isAllActive 
@@ -1041,7 +1055,11 @@ async function renderImportedData() {
             <span class="chip-count">${totalImportazioni}</span>
         `;
         allChip.addEventListener('click', () => {
-            window.appState.dbCategoryFilters = new Set(availableCategories);
+            if (isAllActive) {
+                window.appState.dbCategoryFilters = new Set();
+            } else {
+                window.appState.dbCategoryFilters = new Set(availableCategories);
+            }
             renderImportedData();
         });
         badgesContainer.appendChild(allChip);

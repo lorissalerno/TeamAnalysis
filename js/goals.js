@@ -446,6 +446,12 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
                                                     <input type="text" class="header-col-label-input" data-table-id="${t.id}" data-idx="${idx}" value="${p.label}" style="background:transparent; border:none; color:var(--text-main); font-weight:700; text-align:center; font-size:0.88rem; width:100%; outline:none;" placeholder="Titolo...">
                                                     <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
+                                                        <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="-1" title="Sposta a sinistra" ${idx === 0 ? 'disabled style="background:none; border:none; color:var(--text-muted); cursor:default; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.25;"' : 'style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;"'} onmouseover="if(!this.disabled)this.style.color='var(--primary)';" onmouseout="if(!this.disabled)this.style.color='var(--text-muted)';">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                                        </button>
+                                                        <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="1" title="Sposta a destra" ${idx === products.length - 1 ? 'disabled style="background:none; border:none; color:var(--text-muted); cursor:default; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.25;"' : 'style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;"'} onmouseover="if(!this.disabled)this.style.color='var(--primary)';" onmouseout="if(!this.disabled)this.style.color='var(--text-muted)';">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                                        </button>
                                                         <button class="edit-col-btn" data-table-id="${t.id}" data-idx="${idx}" title="Modifica Titolo" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';">
                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                                                         </button>
@@ -472,7 +478,7 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                                         </span>
                                                         <span style="font-size:0.55rem; opacity:0.6; margin-left:3px;">▼</span>
                                                     </button>
-                                                    <div class="col-metrics-dropdown" data-table-id="${t.id}" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.45); padding:8px; max-height:240px; overflow-y:auto; text-align:left;">
+                                                    <div class="col-metrics-dropdown" data-table-id="${t.id}" data-idx="${idx}" style="display:none; position:absolute; top:100%; left:0; right:auto; z-index:100; min-width:360px; max-width:min(460px, calc(100vw - 40px)); width:max-content; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.45); padding:8px; max-height:240px; overflow-y:auto; text-align:left;">
                                                         <div style="position:sticky; top:0; background:var(--bg-surface); padding-bottom:6px; margin-bottom:6px; border-bottom:1px solid var(--border); z-index:2;">
                                                             <input type="text" class="metric-search-input" data-table-id="${t.id}" data-idx="${idx}" placeholder="🔍 Cerca prodotto..." style="width:100%; padding:5px 8px; font-size:0.75rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); box-sizing:border-box;">
                                                         </div>
@@ -483,7 +489,7 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                                                 return `
                                                                     <label class="metric-item-label" data-table-id="${t.id}" data-idx="${idx}" data-metric="${m}" style="display:flex; align-items:center; gap:6px; font-size:0.75rem; padding:4px 6px; color:var(--text-main); cursor:pointer; border-radius:4px; white-space:nowrap;">
                                                                         <input type="checkbox" class="metric-cb" data-table-id="${t.id}" data-idx="${idx}" data-metric="${m}" ${isChecked ? 'checked' : ''} style="margin:0;">
-                                                                        <span style="overflow:hidden; text-overflow:ellipsis;">${m}</span>
+                                                                        <span style="white-space:nowrap; overflow:visible;">${m}</span>
                                                                     </label>
                                                                 `;
                                                             }).join('')}
@@ -586,6 +592,21 @@ async function renderSalesGoalsTable(kind = 'sales') {
                     await appDb.setSetting(`${TK.products}${t.id}`, products);
                     await saveSalesTableData(tableCard, t.id, products, employees, year, t.skill, kind);
                 }
+            };
+        });
+
+        tableCard.querySelectorAll('.move-col-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                const dir = parseInt(btn.dataset.dir, 10);
+                const targetIdx = idx + dir;
+                if (isNaN(idx) || !products[idx]) return;
+                if (targetIdx < 0 || targetIdx >= products.length) return;
+                const temp = products[idx];
+                products[idx] = products[targetIdx];
+                products[targetIdx] = temp;
+                await appDb.setSetting(`${TK.products}${t.id}`, products);
+                await renderSalesGoalsTable(kind);
             };
         });
 
@@ -1112,7 +1133,7 @@ async function openManageProductsModal(currentProducts) {
         modal = document.createElement('div');
         modal.id = 'manage-products-modal';
         modal.className = 'modal';
-        modal.style.cssText = 'max-width: 680px; width: 92%; border-radius: 12px;';
+        modal.style.cssText = 'max-width: 920px; width: 95%; border-radius: 12px;';
         document.body.appendChild(modal);
     }
 
@@ -1137,7 +1158,7 @@ async function openManageProductsModal(currentProducts) {
                 <h4 style="font-size:0.9rem; font-weight:700; margin:0; color:var(--text-main);">+ Aggiungi Nuova Colonna</h4>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                     <input type="text" id="new-prod-name" placeholder="Titolo colonna (es. Nuovi Abo)" style="flex:1; min-width:140px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
-                    <select id="new-prod-metric" style="flex:1; min-width:140px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
+                    <select id="new-prod-metric" style="flex:2; min-width:260px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;">
                         <option value="">Collega a metrica DB...</option>
                         ${availableMetrics.map(m => `<option value="${m}">${m}</option>`).join('')}
                     </select>
@@ -1189,6 +1210,8 @@ async function openManageProductsModal(currentProducts) {
                     <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; color:var(--text-muted); cursor:pointer;">
                         <input type="checkbox" class="prod-chf-cb" data-idx="${idx}" ${p.isCHF ? 'checked' : ''}> CHF
                     </label>
+                    <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem; display:inline-flex; align-items:center;" onclick="moveProductItem(${idx}, -1)" title="Sposta a sinistra" ${idx === 0 ? 'disabled style="opacity:0.25; cursor:default;"' : ''}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+                    <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem; display:inline-flex; align-items:center;" onclick="moveProductItem(${idx}, 1)" title="Sposta a destra" ${idx === activeProds.length - 1 ? 'disabled style="opacity:0.25; cursor:default;"' : ''}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
                     <button class="btn secondary" style="padding:3px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="removeProductItem(${idx})">Rimuovi</button>
                 </div>
             `;
@@ -1210,6 +1233,16 @@ async function openManageProductsModal(currentProducts) {
 
     window.removeProductItem = (idx) => {
         activeProds.splice(idx, 1);
+        renderProdList();
+    };
+
+    window.moveProductItem = (idx, dir) => {
+        const targetIdx = idx + dir;
+        if (!activeProds[idx]) return;
+        if (targetIdx < 0 || targetIdx >= activeProds.length) return;
+        const temp = activeProds[idx];
+        activeProds[idx] = activeProds[targetIdx];
+        activeProds[targetIdx] = temp;
         renderProdList();
     };
 
