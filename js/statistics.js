@@ -3139,10 +3139,10 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
 
             if (showTeamGoal && relevantGoal) {
                 html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
-                html += `<td>Obiettivo</td>`;
+                html += `<td style="color:#D946EF;">Obiettivo</td>`;
                 labels.forEach(() => {
                     const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
-                    html += `<td style="text-align:center; color: var(--text-muted);">${targetVal}</td>`;
+                    html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
                 });
                 html += '</tr>';
             }
@@ -3172,10 +3172,10 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
 
             if (showTeamGoal && relevantGoal) {
                 html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
-                html += `<td>Obiettivo</td>`;
+                html += `<td style="color:#D946EF;">Obiettivo</td>`;
                 labels.forEach(() => {
                     const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
-                    html += `<td style="text-align:center; color: var(--text-muted);">${targetVal}</td>`;
+                    html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
                 });
                 html += '</tr>';
             }
@@ -3217,10 +3217,10 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
 
             if (showTeamGoal && relevantGoal) {
                 html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
-                html += `<td>Obiettivo</td>`;
+                html += `<td style="color:#D946EF;">Obiettivo</td>`;
                 labels.forEach(() => {
                     const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
-                    html += `<td style="text-align:center; color: var(--text-muted);">${targetVal}</td>`;
+                    html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
                 });
                 html += '</tr>';
             }
