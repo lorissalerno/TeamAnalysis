@@ -440,7 +440,7 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                 <th scope="col" style="padding:12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
                                 <th scope="col" style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>
                                 ${products.map((p, idx) => `
-                                    <th scope="col" style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); width:155px; min-width:145px; position:relative;">
+                                    <th scope="col" style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); ${editMode ? 'width:250px; min-width:240px;' : 'width:155px; min-width:145px;'} position:relative;">
                                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
                                             ${editMode ? `
                                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
