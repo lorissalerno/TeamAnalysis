@@ -156,7 +156,7 @@
         <section id="database" class="page-section">
             <div class="section-header flex-between">
                 <h1>Database</h1>
-                <button type="button" class="btn secondary" id="open-import-logs-btn" title="Storico Log Importazioni (Ultimi 7 giorni)" style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; font-size:0.9rem;">
+                <button type="button" class="btn secondary" id="open-import-logs-btn" title="Storico Log Importazioni (Ultimi 30 giorni)" style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; font-size:0.9rem;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     Storico Log
                 </button>
@@ -823,15 +823,15 @@
         </div>
     </div>
 
-    <!-- Storico Log Modal (Ultimi 7 Giorni) -->
+    <!-- Storico Log Modal (Ultimi 30 Giorni) -->
     <div id="import-logs-modal" class="modal" style="max-width: 680px;">
         <div class="modal-header">
-            <h2>Storico Log Importazioni (Ultimi 7 Giorni)</h2>
+            <h2>Storico Log Importazioni (Ultimi 30 Giorni)</h2>
             <button class="close-modal" id="close-import-logs-modal">&times;</button>
         </div>
         <div class="modal-body" style="padding:16px 24px; overflow-y:auto; max-height:60vh;">
             <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
-                I log più vecchi di 7 giorni vengono automaticamente eliminati ogni volta che apri questa schermata.
+                I log più vecchi di 30 giorni vengono automaticamente eliminati ogni volta che apri questa schermata.
             </p>
             <div id="logs-history-container" class="log-area" style="max-height:360px; overflow-y:auto; background:var(--bg-base); border:1px solid var(--border); border-radius:6px; padding:12px; font-family:monospace; font-size:0.85rem;">
                 <!-- Populated dynamically -->

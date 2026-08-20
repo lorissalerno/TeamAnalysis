@@ -190,6 +190,7 @@ async function deleteTemplate(templateId) {
             await appDb.deleteRecord('custom_stats', s.id);
         }
     }
+    if (appDb.addImportLog) appDb.addImportLog(`[${new Date().toLocaleTimeString()}] Eliminato template "${target.name}" e tutte le sue statistiche.`, false, 'Statistica');
 
     const remaining = tpls.filter(t => t.id !== templateId);
     await appDb.setSetting('stat_templates', remaining);
@@ -1578,6 +1579,7 @@ function createStatModalHTML() {
 async function saveNewStat() {
     const type = document.getElementById('stat-type').value;
     const activeTemplateId = await getActiveTemplateId();
+    const currentEditingStatIdPrev = currentEditingStatId;
 
     // Tipo speciale: Tabella Obiettivi Vendita
     if (type === 'goals_table') {
@@ -1690,6 +1692,10 @@ async function saveNewStat() {
         };
 
         await appDb.addMultiple('custom_stats', [newStat]);
+    }
+    if (appDb.addImportLog) {
+        const action = currentEditingStatIdPrev ? 'Modificata' : 'Creata';
+        appDb.addImportLog(`[${new Date().toLocaleTimeString()}] ${action} statistica "${title}" (tipo ${type})${skill && skill !== 'ALL' ? ' [' + skill + ']' : ''}.`, false, 'Statistica');
     }
     document.getElementById('stat-config-modal').classList.remove('open');
     const overlay = document.getElementById('modal-overlay');
@@ -2787,6 +2793,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             deleteBtn.onclick = async () => {
                 if (!await appDialog.confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
                 await appDb.deleteRecord('custom_stats', statConfig.id);
+                if (appDb.addImportLog) appDb.addImportLog(`[${new Date().toLocaleTimeString()}] Eliminata statistica "${statConfig.title}".`, false, 'Statistica');
                 renderTeamStats();
             };
             actionsDiv.appendChild(deleteBtn);
@@ -2882,6 +2889,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
         deleteBtn.onclick = async () => {
             if (!await appDialog.confirm(`Eliminare la statistica "${statConfig.title}"?`)) return;
             await appDb.deleteRecord('custom_stats', statConfig.id);
+            if (appDb.addImportLog) appDb.addImportLog(`[${new Date().toLocaleTimeString()}] Eliminata statistica "${statConfig.title}".`, false, 'Statistica');
             renderTeamStats();
         };
         actionsDiv.appendChild(deleteBtn);

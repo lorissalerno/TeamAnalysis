@@ -488,7 +488,7 @@ const db = {
         return this.getAll('import_logs');
     },
 
-    cleanOldImportLogs: async function(days = 7) {
+    cleanOldImportLogs: async function(days = 30) {
         if (!this._db || !this._db.objectStoreNames.contains('import_logs')) return 0;
         const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
         const logs = await this.getAll('import_logs');

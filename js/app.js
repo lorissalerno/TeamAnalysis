@@ -489,7 +489,7 @@ window.getDisplayName = function(realName) {
 };
 
 // --- IMPORT CSV ---
-function logImport(msg, isError = false) {
+function logImport(msg, isError = false, type = 'Import') {
     const liveLogs = document.getElementById('wizard-live-logs');
     const oldLog = document.getElementById('import-log');
     const timeStr = new Date().toLocaleTimeString();
@@ -509,7 +509,7 @@ function logImport(msg, isError = false) {
     }
 
     if (window.appDb && window.appDb.addImportLog) {
-        window.appDb.addImportLog(`[${timeStr}] ${msg}`, isError).catch(() => {});
+        window.appDb.addImportLog(`[${timeStr}] ${msg}`, isError, type).catch(() => {});
     }
 }
 
@@ -2965,12 +2965,12 @@ function setupLogHistoryModal() {
 
         let cleanedCount = 0;
         if (window.appDb && window.appDb.cleanOldImportLogs) {
-            cleanedCount = await window.appDb.cleanOldImportLogs(7);
+            cleanedCount = await window.appDb.cleanOldImportLogs(30);
         }
 
         if (noticeEl) {
             noticeEl.textContent = cleanedCount > 0 
-                ? `Eliminati ${cleanedCount} log più vecchi di 7 giorni.` 
+                ? `Eliminati ${cleanedCount} log più vecchi di 30 giorni.` 
                 : '';
         }
 
@@ -2981,15 +2981,25 @@ function setupLogHistoryModal() {
 
             container.innerHTML = '';
             if (logs.length === 0) {
-                container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">Nessun log salvato negli ultimi 7 giorni.</div>';
+                container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">Nessun log salvato negli ultimi 30 giorni.</div>';
             } else {
                 logs.forEach(l => {
                     const div = document.createElement('div');
                     div.style.marginBottom = '6px';
-                    div.style.paddingBottom = '4px';
+                    div.style.paddingBottom = '6px';
                     div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-                    div.textContent = `${l.text}`;
+                    const dateLabel = l.dateStr || (l.timestamp ? new Date(l.timestamp).toLocaleString() : '');
+                    const typeLabel = l.type && l.type !== 'Import' ? ` [${l.type}]` : '';
                     if (l.isError) div.style.color = 'var(--danger, #ef4444)';
+                    const timeSpan = document.createElement('span');
+                    timeSpan.style.fontWeight = '600';
+                    timeSpan.style.color = 'var(--text-muted, #999)';
+                    timeSpan.style.marginRight = '8px';
+                    timeSpan.textContent = dateLabel ? `[${dateLabel}]` : '';
+                    const textSpan = document.createElement('span');
+                    textSpan.textContent = `${typeLabel} ${(l.text || '').replace(/^\[\d{1,2}:\d{2}:\d{2}\]\s*/, '')}`.trim();
+                    div.appendChild(timeSpan);
+                    div.appendChild(textSpan);
                     container.appendChild(div);
                 });
             }

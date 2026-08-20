@@ -1260,10 +1260,17 @@ async function openManageProductsModal(currentProducts) {
 
 window.deleteGoal = async function(id) {
     if (!await appDialog.confirm("Sei sicuro di voler eliminare questo obiettivo?")) return;
+    let metricLabel = 'obiettivo';
+    const allGoals = await appDb.getAll('goals');
+    const goal = allGoals.find(g => g.id === id);
+    if (goal) metricLabel = `obiettivo "${goal.metric}"` + (goal.employee ? ` per ${goal.employee}` : '');
     const transaction = appDb._db.transaction(['goals'], 'readwrite');
     const store = transaction.objectStore('goals');
     store.delete(id);
     transaction.oncomplete = () => {
+        if (appDb.addImportLog) {
+            appDb.addImportLog(`[${new Date().toLocaleTimeString()}] Eliminato ${metricLabel}.`, false, 'Goal');
+        }
         renderGoals();
         if (window.renderStatistics) window.renderStatistics();
     };
@@ -1675,7 +1682,12 @@ async function saveNewGoal() {
     document.getElementById('goal-config-modal').classList.remove('open');
     const overlay = document.getElementById('modal-overlay');
     if (overlay) overlay.classList.remove('open');
+    const wasEditing = !!editingGoalId;
     editingGoalId = null;
+    if (appDb.addImportLog) {
+        const action = wasEditing ? 'Modificato' : 'Creato';
+        appDb.addImportLog(`[${new Date().toLocaleTimeString()}] ${action} obiettivo "${metric}" (target ${target}, direzione ${direction === 'max' ? 'massimizza' : 'minimizza'})${employee ? ' per ' + employee : ''}${skill ? ' [' + skill + ']' : ''}.`, false, 'Goal');
+    }
     renderGoals();
     
     // Re-render statistics to show the new goal line if it's open

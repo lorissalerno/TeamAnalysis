@@ -18,7 +18,7 @@ Niente build/lint/test. Aprire `index.html` direttamente nel browser (o `python3
 
 ## Dati (IndexedDB `TeamAnalysisDB`, v3)
 
-- Store: `settings`, `performance`, `sales`, `anonymous_map`, `dashboard_widgets`, `custom_stats`, `goals`, `import_logs` (log import con `appDb.addImportLog(msg, isError)`, letti con `getImportLogs()`, ripuliti con `cleanOldImportLogs(7)`).
+- Store: `settings`, `performance`, `sales`, `anonymous_map`, `dashboard_widgets`, `custom_stats`, `goals`, `import_logs` (log import/modifiche con `appDb.addImportLog(msg, isError, type)`, letti con `getImportLogs()`, ripuliti con `cleanOldImportLogs(30)` — ritenzione massima 30 giorni).
 - Record performance/sales: `{ id, year, date, employee, data{...}, category, skill? }` con `date` come `YYYY-MM-DD`. I record sales hanno `data.Product` (distinguono AOIT da "Nuovi Abo").
 - Ogni anno è un sistema indipendente; tutto è filtrato per `year`/`activeYear`.
 - Aumentando `DB_VERSION` va aggiunta la migrazione in `onupgradeneeded` (esempio: indice `year` su `goals` per `oldVersion < 2`).
