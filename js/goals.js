@@ -292,7 +292,7 @@ async function renderSalesGoalsTable(kind = 'sales') {
     const statiData = await appDb.getAll('stati', 'year', year);
     const collabWorkPcts = (await appDb.getSetting(TK.workPcts, {})) || {};
 
-    const salesMetricsSet = new Set(['AOIT', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
+    const salesMetricsSet = new Set();
     salesData.forEach(d => {
         if (d.data?.Product) salesMetricsSet.add(d.data.Product);
         if (d.category) salesMetricsSet.add(d.category);
@@ -1107,7 +1107,7 @@ async function getAvailableDbMetrics(year) {
     const perfData = await appDb.getAll('performance', 'year', activeYear);
     const salesData = await appDb.getAll('sales', 'year', activeYear);
 
-    const salesMetricsSet = new Set(['AOIT', 'My Service', 'My Security M+L', 'Retention', 'Mobile', 'Internet', 'TV']);
+    const salesMetricsSet = new Set();
     salesData.forEach(d => {
         if (d.data?.Product) salesMetricsSet.add(d.data.Product);
         if (d.category) salesMetricsSet.add(d.category);
