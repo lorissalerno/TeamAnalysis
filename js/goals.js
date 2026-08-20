@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'card';
             const skillText = g.skill && g.skill !== 'ALL' ? g.skill : 'Tutte le Skill';
             const empText = g.employee ? window.getDisplayName(g.employee) : 'Tutto il Team';
+            const displayMetric = activeGoalsTab === 'efficienza' ? g.metric.replace(/^Performance:\s*/, '') : g.metric;
             
             let tolLabel = '';
             let rangeLabel = null;
@@ -179,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.innerHTML = `
                 <div style="flex:1; min-width:240px;">
                     <h3 style="font-size:1rem; font-weight:700; color:var(--text-main); margin:0 0 6px 0; line-height:1.35; word-break:break-word;">
-                        ${g.metric}
+                        ${displayMetric}
                     </h3>
                     <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                         <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary, #6366f1); border:1px solid rgba(99,102,241,0.25); white-space:nowrap;">
