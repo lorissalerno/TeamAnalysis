@@ -462,13 +462,11 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%;">
-                                                    <span class="toggle-mode-btn" data-table-id="${t.id}" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.2); color:var(--primary); border:1px solid rgba(99,102,241,0.4);' : 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4);'}">
-                                                        ${p.mode === 'team' ? 'TEAM' : 'INDIV.'}
-                                                    </span>
-                                                    <span class="toggle-chf-btn" data-table-id="${t.id}" data-idx="${idx}" title="Clicca per cambiare tipo di valore" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; background:var(--bg-surface); border:1px solid var(--border); color:var(--text-muted);">
-                                                        ${p.isCHF ? 'CHF' : 'Qtà'}
-                                                    </span>
+                                                <div style="display:flex; align-items:center; justify-content:center; gap:4px; width:100%;">
+                                                    <button type="button" class="toggle-mode-btn" data-table-id="${t.id}" data-idx="${idx}" data-mode="individual" title="Obiettivo individuale" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; border:1px solid; ${p.mode === 'individual' ? 'background:rgba(16,185,129,0.2); color:#10b981; border-color:rgba(16,185,129,0.4);' : 'background:var(--bg-surface); color:var(--text-muted); border-color:var(--border);'}">Indiv.</button>
+                                                    <button type="button" class="toggle-mode-btn" data-table-id="${t.id}" data-idx="${idx}" data-mode="team" title="Obiettivo di team" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; border:1px solid; ${p.mode === 'team' ? 'background:rgba(99,102,241,0.2); color:var(--primary); border-color:rgba(99,102,241,0.4);' : 'background:var(--bg-surface); color:var(--text-muted); border-color:var(--border);'}">Team</button>
+                                                    <button type="button" class="toggle-chf-btn" data-table-id="${t.id}" data-idx="${idx}" data-chf="1" title="Valore in CHF" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; border:1px solid; ${p.isCHF ? 'background:rgba(59,130,246,0.2); color:#3b82f6; border-color:rgba(59,130,246,0.4);' : 'background:var(--bg-surface); color:var(--text-muted); border-color:var(--border);'}">CHF</button>
+                                                    <button type="button" class="toggle-chf-btn" data-table-id="${t.id}" data-idx="${idx}" data-chf="0" title="Valore in quantità" style="cursor:pointer; font-size:0.68rem; padding:3px 7px; border-radius:6px; font-weight:700; letter-spacing:0.03em; border:1px solid; ${!p.isCHF ? 'background:rgba(234,179,8,0.2); color:#eab308; border-color:rgba(234,179,8,0.4);' : 'background:var(--bg-surface); color:var(--text-muted); border-color:var(--border);'}">Qtà</button>
                                                 </div>
                                                 <div class="col-metrics-picker" data-table-id="${t.id}" data-idx="${idx}" style="position:relative; width:100%;">
                                                     <button type="button" class="col-metrics-btn" data-table-id="${t.id}" data-idx="${idx}" style="background:var(--bg-surface); border:1px solid var(--border); color:var(--text-main); font-size:0.72rem; border-radius:6px; padding:4px 8px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
@@ -626,8 +624,9 @@ async function renderSalesGoalsTable(kind = 'sales') {
         tableCard.querySelectorAll('.toggle-mode-btn').forEach(btn => {
             btn.onclick = async () => {
                 const idx = parseInt(btn.dataset.idx, 10);
-                if (!isNaN(idx) && products[idx]) {
-                    products[idx].mode = products[idx].mode === 'team' ? 'individual' : 'team';
+                const mode = btn.dataset.mode;
+                if (!isNaN(idx) && products[idx] && mode) {
+                    products[idx].mode = mode;
                     await appDb.setSetting(`${TK.products}${t.id}`, products);
                     await renderSalesGoalsTable(kind);
                 }
@@ -637,8 +636,9 @@ async function renderSalesGoalsTable(kind = 'sales') {
         tableCard.querySelectorAll('.toggle-chf-btn').forEach(btn => {
             btn.onclick = async () => {
                 const idx = parseInt(btn.dataset.idx, 10);
-                if (!isNaN(idx) && products[idx]) {
-                    products[idx].isCHF = !products[idx].isCHF;
+                const chf = btn.dataset.chf;
+                if (!isNaN(idx) && products[idx] && chf !== undefined) {
+                    products[idx].isCHF = chf === '1';
                     await appDb.setSetting(`${TK.products}${t.id}`, products);
                     await renderSalesGoalsTable(kind);
                 }
