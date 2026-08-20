@@ -7,6 +7,7 @@
 
 let editingGoalId = null;
 let activeSalesSkillFilter = 'ALL';
+let activeGoalsTab = 'efficienza'; // 'efficienza' | 'sales' | 'stati'
 
 // Calcola il range di accettazione di un obiettivo in base alla direzione:
 // - direction 'min' (obiettivo minimo, "almeno"): tolleranza solo in giu -> [target - tol, +inf]
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (tabSalesBtn && tabListBtn) {
         tabSalesBtn.addEventListener('click', () => {
+            activeGoalsTab = 'sales';
             tabSalesBtn.classList.add('active');
             tabListBtn.classList.remove('active');
             if (tabStatiBtn) tabStatiBtn.classList.remove('active');
@@ -68,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         tabListBtn.addEventListener('click', () => {
+            activeGoalsTab = 'efficienza';
             tabListBtn.classList.add('active');
             tabSalesBtn.classList.remove('active');
             if (tabStatiBtn) tabStatiBtn.classList.remove('active');
@@ -81,14 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (tabStatiBtn) {
         tabStatiBtn.addEventListener('click', () => {
+            activeGoalsTab = 'stati';
             tabStatiBtn.classList.add('active');
             tabListBtn.classList.remove('active');
             tabSalesBtn.classList.remove('active');
-            if (containerStati) containerStati.style.display = 'block';
-            if (containerList) containerList.style.display = 'none';
+            if (containerStati) containerStati.style.display = 'none';
+            if (containerList) containerList.style.display = 'block';
             if (containerSales) containerSales.style.display = 'none';
-            if (addBtn) addBtn.style.display = 'none';
-            renderSalesGoalsTable('stati');
+            if (addBtn) addBtn.style.display = 'inline-flex';
+            if (window.renderGoals) window.renderGoals();
         });
     }
 
@@ -114,8 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         list.innerHTML = '';
         
         const filteredGoals = goals.filter(g => {
-            if (!query) return true;
             const metricStr = (g.metric || '').toLowerCase();
+            if (activeGoalsTab === 'stati' && !(g.metric || '').startsWith('Stati: ')) return false;
+            if (activeGoalsTab === 'sales' && !(g.metric || '').startsWith('Sales: ')) return false;
+            if (activeGoalsTab === 'efficienza' && ((g.metric || '').startsWith('Sales: ') || (g.metric || '').startsWith('Stati: '))) return false;
+            if (!query) return true;
             const skillStr = (g.skill || '').toLowerCase();
             const empStr = (g.employee ? window.getDisplayName(g.employee) : 'tutto il team').toLowerCase();
             const targetStr = String(g.target || '');
@@ -123,7 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (filteredGoals.length === 0) {
-            list.innerHTML = `<p style="color:var(--text-muted)">${goals.length === 0 ? 'Nessun obiettivo impostato.' : 'Nessun obiettivo trovato per la ricerca.'}</p>`;
+            if (goals.length === 0) {
+                list.innerHTML = `<p style="color:var(--text-muted)">Nessun obiettivo impostato.</p>`;
+            } else if (activeGoalsTab === 'stati') {
+                list.innerHTML = `<p style="color:var(--text-muted)">Nessun obiettivo Stati impostato. Usa il pulsante "Nuovo Obiettivo" per crearne uno.</p>`;
+            } else if (activeGoalsTab === 'sales') {
+                list.innerHTML = `<p style="color:var(--text-muted)">Nessun obiettivo Vendita impostato.</p>`;
+            } else {
+                list.innerHTML = `<p style="color:var(--text-muted)">Nessun obiettivo trovato per la ricerca.</p>`;
+            }
             return;
         }
         
@@ -1293,11 +1308,16 @@ async function openGoalModal(goalId = null) {
     const perfData = await appDb.getAll('performance', 'year', year);
     
     const metricsSet = new Set();
-    perfData.forEach(d => Object.keys(d.data).forEach(k => metricsSet.add(`Performance: ${k}`)));
+    if (activeGoalsTab === 'stati') {
+        const statiData = await appDb.getAll('stati', 'year', year);
+        statiData.forEach(d => Object.keys(d.data).forEach(k => metricsSet.add(`Stati: ${k}`)));
+    } else {
+        perfData.forEach(d => Object.keys(d.data).forEach(k => metricsSet.add(`Performance: ${k}`)));
+    }
 
     const allMetrics = Array.from(metricsSet).sort();
     function displayMetric(m) {
-        return m.replace('Performance: ', '').replace('Sales: ', '');
+        return m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
     }
 
     const metricSearchInput = document.getElementById('goal-metric-search');
