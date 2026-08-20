@@ -7,7 +7,7 @@
 
 let editingGoalId = null;
 let activeSalesSkillFilter = 'ALL';
-let activeGoalsTab = 'efficienza'; // 'efficienza' | 'sales' | 'stati'
+let activeGoalsTab = (() => { try { return localStorage.getItem('goals_active_tab') || 'efficienza'; } catch (e) { return 'efficienza'; } })(); // 'efficienza' | 'sales' | 'stati'
 let lastToleranceInput = 'pct';
 
 // Calcola il range di accettazione di un obiettivo in base alla direzione:
@@ -57,53 +57,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const containerList = document.getElementById('goals-list-container');
     const containerStati = document.getElementById('goals-stati-container');
 
+    const applyGoalsTabUI = () => {
+        const isSales = activeGoalsTab === 'sales';
+        const isEfficienza = activeGoalsTab === 'efficienza';
+        const isStati = activeGoalsTab === 'stati';
+        if (tabListBtn) tabListBtn.classList.toggle('active', isEfficienza);
+        if (tabSalesBtn) tabSalesBtn.classList.toggle('active', isSales);
+        if (tabStatiBtn) tabStatiBtn.classList.toggle('active', isStati);
+        if (containerList) containerList.style.display = (isEfficienza || isStati) ? 'block' : 'none';
+        if (containerSales) containerSales.style.display = isSales ? 'block' : 'none';
+        if (containerStati) containerStati.style.display = 'none';
+        if (addBtn) addBtn.style.display = isSales ? 'none' : 'inline-flex';
+    };
+
+    const setGoalsTab = (tab) => {
+        activeGoalsTab = tab;
+        try { localStorage.setItem('goals_active_tab', tab); } catch (e) {}
+        applyGoalsTabUI();
+        if (tab === 'sales') renderSalesGoalsTable('sales');
+        else if (window.renderGoals) window.renderGoals();
+    };
+
     if (tabSalesBtn && tabListBtn) {
-        tabSalesBtn.addEventListener('click', () => {
-            activeGoalsTab = 'sales';
-            tabSalesBtn.classList.add('active');
-            tabListBtn.classList.remove('active');
-            if (tabStatiBtn) tabStatiBtn.classList.remove('active');
-            if (containerSales) containerSales.style.display = 'block';
-            if (containerList) containerList.style.display = 'none';
-            if (containerStati) containerStati.style.display = 'none';
-            if (addBtn) addBtn.style.display = 'none';
-            renderSalesGoalsTable('sales');
-        });
-
-        tabListBtn.addEventListener('click', () => {
-            activeGoalsTab = 'efficienza';
-            tabListBtn.classList.add('active');
-            tabSalesBtn.classList.remove('active');
-            if (tabStatiBtn) tabStatiBtn.classList.remove('active');
-            if (containerList) containerList.style.display = 'block';
-            if (containerSales) containerSales.style.display = 'none';
-            if (containerStati) containerStati.style.display = 'none';
-            if (addBtn) addBtn.style.display = 'inline-flex';
-            if (window.renderGoals) window.renderGoals();
-        });
+        tabSalesBtn.addEventListener('click', () => setGoalsTab('sales'));
+        tabListBtn.addEventListener('click', () => setGoalsTab('efficienza'));
     }
-
     if (tabStatiBtn) {
-        tabStatiBtn.addEventListener('click', () => {
-            activeGoalsTab = 'stati';
-            tabStatiBtn.classList.add('active');
-            tabListBtn.classList.remove('active');
-            tabSalesBtn.classList.remove('active');
-            if (containerStati) containerStati.style.display = 'none';
-            if (containerList) containerList.style.display = 'block';
-            if (containerSales) containerSales.style.display = 'none';
-            if (addBtn) addBtn.style.display = 'inline-flex';
-            if (window.renderGoals) window.renderGoals();
-        });
+        tabStatiBtn.addEventListener('click', () => setGoalsTab('stati'));
     }
 
-    // Render iniziale: attendi che l'app sia inizializzata (appState popolato)
+    // Render iniziale: ripristina l'ultimo tab attivo (Vendita/Efficienza/Stati)
+    const bootGoalsTab = () => {
+        applyGoalsTabUI();
+        if (activeGoalsTab === 'sales') renderSalesGoalsTable('sales');
+        else if (window.renderGoals) window.renderGoals();
+    };
     if (window.appState && window.appState.activeYear !== undefined) {
-        if (window.renderGoals) window.renderGoals();
+        bootGoalsTab();
     } else {
-        window.addEventListener('app-initialized', () => {
-            if (window.renderGoals) window.renderGoals();
-        }, { once: true });
+        window.addEventListener('app-initialized', bootGoalsTab, { once: true });
     }
     
     window.renderGoals = async function() {
@@ -443,12 +435,12 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                     <th scope="col" style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); ${editMode ? 'width:250px; min-width:240px;' : 'width:155px; min-width:145px;'} position:relative;">
                                         <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
                                             ${editMode ? `
-                                                <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; background:var(--bg-base); padding:3px 0; border-radius:6px;">
-                                                    <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="-1" title="Sposta a sinistra" ${idx === 0 ? 'disabled style="background:none; border:none; color:var(--text-muted); cursor:default; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.25;"' : 'style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;"'} onmouseover="if(!this.disabled)this.style.color='var(--primary)';" onmouseout="if(!this.disabled)this.style.color='var(--text-muted)';">
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                                <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; background:var(--bg-surface); padding:4px; border-radius:8px; border:1px solid var(--border); box-sizing:border-box;">
+                                                    <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="-1" title="Sposta a sinistra" ${idx === 0 ? 'disabled style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-muted); cursor:default; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box; opacity:0.3;"' : 'style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); cursor:pointer; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box;"'} onmouseover="if(!this.disabled){this.style.background=\'var(--primary)\'; this.style.borderColor=\'var(--primary)\'; this.style.color=\'#fff\';}" onmouseout="if(!this.disabled){this.style.background=\'var(--bg-base)\'; this.style.borderColor=\'var(--border)\'; this.style.color=\'var(--text-main)\';}">
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                                                     </button>
-                                                    <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="1" title="Sposta a destra" ${idx === products.length - 1 ? 'disabled style="background:none; border:none; color:var(--text-muted); cursor:default; padding:3px; display:inline-flex; align-items:center; border-radius:4px; opacity:0.25;"' : 'style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:3px; display:inline-flex; align-items:center; border-radius:4px;"'} onmouseover="if(!this.disabled)this.style.color='var(--primary)';" onmouseout="if(!this.disabled)this.style.color='var(--text-muted)';">
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                                    <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="1" title="Sposta a destra" ${idx === products.length - 1 ? 'disabled style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-muted); cursor:default; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box; opacity:0.3;"' : 'style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); cursor:pointer; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box;"'} onmouseover="if(!this.disabled){this.style.background=\'var(--primary)\'; this.style.borderColor=\'var(--primary)\'; this.style.color=\'#fff\';}" onmouseout="if(!this.disabled){this.style.background=\'var(--bg-base)\'; this.style.borderColor=\'var(--border)\'; this.style.color=\'var(--text-main)\';}">
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                                                     </button>
                                                 </div>
                                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
