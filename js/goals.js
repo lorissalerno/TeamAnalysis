@@ -8,6 +8,7 @@
 let editingGoalId = null;
 let activeSalesSkillFilter = 'ALL';
 let activeGoalsTab = 'efficienza'; // 'efficienza' | 'sales' | 'stati'
+let lastToleranceInput = 'pct';
 
 // Calcola il range di accettazione di un obiettivo in base alla direzione:
 // - direction 'min' (obiettivo minimo, "almeno"): tolleranza solo in giu -> [target - tol, +inf]
@@ -1385,9 +1386,16 @@ async function openGoalModal(goalId = null) {
     const weightSearchInput = document.getElementById('goal-weight-metric-search');
     const weightDropdown = document.getElementById('goal-weight-metric-dropdown');
     const weightHidden = document.getElementById('goal-weight-metric');
+    const weightEnabledCheckbox = document.getElementById('goal-weight-enabled');
+    const weightGroup = document.getElementById('goal-weight-group');
 
     let goalSelectedWeight = '';
     let weightUserTouched = false;
+
+    function updateWeightVisibility() {
+        weightGroup.style.display = weightEnabledCheckbox.checked ? 'block' : 'none';
+    }
+    weightEnabledCheckbox.addEventListener('change', updateWeightVisibility);
 
     function renderWeightDropdown(filterText = '') {
         weightDropdown.innerHTML = '';
@@ -1420,6 +1428,8 @@ async function openGoalModal(goalId = null) {
     weightSearchInput.value = '';
     goalSelectedWeight = '';
     weightHidden.value = '';
+    weightEnabledCheckbox.checked = false;
+    updateWeightVisibility();
     renderWeightDropdown('');
 
     weightSearchInput.addEventListener('focus', () => {
@@ -1515,9 +1525,13 @@ async function openGoalModal(goalId = null) {
         }
     }
 
-    targetInput.oninput = () => { syncToleranceFromPct(); setSuffixes(); };
-    tolPctInput.oninput = () => { syncToleranceFromPct(); };
-    tolNumInput.oninput = () => { syncToleranceFromNum(); setSuffixes(); };
+    targetInput.oninput = () => {
+        if (lastToleranceInput === 'num') syncToleranceFromNum();
+        else syncToleranceFromPct();
+        setSuffixes();
+    };
+    tolPctInput.oninput = () => { lastToleranceInput = 'pct'; syncToleranceFromPct(); };
+    tolNumInput.oninput = () => { lastToleranceInput = 'num'; syncToleranceFromNum(); setSuffixes(); };
 
     // Suffix % visibility management
     const tolPctSuffix = document.getElementById('tol-pct-suffix');
@@ -1547,6 +1561,8 @@ async function openGoalModal(goalId = null) {
                 weightSearchInput.value = displayMetric(existing.weightMetric);
                 renderWeightDropdown('');
             }
+            weightEnabledCheckbox.checked = !!existing.weightMetric;
+            updateWeightVisibility();
 
             targetInput.value = existing.target ?? '';
             skillSelect.value = existing.skill || 'ALL';
@@ -1568,15 +1584,18 @@ async function openGoalModal(goalId = null) {
                     ? (parseFloat(existing.tolerancePlus) || 0)
                     : (parseFloat(existing.toleranceMinus) || 0);
                 if (existing.toleranceType === 'numeric') {
+                    lastToleranceInput = 'num';
                     tolNumInput.value = tolVal || '';
                     syncToleranceFromNum();
                 } else {
+                    lastToleranceInput = 'pct';
                     tolPctInput.value = tolVal || '';
                     syncToleranceFromPct();
                 }
             } else {
                 tolPctInput.value = '';
                 tolNumInput.value = '';
+                lastToleranceInput = 'pct';
             }
             setSuffixes();
         }
@@ -1587,9 +1606,11 @@ async function openGoalModal(goalId = null) {
         empSelect.value = '';
         tolPctInput.value = '';
         tolNumInput.value = '';
+        lastToleranceInput = 'pct';
         setSuffixes();
+        weightEnabledCheckbox.checked = false;
+        updateWeightVisibility();
     }
-
     modal.classList.add('open');
     const overlay = document.getElementById('modal-overlay');
     if (overlay) overlay.classList.add('open');
@@ -1611,8 +1632,12 @@ function createGoalModalHTML() {
                 <div id="goal-metric-dropdown" class="searchable-dropdown"></div>
             </div>
 
-            <label>Metrica di influenza (opzionale):</label>
-            <div style="position:relative; margin-bottom:4px;">
+            <label class="toggle-switch" id="goal-weight-toggle" style="display:flex; align-items:center; cursor:pointer; margin-bottom:10px;">
+                <input type="checkbox" id="goal-weight-enabled">
+                <span class="slider"></span>
+                <span class="label" style="font-size:0.85rem; font-weight:600; margin-left:6px;">Metrica di influenza (opzionale)</span>
+            </label>
+            <div id="goal-weight-group" style="position:relative; margin-bottom:4px;">
                 <input type="text" id="goal-weight-metric-search" placeholder="Esempio: Voice Inbound (#)" autocomplete="off" style="width:100%; padding:8px 32px 8px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
                 <svg style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:0.4;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 <input type="hidden" id="goal-weight-metric">
@@ -1666,10 +1691,12 @@ function createGoalModalHTML() {
 
 async function saveNewGoal() {
     const metric = document.getElementById('goal-metric').value;
-    const weightMetric = document.getElementById('goal-weight-metric').value;
+    const weightEnabled = document.getElementById('goal-weight-enabled').checked;
+    const weightMetric = weightEnabled ? document.getElementById('goal-weight-metric').value : '';
     const target = parseFloat(document.getElementById('goal-target').value);
     const direction = document.getElementById('goal-direction').value === 'max' ? 'max' : 'min';
-    const tolerance = parseFloat(document.getElementById('goal-tolerance-pct').value) || 0;
+    const tolPct = parseFloat(document.getElementById('goal-tolerance-pct').value) || 0;
+    const tolNum = parseFloat(document.getElementById('goal-tolerance-num').value) || 0;
     const skill = document.getElementById('goal-skill').value;
     const employee = document.getElementById('goal-employee').value;
     
@@ -1682,7 +1709,8 @@ async function saveNewGoal() {
         return;
     }
     
-    const toleranceType = tolerance !== 0 ? 'percentage' : 'none';
+    const tolerance = lastToleranceInput === 'num' ? tolNum : tolPct;
+    const toleranceType = tolerance !== 0 ? (lastToleranceInput === 'num' ? 'numeric' : 'percentage') : 'none';
 
     const newGoal = {
         id: editingGoalId || ('goal_' + Date.now()),
