@@ -435,7 +435,15 @@ async function renderSalesGoalsTable(kind = 'sales') {
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         </button>
                     ` : ''}
-                    <span style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700; letter-spacing:0.02em;">Skill: ${t.skill === 'ALL' ? 'Tutte' : t.skill}</span>
+                    ${editMode && !isStati ? `
+                        <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted); display:inline-flex; align-items:center; gap:4px;">
+                            Skill:
+                            <select class="edit-table-skill-select" data-id="${t.id}" style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:12px; background:var(--bg-base); color:var(--primary); border:1px solid rgba(99,102,241,0.3); outline:none; cursor:pointer;">
+                                <option value="ALL" ${t.skill === 'ALL' ? 'selected' : ''}>Tutte</option>
+                                ${configuredSkills.map(s => `<option value="${s}" ${t.skill === s ? 'selected' : ''}>${s}</option>`).join('')}
+                            </select>
+                        </label>
+                    ` : `<span style="font-size:0.72rem; padding:3px 10px; border-radius:12px; background:rgba(99,102,241,0.15); color:var(--primary); font-weight:700; letter-spacing:0.02em;">Skill: ${t.skill === 'ALL' ? 'Tutte' : t.skill}</span>`}
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button class="btn secondary btn-sm toggle-table-edit-btn" data-id="${t.id}" title="${editMode ? 'Passa alla visualizzazione' : 'Passa alla modalità modifica'}" style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700; padding:6px 12px; ${editMode ? 'background:var(--primary); color:#fff; border:1px solid var(--primary);' : 'background:var(--bg-surface); color:var(--text-main); border:1px solid var(--border);'}">
@@ -610,6 +618,36 @@ async function renderSalesGoalsTable(kind = 'sales') {
                 };
                 inp.onblur = save;
                 inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } };
+            };
+        }
+
+        const skillSelect = tableCard.querySelector('.edit-table-skill-select');
+        if (skillSelect) {
+            skillSelect.onchange = async (e) => {
+                const newSkill = e.target.value;
+                const tIdx = tablesList.findIndex(item => item.id === t.id);
+                if (tIdx === -1) return;
+                const oldSkill = tablesList[tIdx].skill;
+                if (newSkill === oldSkill) return;
+                tablesList[tIdx].skill = newSkill;
+                // Se il titolo era uguale al vecchio skill, aggiorna anche il titolo per coerenza
+                const oldNameForSkill = oldSkill === 'ALL' ? 'Tutte le Skill' : oldSkill;
+                if (tablesList[tIdx].name === oldNameForSkill) {
+                    tablesList[tIdx].name = newSkill === 'ALL' ? 'Tutte le Skill' : newSkill;
+                }
+                await appDb.setSetting(`${TK.list}${year}`, tablesList);
+                // Aggiorna anche gli obiettivi esistenti di questa tabella al nuovo skill
+                try {
+                    const prefixId = `${TK.goalsPrefix}${year}_${t.id}_`;
+                    const allGoals = await appDb.getAll('goals', 'year', year);
+                    const toUpdate = allGoals.filter(g => String(g.id || '').startsWith(prefixId) && g.skill !== newSkill);
+                    if (toUpdate.length > 0) {
+                        const fixed = toUpdate.map(g => ({ ...g, skill: newSkill }));
+                        await appDb.addMultiple('goals', fixed);
+                        if (appDb.addImportLog) appDb.addImportLog(`[${new Date().toLocaleTimeString()}] Skill tabella "${tablesList[tIdx].name}" cambiata da ${oldSkill} a ${newSkill} (${fixed.length} obiettivi aggiornati).`, false, 'Goal');
+                    }
+                } catch (err) {}
+                await renderSalesGoalsTable(kind);
             };
         }
 

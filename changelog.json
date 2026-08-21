@@ -13,7 +13,8 @@
       "Changelog: testi semplificati e divisi in Novità e BugFix",
       "Impostazioni: controllo aggiornamenti automatico da GitHub",
       "Impostazioni: cronologia novità raggruppata per versione e giorno",
-      "README che si aggiorna da solo ad ogni versione"
+      "README che si aggiorna da solo ad ogni versione",
+      "Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella"
     ],
     "bugfix": [
       "Fix modifica torta che riapriva a barre",
@@ -23,7 +24,8 @@
       "Fix grafico a torta per origine dati Stati (0%)",
       "Nasconde Contenuto della Torta per grafici non Sales",
       "Fix warning file:// Unsafe attempt to load URL in console"
-    ]
+    ],
+    "commit": "fc6e5d4"
   },
   {
     "version": "v1.15",

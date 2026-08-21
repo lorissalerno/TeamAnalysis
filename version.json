@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "e3cba2c",
-  "description": "Tasto Verifica aggiornamenti diventa Scarica aggiornamento se disponibile, altrimenti mostra Sei aggiornato senza messaggi extra"
+  "commit": "fc6e5d4",
+  "description": "Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella"
 }

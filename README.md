@@ -41,6 +41,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Impostazioni: controllo aggiornamenti automatico da GitHub
 - Impostazioni: cronologia novità raggruppata per versione e giorno
 - README che si aggiorna da solo ad ogni versione
+- Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella
 
 **BugFix**
 - Fix modifica torta che riapriva a barre
