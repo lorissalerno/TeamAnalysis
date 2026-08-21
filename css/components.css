@@ -1838,8 +1838,8 @@ select option {
 }
 
 .changelog-entry.latest {
-    border-color: var(--primary);
-    background: var(--accent-muted);
+    border-color: var(--border);
+    background: var(--bg-base);
 }
 
 .changelog-entry-header {

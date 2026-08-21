@@ -1,6 +1,6 @@
 {
-  "version": "v1.21",
+  "version": "v1.16",
   "date": "2026-08-21",
   "commit": "5670cb5",
-  "description": "Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://"
+  "description": "Fix altezza riquadri uguale e riquadro attuale senza colore"
 }
