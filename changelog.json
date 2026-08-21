@@ -19,7 +19,8 @@
       "Fix barra statistiche sticky: top -32 e parent block per non sparire allo scroll",
       "Fix: torte mostrano skill sotto al titolo come i grafici a colonne",
       "Sforamenti tolleranze: esclusa parte vendite",
-      "Sforamenti tolleranza: memorizza skill selezionato dopo reload"
+      "Sforamenti tolleranza: memorizza skill selezionato dopo reload",
+      "Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati"
     ],
     "bugfix": [
       "Fix modifica torta che riapriva a barre",
@@ -30,7 +31,7 @@
       "Nasconde Contenuto della Torta per grafici non Sales",
       "Fix warning file:// Unsafe attempt to load URL in console"
     ],
-    "commit": "53edf1f"
+    "commit": "c6405a8"
   },
   {
     "version": "v1.15",

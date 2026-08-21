@@ -1455,6 +1455,9 @@ async function renderImportedData() {
     });
     tbody.appendChild(fragment);
     renderDbPagination(totalFiltered, page, totalPages);
+    if (window.renderDatabasePivot) {
+        try { window.renderDatabasePivot(); } catch(e) {}
+    }
 
     // Attach row edit handlers
     tbody.querySelectorAll('.edit-metric-row-btn').forEach(btn => {

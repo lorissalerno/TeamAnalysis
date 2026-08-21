@@ -47,6 +47,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Fix: torte mostrano skill sotto al titolo come i grafici a colonne
 - Sforamenti tolleranze: esclusa parte vendite
 - Sforamenti tolleranza: memorizza skill selezionato dopo reload
+- Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati
 
 **BugFix**
 - Fix modifica torta che riapriva a barre
