@@ -31,7 +31,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 
 **Novità**
 - Tasto Verifica aggiornamenti diventa Scarica aggiornamento se disponibile, altrimenti mostra Sei aggiornato senza messaggi extra
-- Torta: doppio toggle centro % e CHF con formato 27'000.- e fix modifica che riapriva a barre
+- Torta: doppio toggle centro % e CHF con formato 27'000.-
 - Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve
 - Personalizzato popup chiusura: download automatico Backup Completo e chiarito limite popup nativo Chrome non modificabile
 - Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://
@@ -42,6 +42,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - README che si aggiorna da solo ad ogni versione
 
 **BugFix**
+- Fix modifica torta che riapriva a barre
 - Filtro skill torta vendite: mostra solo skill assegnati ai collaboratori
 - Fix filtro skill grafico a torta vendite: ora seleziona skill collaboratori invece di includere tutti
 - Fix bug origine dati Vendita non mostra Tabella Obiettivi e anteprima destra buggata
