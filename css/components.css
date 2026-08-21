@@ -1788,14 +1788,13 @@ select option {
 .settings-changelog-card {
     display: flex;
     flex-direction: column;
-}
-
-.settings-changelog-card {
+    height: 380px;
     max-height: 380px;
 }
 
 .settings-changelog-card #changelog-container {
-    max-height: 260px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 
