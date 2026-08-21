@@ -14,7 +14,8 @@
       "Impostazioni: controllo aggiornamenti automatico da GitHub",
       "Impostazioni: cronologia novità raggruppata per versione e giorno",
       "README che si aggiorna da solo ad ogni versione",
-      "Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella"
+      "Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella",
+      "Fix barra statistiche sticky: rimane in cima e non sparisce allo scroll"
     ],
     "bugfix": [
       "Fix modifica torta che riapriva a barre",
@@ -25,7 +26,7 @@
       "Nasconde Contenuto della Torta per grafici non Sales",
       "Fix warning file:// Unsafe attempt to load URL in console"
     ],
-    "commit": "fc6e5d4"
+    "commit": "a875f7e"
   },
   {
     "version": "v1.15",

@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "fc6e5d4",
-  "description": "Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella"
+  "commit": "a875f7e",
+  "description": "Fix barra statistiche sticky: rimane in cima e non sparisce allo scroll"
 }
