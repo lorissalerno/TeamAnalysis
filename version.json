@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "6d716cc",
-  "description": "Fix barra statistiche sticky: top -32 e parent block per non sparire allo scroll"
+  "commit": "99ee1a5",
+  "description": "Fix: torte mostrano skill sotto al titolo come i grafici a colonne"
 }

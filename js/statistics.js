@@ -2958,16 +2958,16 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
     const info = document.createElement('div');
     info.className = 'stat-info';
     let infoParts = [];
-    if (isPerf) {
-        if (statConfig.skill && statConfig.skill !== 'ALL') {
-            infoParts.push(statConfig.skill);
-        } else {
-            infoParts.push('Tutte le Skill');
-        }
-    } else {
-        if (statConfig.product) {
-            infoParts.push(statConfig.product);
-        }
+    if (statConfig.skill && statConfig.skill !== 'ALL') {
+        infoParts.push(statConfig.skill);
+    } else if (isPerf) {
+        infoParts.push('Tutte le Skill');
+    } else if (statConfig.type === 'pie') {
+        // Per le torte (anche Sales/Stati) mostra sempre il contesto skill come nelle colonne
+        infoParts.push('Tutte le Skill');
+    }
+    if (statConfig.product) {
+        infoParts.push(statConfig.product);
     }
     const infoText = infoParts.join(' · ');
     info.textContent = infoText;
