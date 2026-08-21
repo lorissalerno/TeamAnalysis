@@ -1,6 +1,6 @@
 {
-  "version": "v1.21",
+  "version": "v1.22",
   "date": "2026-08-21",
-  "commit": "e7730f7",
-  "description": "Fix warning file:// Unsafe attempt to load URL in console"
+  "commit": "c34b6d2",
+  "description": "Fix bug origine dati Vendita non mostra Tabella Obiettivi e anteprima destra buggata"
 }

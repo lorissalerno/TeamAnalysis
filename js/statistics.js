@@ -1228,9 +1228,17 @@ async function openStatModal(editingStat = null) {
         const cardNode = await buildStatCard(tempStatConfig, pData, sData, stData, gData, isIndividualView, selectedEmployee, teamAvgOnly, showTeamAvg, showTeamGoal, true);
         if (cardNode) {
             container.appendChild(cardNode);
+            // Forza resize del grafico dopo che il contenitore diventa visibile (fix anteprima buggata)
+            requestAnimationFrame(() => {
+                const cvs = container.querySelectorAll('canvas');
+                cvs.forEach(c => {
+                    const ch = Chart.getChart(c);
+                    if (ch) ch.resize();
+                });
+            });
         }
 
-        const canvas = cardNode.querySelector('canvas');
+        const canvas = cardNode ? cardNode.querySelector('canvas') : null;
         if (canvas) {
             const chart = Chart.getChart(canvas);
             if (chart && chart.scales) {
@@ -1362,6 +1370,12 @@ async function openStatModal(editingStat = null) {
         if (pieModeGroup) pieModeGroup.style.display = (isPie && isSalesSource) ? 'block' : 'none';
     }
 
+    function syncSourceButtons() {
+        if (sourcePerfBtn) sourcePerfBtn.classList.toggle('active', currentStatSource === 'performance');
+        if (sourceSalesBtn) sourceSalesBtn.classList.toggle('active', currentStatSource === 'sales');
+        if (sourceStatiBtn) sourceStatiBtn.classList.toggle('active', currentStatSource === 'stati');
+    }
+
     if (editingStat) {
         if (editingStat.skill) skillSelect.value = editingStat.skill;
         if (editingStat.type) typeSelect.value = editingStat.type;
@@ -1373,24 +1387,11 @@ async function openStatModal(editingStat = null) {
         if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
         const pieGoalCenterCb = document.getElementById('pie-goal-center');
         if (pieGoalCenterCb) pieGoalCenterCb.checked = !!editingStat.pieGoalCenter;
-        if (sourcePerfBtn && sourceSalesBtn && sourceStatiBtn) {
-            if (currentStatSource === 'sales') {
-                sourceSalesBtn.classList.add('active');
-                sourcePerfBtn.classList.remove('active');
-                sourceStatiBtn.classList.remove('active');
-            } else if (currentStatSource === 'stati') {
-                sourceStatiBtn.classList.add('active');
-                sourcePerfBtn.classList.remove('active');
-                sourceSalesBtn.classList.remove('active');
-            } else {
-                sourcePerfBtn.classList.add('active');
-                sourceSalesBtn.classList.remove('active');
-                sourceStatiBtn.classList.remove('active');
-            }
-        }
+        syncSourceButtons();
         populateTypeSelect(currentStatSource);
         applyTypeUI(editingStat.type || 'bar');
     } else {
+        syncSourceButtons();
         populateTypeSelect(currentStatSource);
         applyTypeUI('bar');
     }
@@ -1398,20 +1399,17 @@ async function openStatModal(editingStat = null) {
     function switchStatSource(source) {
         if (currentStatSource === source) return;
         currentStatSource = source;
-        if (sourcePerfBtn) sourcePerfBtn.classList.toggle('active', source === 'performance');
-        if (sourceSalesBtn) sourceSalesBtn.classList.toggle('active', source === 'sales');
-        if (sourceStatiBtn) sourceStatiBtn.classList.toggle('active', source === 'stati');
+        syncSourceButtons();
         // Ricrea le righe metrica per il nuovo filtro origine dati
         metricsContainer.innerHTML = '';
         createMetricRow();
         populateTypeSelect(currentStatSource);
-        applyTypeUI(typeSelect.value);
         schedulePreview();
     }
 
-    if (sourcePerfBtn) sourcePerfBtn.addEventListener('click', () => switchStatSource('performance'));
-    if (sourceSalesBtn) sourceSalesBtn.addEventListener('click', () => switchStatSource('sales'));
-    if (sourceStatiBtn) sourceStatiBtn.addEventListener('click', () => switchStatSource('stati'));
+    if (sourcePerfBtn) sourcePerfBtn.onclick = () => switchStatSource('performance');
+    if (sourceSalesBtn) sourceSalesBtn.onclick = () => switchStatSource('sales');
+    if (sourceStatiBtn) sourceStatiBtn.onclick = () => switchStatSource('stati');
 
     // Sincronizza l'evidenziazione dei pulsanti tipo con il valore corrente del select
     function syncTypeSelectorButtons() {
@@ -1422,21 +1420,21 @@ async function openStatModal(editingStat = null) {
         });
     }
 
-    typeSelect.addEventListener('change', (e) => {
+    typeSelect.onchange = (e) => {
         syncTypeSelectorButtons();
         applyTypeUI(e.target.value);
         schedulePreview();
-    });
-    skillSelect.addEventListener('change', schedulePreview);
-    if (yMinInput) yMinInput.addEventListener('input', schedulePreview);
-    if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
-    if (y2MinInput) y2MinInput.addEventListener('input', schedulePreview);
-    if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
-    if (goalsTableIdSelect) goalsTableIdSelect.addEventListener('change', schedulePreview);
+    };
+    skillSelect.onchange = schedulePreview;
+    if (yMinInput) yMinInput.oninput = schedulePreview;
+    if (yMaxInput) yMaxInput.oninput = schedulePreview;
+    if (y2MinInput) y2MinInput.oninput = schedulePreview;
+    if (y2MaxInput) y2MaxInput.oninput = schedulePreview;
+    if (goalsTableIdSelect) goalsTableIdSelect.onchange = schedulePreview;
     const pieModeSelect2 = document.getElementById('stat-pie-mode');
-    if (pieModeSelect2) pieModeSelect2.addEventListener('change', schedulePreview);
+    if (pieModeSelect2) pieModeSelect2.onchange = schedulePreview;
     const pieGoalCenterCb2 = document.getElementById('pie-goal-center');
-    if (pieGoalCenterCb2) pieGoalCenterCb2.addEventListener('change', schedulePreview);
+    if (pieGoalCenterCb2) pieGoalCenterCb2.onchange = schedulePreview;
 
     function updatePreviewAvgToggleVisibility() {
         const previewAvgLabel = modal.querySelector('#preview-show-team-avg-label');

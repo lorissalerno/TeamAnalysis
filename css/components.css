@@ -323,9 +323,8 @@ input:checked + .slider:before {
     border: 1px solid var(--border);
     background: var(--bg-base);
     overflow: auto;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
+    display: block;
+    padding: 16px;
 }
 
 .modal.open {
