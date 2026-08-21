@@ -48,6 +48,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Sforamenti tolleranze: esclusa parte vendite
 - Sforamenti tolleranza: memorizza skill selezionato dopo reload
 - Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati
+- Database: switch Lista/Tabella con stessi filtri, icone SVG vicino a Dati Importati
 
 **BugFix**
 - Fix modifica torta che riapriva a barre

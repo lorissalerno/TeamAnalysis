@@ -20,7 +20,8 @@
       "Fix: torte mostrano skill sotto al titolo come i grafici a colonne",
       "Sforamenti tolleranze: esclusa parte vendite",
       "Sforamenti tolleranza: memorizza skill selezionato dopo reload",
-      "Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati"
+      "Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati",
+      "Database: switch Lista/Tabella con stessi filtri, icone SVG vicino a Dati Importati"
     ],
     "bugfix": [
       "Fix modifica torta che riapriva a barre",
@@ -31,7 +32,7 @@
       "Nasconde Contenuto della Torta per grafici non Sales",
       "Fix warning file:// Unsafe attempt to load URL in console"
     ],
-    "commit": "c6405a8"
+    "commit": "5ba3030"
   },
   {
     "version": "v1.15",

@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "c6405a8",
-  "description": "Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati"
+  "commit": "5ba3030",
+  "description": "Database: switch Lista/Tabella con stessi filtri, icone SVG vicino a Dati Importati"
 }
