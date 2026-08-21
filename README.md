@@ -2,11 +2,11 @@
 
 > Analizza le statistiche del tuo team — app web statica 100% client-side per l'analisi delle performance, delle vendite e degli stati.
 
-[![Versione](https://img.shields.io/badge/versione-v1.16-0ea5e9)](https://github.com/IronDirt/TeamAnalysis)
+[![Versione](https://img.shields.io/badge/versione-v1.17-0ea5e9)](https://github.com/IronDirt/TeamAnalysis)
 [![Repository](https://img.shields.io/badge/GitHub-IronDirt%2FTeamAnalysis-181717?logo=github)](https://github.com/IronDirt/TeamAnalysis)
 [![Data](https://img.shields.io/badge/data-21%2F08%2F2026-10b981)](https://github.com/IronDirt/TeamAnalysis/commits/main)
 
-**Repository pubblico:** [https://github.com/IronDirt/TeamAnalysis](https://github.com/IronDirt/TeamAnalysis)  ·  **Versione attuale:** `v1.16` del 21/08/2026
+**Repository pubblico:** [https://github.com/IronDirt/TeamAnalysis](https://github.com/IronDirt/TeamAnalysis)  ·  **Versione attuale:** `v1.17` del 21/08/2026
 
 ---
 
@@ -27,8 +27,9 @@ Il riquadro **Stato Aggiornamenti** in *Impostazioni* è collegato a GitHub e co
 
 Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **Novità e Modifiche** in Impostazioni. I dati provengono da `changelog.json` e `version.json` (aggiornati automaticamente ad ogni commit tramite `scripts/bump-version.js`).
 
-### v1.16 — 21/08/2026 `Attuale`
+### v1.17 — 21/08/2026 `Attuale`
 
+- GitHub: default repo IronDirt/TeamAnalysis + README auto-generato
 - Impostazioni: nuovo riquadro Stato Aggiornamenti collegato a GitHub (verifica disponibilità aggiornamenti, badge versione, link repository)
 - Impostazioni: nuovo riquadro Novità e Modifiche con changelog raggruppato per giorno e versione
 - Versionamento automatico v1.15 → v1.16 con version.json e changelog.json

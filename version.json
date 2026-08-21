@@ -1,6 +1,6 @@
 {
-  "version": "v1.16",
+  "version": "v1.17",
   "date": "2026-08-21",
-  "commit": "496cf30",
-  "description": "Impostazioni: riquadro aggiornamenti GitHub + changelog versionato"
+  "commit": "ef5dd58",
+  "description": "GitHub: default repo IronDirt/TeamAnalysis + README auto-generato"
 }

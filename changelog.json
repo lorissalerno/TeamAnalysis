@@ -1,8 +1,9 @@
 [
   {
-    "version": "v1.16",
+    "version": "v1.17",
     "date": "2026-08-21",
     "changes": [
+      "GitHub: default repo IronDirt/TeamAnalysis + README auto-generato",
       "Impostazioni: nuovo riquadro Stato Aggiornamenti collegato a GitHub (verifica disponibilità aggiornamenti, badge versione, link repository)",
       "Impostazioni: nuovo riquadro Novità e Modifiche con changelog raggruppato per giorno e versione",
       "Versionamento automatico v1.15 → v1.16 con version.json e changelog.json"
