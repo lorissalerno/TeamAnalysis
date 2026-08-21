@@ -90,7 +90,6 @@ Il riquadro **Stato Aggiornamenti** in *Impostazioni* è collegato a GitHub e co
 Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **Novità e Modifiche** in Impostazioni. I dati provengono da \`changelog.json\` e \`version.json\` (aggiornati automaticamente ad ogni commit tramite \`scripts/bump-version.js\`).
 
 ${changelogMd}
-> Ogni giorno con modifiche incrementa la versione (es. v1.15 → v1.16). Il README viene rigenerato automaticamente ad ogni bump.
 
 ---
 

@@ -64,7 +64,6 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Dashboard: obiettivi Sales di team per ogni Skill
 
 
-> Ogni giorno con modifiche incrementa la versione (es. v1.15 → v1.16). Il README viene rigenerato automaticamente ad ogni bump.
 
 ---
 

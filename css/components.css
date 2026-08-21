@@ -1760,7 +1760,6 @@ select option {
 
 .settings-extended-grid > .card {
     height: 100%;
-    min-height: 460px;
 }
 
 .settings-card-header {
@@ -1787,8 +1786,8 @@ select option {
 }
 
 .settings-changelog-card #changelog-container {
-    flex: 1;
-    min-height: 0;
+    max-height: 280px;
+    overflow-y: auto;
 }
 
 .update-version-row {
