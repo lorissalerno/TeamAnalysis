@@ -1808,7 +1808,7 @@ select option {
 }
 
 .settings-changelog-card #changelog-container {
-    max-height: 260px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
