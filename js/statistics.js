@@ -316,6 +316,21 @@ async function renderTemplatesModalList() {
         btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
             await appDb.setSetting('active_stat_template', id);
+            // Sincronizza per-collaboratore se siamo in vista individuale (stesso motivo del select globale)
+            const isIndView = document.querySelector('.tab-btn[data-target="stat-individual"]')?.classList.contains('active');
+            const selEmp = document.getElementById('individual-select')?.value;
+            if (isIndView && selEmp && window.appState?.collaboratorTemplates?.[selEmp]) {
+                window.appState.collaboratorTemplates[selEmp] = id;
+                try {
+                    const year = window.appState.activeYear;
+                    const allMappings = await appDb.getAll('anonymous_map', 'year', year);
+                    const mapRecord = allMappings.find(m => m.realName === selEmp);
+                    if (mapRecord) {
+                        mapRecord.templateId = id;
+                        await appDb.updateRecord('anonymous_map', mapRecord);
+                    }
+                } catch (e) {}
+            }
             await initTemplateControls();
             await renderStatistics();
             await renderTemplatesModalList();
@@ -394,7 +409,24 @@ async function initTemplateControls() {
     });
 
     select.onchange = async () => {
-        await appDb.setSetting('active_stat_template', select.value);
+        const newId = select.value;
+        await appDb.setSetting('active_stat_template', newId);
+        // Se siamo in vista individuale con collaboratore selezionato che ha già un template dedicato,
+        // sincronizza anche il mapping per-collaboratore altrimenti verrebbe subito sovrascritto da handleCollaboratorTemplateSwitch
+        const isIndView = document.querySelector('.tab-btn[data-target="stat-individual"]')?.classList.contains('active');
+        const selEmp = document.getElementById('individual-select')?.value;
+        if (isIndView && selEmp && window.appState?.collaboratorTemplates?.[selEmp]) {
+            window.appState.collaboratorTemplates[selEmp] = newId;
+            try {
+                const year = window.appState.activeYear;
+                const allMappings = await appDb.getAll('anonymous_map', 'year', year);
+                const mapRecord = allMappings.find(m => m.realName === selEmp);
+                if (mapRecord) {
+                    mapRecord.templateId = newId;
+                    await appDb.updateRecord('anonymous_map', mapRecord);
+                }
+            } catch (e) {}
+        }
         await renderStatistics();
     };
 
@@ -1129,8 +1161,9 @@ async function openStatModal(editingStat = null) {
         const pieModeSel = document.getElementById('stat-pie-mode');
         const pieModeHint = document.getElementById('pie-mode-hint');
         if (pieModeSel && pieModeHint) {
-            const perfMetric = (selectedMetricsList[0] || '').startsWith('Performance: ');
-            const showHint = type === 'pie' && pieModeSel.value !== 'collaboratori' && perfMetric;
+            const firstMetric = selectedMetricsList[0] || '';
+            const isNonSalesMetric = firstMetric.startsWith('Performance: ') || firstMetric.startsWith('Stati: ');
+            const showHint = type === 'pie' && pieModeSel.value !== 'collaboratori' && isNonSalesMetric;
             pieModeHint.style.display = showHint ? 'block' : 'none';
             pieModeHint.textContent = showHint ? 'Le modalità Pacchetti e Doppia Torta funzionano solo con i dati Sales: seleziona una metrica Sales oppure torna a "Prezzo totale per ogni Collaboratore".' : '';
         }
@@ -1176,7 +1209,7 @@ async function openStatModal(editingStat = null) {
             skill: skill,
             type: type,
             goalsTableId: goalsTableId,
-            pieMode: document.getElementById('stat-pie-mode')?.value || 'collaboratori',
+            pieMode: (currentStatSource !== 'sales' ? 'collaboratori' : (document.getElementById('stat-pie-mode')?.value || 'collaboratori')),
             pieGoalCenter: document.getElementById('pie-goal-center')?.checked || false,
             title: isGoalsTable ? 'Tabella Obiettivi Vendita' : (selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '')),
             yMin: customYMin,
@@ -1324,7 +1357,9 @@ async function openStatModal(editingStat = null) {
         if (skillLabel && skillLabel.tagName === 'LABEL') skillLabel.style.display = showSkill ? '' : 'none';
         if (yScaleGroup) yScaleGroup.style.display = (isGoalsTable || isPie || isTable) ? 'none' : '';
         const pieModeGroup = document.getElementById('pie-mode-group');
-        if (pieModeGroup) pieModeGroup.style.display = isPie ? 'block' : 'none';
+        // Contenuto della Torta (pacchetti/doppia) ha senso solo per origine Sales
+        const isSalesSource = currentStatSource === 'sales';
+        if (pieModeGroup) pieModeGroup.style.display = (isPie && isSalesSource) ? 'block' : 'none';
     }
 
     if (editingStat) {
@@ -1679,7 +1714,8 @@ async function saveNewStat() {
     const yMaxVal = parseFloat(document.getElementById('stat-y-max')?.value);
     const y2MinVal = parseFloat(document.getElementById('stat-y2-min')?.value);
     const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
-    const pieModeVal = document.getElementById('stat-pie-mode')?.value || 'collaboratori';
+    const rawPieModeVal = document.getElementById('stat-pie-mode')?.value || 'collaboratori';
+    const pieModeVal = (currentStatSource !== 'sales') ? 'collaboratori' : rawPieModeVal;
     const pieGoalCenterVal = document.getElementById('pie-goal-center')?.checked || false;
 
     if (currentEditingStatId) {
@@ -1861,7 +1897,11 @@ async function renderIndividualStats() {
     if (prevHeight > 0) container.style.minHeight = prevHeight + 'px';
 
     const year = window.appState.activeYear;
-    await handleCollaboratorTemplateSwitch(employee);
+    // Solo se la vista individuale è effettivamente attiva evita di sovrascrivere il template globale quando siamo in vista Team
+    const isIndTabActive = document.querySelector('.tab-btn[data-target="stat-individual"]')?.classList.contains('active');
+    if (isIndTabActive) {
+        await handleCollaboratorTemplateSwitch(employee);
+    }
     const activeTemplateId = await getActiveTemplateId();
 
     const allStats = await appDb.getAll('custom_stats');
@@ -3706,8 +3746,9 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             const metricTotals = {};
             metricsList.forEach(m => {
                 const isP = m.startsWith('Performance: ');
-                const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
-                const sData = isP ? perfData : salesData;
+                const isSt = m.startsWith('Stati: ');
+                const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace(/^State Rcode - /, '');
+                const sData = isSt ? statiData : (isP ? perfData : salesData);
                 let sum = 0;
                 sData.forEach(row => {
                     if (isIndividual && employeeName && row.employee !== employeeName) return;
@@ -3716,13 +3757,23 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                 });
                 metricTotals[rKey] = sum;
             });
-            pieEntries = Object.entries(metricTotals);
-            renderDonut(canvasContainer, pieEntries);
+            pieEntries = Object.entries(metricTotals).filter(([, v]) => v > 0);
+            if (pieEntries.length === 0) {
+                canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile per le metriche selezionate (verifica che i dati Stati siano stati importati per l\'anno ' + activeYr + ').</p>';
+            } else {
+                // Se la torta è stata creata con modalità pacchetti/doppia (sales-only) ma contiene metriche Stati/Performance, forza comunque la vista confronti metriche
+                renderDonut(canvasContainer, pieEntries);
+            }
         } else if (pieMode === 'doppia') {
-            // Doppia Torta: pacchetti con prezzo totale + totale per collaboratore (per il team)
-            const isPiePerf = statConfig.metric.startsWith('Performance: ');
-            if (isPiePerf) {
-                canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Doppia Torta è disponibile solo con dati Sales.</p>';
+            // Doppia Torta: solo Sales — per Stati/Performance legacy fallback a collaboratori
+            const isPieNonSales = statConfig.metric.startsWith('Performance: ') || statConfig.metric.startsWith('Stati: ');
+            if (isPieNonSales) {
+                const fallbackEntries = buildCollaboratorEntries(isIndividual && employeeName ? employeeName : null);
+                if (fallbackEntries.length === 0) {
+                    canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                } else {
+                    renderDonut(canvasContainer, fallbackEntries);
+                }
             } else if (isIndividual && employeeName) {
                 // In visuale singolo collaboratore: la torta collaboratori scompare e mostra solo i pacchetti del collaboratore
                 const pkgPriceEntries = buildPackagePriceEntries(employeeName);
@@ -3757,10 +3808,15 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                 }
             }
         } else if (pieMode === 'pacchetti') {
-            // Modalità Pacchetti: quantità per nome pacchetto
-            const isPiePerf = statConfig.metric.startsWith('Performance: ');
-            if (isPiePerf) {
-                canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">La modalità Pacchetti è disponibile solo con dati Sales.</p>';
+            // Modalità Pacchetti: solo Sales — per Stati/Performance legacy fallback a collaboratori
+            const isPieNonSales = statConfig.metric.startsWith('Performance: ') || statConfig.metric.startsWith('Stati: ');
+            if (isPieNonSales) {
+                const fallbackEntries = buildCollaboratorEntries(isIndividual && employeeName ? employeeName : null);
+                if (fallbackEntries.length === 0) {
+                    canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';
+                } else {
+                    renderDonut(canvasContainer, fallbackEntries);
+                }
             } else {
                 const targetEmp = (isIndividual && employeeName) ? employeeName : null;
                 pieEntries = buildPackageQtyEntries(targetEmp);
@@ -3771,10 +3827,10 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                 }
             }
         } else {
-            // Modalità Collaboratori: prezzo totale per ogni collaboratore (o pacchetti del singolo se in visuale individuale)
-            const isPiePerf = statConfig.metric.startsWith('Performance: ');
+            // Modalità Collaboratori: totale per ogni collaboratore (per Stati/Performance è l'unica valida; per Sales mostra pacchetti del singolo se in visuale individuale)
+            const isPieSales = statConfig.metric.startsWith('Sales: ');
             if (isIndividual && employeeName) {
-                if (!isPiePerf) {
+                if (isPieSales) {
                     pieEntries = buildPackagePriceEntries(employeeName);
                     if (pieEntries.length === 0) {
                         canvasContainer.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">Nessun dato disponibile</p>';

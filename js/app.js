@@ -94,7 +94,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        window.location.hash = sectionId;
+        // Su file:// Safari/WebKit considera ogni file URL un'origine unica e
+        // window.location.hash = ... innesca "Unsafe attempt to load URL file://..."
+        // Usiamo history API che non ricarica il frame.
+        try {
+            if (location.protocol === 'file:') {
+                history.replaceState(null, '', '#' + sectionId);
+            } else {
+                window.location.hash = sectionId;
+            }
+        } catch (e) {
+            try { history.replaceState(null, '', '#' + sectionId); } catch (_) {}
+        }
         // Chiudi eventuali modal o popup aperti prima di cambiare sezione
         document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
         const overlay = document.getElementById('modal-overlay');

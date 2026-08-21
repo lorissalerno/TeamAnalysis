@@ -1,6 +1,6 @@
 [
   {
-    "version": "v1.18",
+    "version": "v1.21",
     "date": "2026-08-21",
     "novita": [
       "Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve",
@@ -12,7 +12,11 @@
       "Impostazioni: cronologia novità raggruppata per versione e giorno",
       "README che si aggiorna da solo ad ogni versione"
     ],
-    "bugfix": []
+    "bugfix": [
+      "Fix grafico a torta per origine dati Stati (0%)",
+      "Nasconde Contenuto della Torta per grafici non Sales",
+      "Fix warning file:// Unsafe attempt to load URL in console"
+    ]
   },
   {
     "version": "v1.15",

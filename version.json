@@ -1,6 +1,6 @@
 {
-  "version": "v1.18",
+  "version": "v1.21",
   "date": "2026-08-21",
-  "commit": "957fd62",
-  "description": "Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve"
+  "commit": "e7730f7",
+  "description": "Fix warning file:// Unsafe attempt to load URL in console"
 }
