@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "f36e2d1",
-  "description": "Sforamenti tolleranze: esclusa parte vendite"
+  "commit": "53edf1f",
+  "description": "Sforamenti tolleranza: memorizza skill selezionato dopo reload"
 }

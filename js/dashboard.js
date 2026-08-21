@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const skillFilter = document.getElementById('dash-tolerance-filter-skill');
     if (skillFilter) {
         skillFilter.addEventListener('change', () => {
+            try { localStorage.setItem('taDashToleranceSkill', skillFilter.value); } catch(e) {}
             if (window.renderDashboard) window.renderDashboard();
         });
     }
@@ -649,6 +650,15 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
             optHtml += `<option value="${s}">${s}</option>`;
         });
         skillSelect.innerHTML = optHtml;
+    }
+    // Ripristina skill selezionato da localStorage (persistenza dopo reload)
+    if (skillSelect) {
+        try {
+            const savedSkill = localStorage.getItem('taDashToleranceSkill');
+            if (savedSkill && [...skillSelect.options].some(o => o.value === savedSkill)) {
+                skillSelect.value = savedSkill;
+            }
+        } catch(e) {}
     }
 
     // Populate and attach searchable metrics dropdown

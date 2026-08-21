@@ -46,6 +46,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Fix barra statistiche sticky: top -32 e parent block per non sparire allo scroll
 - Fix: torte mostrano skill sotto al titolo come i grafici a colonne
 - Sforamenti tolleranze: esclusa parte vendite
+- Sforamenti tolleranza: memorizza skill selezionato dopo reload
 
 **BugFix**
 - Fix modifica torta che riapriva a barre
