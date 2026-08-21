@@ -871,16 +871,21 @@ async function openStatModal(editingStat = null) {
         metrics.add(`Tabella Obiettivi: ${t.name}`);
     });
     
-    // Gather unique skills da performance, sales e assegnazioni collaboratori (per filtro skill anche su torta Sales)
+    // Gather skills solo tra quelli assegnati ai collaboratori (evita skill non rilevanti tipo prodotti Sales)
     const skills = new Set();
-    perfData.forEach(d => { if (d.skill) skills.add(d.skill); });
-    salesData.forEach(d => { if (d.skill) skills.add(d.skill); });
     try {
         Object.values(window.appState.collaboratorSkills || {}).forEach(list => {
-            (Array.isArray(list) ? list : []).forEach(s => { if (s) skills.add(s); });
+            (Array.isArray(list) ? list : []).forEach(s => { if (s) skills.add(String(s).trim()); });
         });
-        const savedSkills = await appDb.getSetting('skills', null);
-        if (Array.isArray(savedSkills)) savedSkills.forEach(s => { if (s) skills.add(s); });
+        // Fallback: se nessun collaboratore ha skill assegnate, usa la lista skills globale
+        if (skills.size === 0) {
+            const savedSkills = await appDb.getSetting('skills', null);
+            if (Array.isArray(savedSkills)) savedSkills.forEach(s => { if (s) skills.add(String(s).trim()); });
+        }
+        // Ultimo fallback: skill presenti nei dati performance (storico)
+        if (skills.size === 0) {
+            perfData.forEach(d => { if (d.skill) skills.add(String(d.skill).trim()); });
+        }
     } catch (e) {}
 
     // 2. Show Modal

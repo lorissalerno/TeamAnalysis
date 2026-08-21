@@ -1,6 +1,6 @@
 {
-  "version": "v1.23",
+  "version": "v1.24",
   "date": "2026-08-21",
-  "commit": "be920e5",
-  "description": "Fix filtro skill grafico a torta vendite: ora seleziona skill collaboratori invece di includere tutti"
+  "commit": "69aed81",
+  "description": "Filtro skill torta vendite: mostra solo skill assegnati ai collaboratori"
 }
