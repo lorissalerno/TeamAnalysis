@@ -1,6 +1,6 @@
 {
-  "version": "v1.17",
+  "version": "v1.18",
   "date": "2026-08-21",
-  "commit": "7fb533b",
-  "description": "Personalizzato popup chiusura: download automatico Backup Completo e chiarito limite popup nativo Chrome non modificabile"
+  "commit": "957fd62",
+  "description": "Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve"
 }

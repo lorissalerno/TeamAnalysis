@@ -1,8 +1,9 @@
 [
   {
-    "version": "v1.17",
+    "version": "v1.18",
     "date": "2026-08-21",
     "novita": [
+      "Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve",
       "Personalizzato popup chiusura: download automatico Backup Completo e chiarito limite popup nativo Chrome non modificabile",
       "Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://",
       "Popup avviso backup prima di chiudere il browser: beforeunload + modal se modifiche non salvate in backup",

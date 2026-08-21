@@ -984,41 +984,46 @@
     </div>
 
     <!-- Backup Reminder Modal (avviso chiusura browser senza backup) -->
-    <div id="backup-reminder-modal" class="modal" style="max-width: 520px;" role="dialog" aria-modal="true" aria-labelledby="backup-reminder-title">
-        <div class="modal-header" style="border-bottom: 1px solid var(--border);">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div style="width:36px; height:36px; border-radius:8px; background:rgba(245, 158, 11, 0.15); display:flex; align-items:center; justify-content:center; color:#f59e0b; flex-shrink:0;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div id="backup-reminder-modal" class="modal" style="max-width: 500px; border-radius:16px; overflow:hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 8px 20px rgba(0,0,0,0.3);" role="dialog" aria-modal="true" aria-labelledby="backup-reminder-title">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border); padding:18px 22px; background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-base) 100%);">
+            <div style="display:flex; align-items:flex-start; gap:12px;">
+                <div style="width:42px; height:42px; border-radius:11px; background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.08)); border:1px solid rgba(245,158,11,0.22); display:flex; align-items:center; justify-content:center; color:#f59e0b; flex-shrink:0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </div>
-                <div>
-                    <h2 id="backup-reminder-title" style="margin:0; font-size:1.1rem; font-weight:700;">Backup consigliato prima di uscire</h2>
-                    <p style="margin:2px 0 0 0; font-size:0.78rem; color:var(--text-muted);">I dati sono salvati solo nella cache locale del browser</p>
+                <div style="min-width:0;">
+                    <h2 id="backup-reminder-title" style="margin:0; font-size:1.08rem; font-weight:800; letter-spacing:-0.01em; line-height:1.2;">Modifiche non salvate</h2>
+                    <p style="margin:4px 0 0 0; font-size:0.80rem; color:var(--text-muted); line-height:1.35;">I dati vivono solo in questo browser — senza backup li perdi</p>
                 </div>
             </div>
-            <button class="close-modal" id="close-backup-reminder-modal" aria-label="Chiudi">&times;</button>
+            <button class="close-modal" id="close-backup-reminder-modal" aria-label="Chiudi" style="width:32px; height:32px; border-radius:8px;">&times;</button>
         </div>
-        <div class="modal-body" style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
-            <p style="font-size:0.9rem; color:var(--text-main); margin:0; line-height:1.5;">
-                Sono state rilevate <strong>modifiche non ancora salvate in un backup</strong>. Se chiudi il browser senza esportare un backup, i dati potrebbero andare persi (cancellazione cache, cambio dispositivo o browser).
+        <div class="modal-body" style="padding:20px 22px; display:flex; flex-direction:column; gap:14px; background: var(--bg-surface);">
+            <p style="font-size:0.90rem; color:var(--text-main); margin:0; line-height:1.55;">
+                Hai modifiche dall’ultimo backup. Chiudendo ora <strong>senza scaricare</strong> rischi la perdita definitiva <span style="color:var(--text-muted); font-weight:400;">— cache cancellata, altro dispositivo o browser</span>.
             </p>
-            <div style="padding:10px 12px; border-radius:8px; background:var(--accent-muted); border:1px solid var(--border); font-size:0.82rem; color:var(--text-muted); display:flex; gap:8px; align-items:flex-start;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; color:var(--primary); margin-top:2px;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                <span>Consiglio: esegui un <strong style="color:var(--text-main);">Backup Completo</strong> da Impostazioni &amp; Backup prima di chiudere.</span>
+            <div style="display:flex; gap:10px; align-items:center; padding:12px 14px; border-radius:10px; background: linear-gradient(135deg, rgba(37,99,235,0.10), rgba(37,99,235,0.04)); border:1px solid rgba(37,99,235,0.18);">
+                <div style="width:26px; height:26px; border-radius:7px; background: var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <span style="font-size:0.84rem; color:var(--text-main); line-height:1.4;">Un click su <strong>Scarica Backup Completo</strong> salva tutto in un file JSON — pronto in 1 secondo.</span>
             </div>
-            <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--text-muted); cursor:pointer; user-select:none; margin-top:2px;">
-                <input type="checkbox" id="backup-reminder-snooze" style="accent-color:var(--primary); width:14px; height:14px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-muted); cursor:pointer; user-select:none; padding: 2px 0;">
+                <input type="checkbox" id="backup-reminder-snooze" style="accent-color:var(--primary); width:14px; height:14px; border-radius:4px;">
                 Non avvisarmi più in questa sessione
             </label>
         </div>
-        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn secondary" id="backup-reminder-stay-btn">Resta nella pagina</button>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" class="btn secondary" id="backup-reminder-close-anyway-btn">Chiudi senza backup</button>
-                <button type="button" class="btn primary" id="backup-reminder-backup-btn" style="display:inline-flex; align-items:center; gap:6px;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    Esegui backup ora
+        <div class="modal-footer" style="display:flex; flex-direction:column; gap:10px; padding:14px 22px 18px; background: var(--bg-base); border-top:1px solid var(--border);">
+            <div style="display:flex; gap:8px; width:100%;">
+                <button type="button" class="btn primary" id="backup-reminder-backup-btn" style="flex:1; justify-content:center; padding:11px 18px; font-size:0.92rem; font-weight:700; border-radius:10px; box-shadow: 0 4px 14px rgba(37,99,235,0.28); display:inline-flex; align-items:center; gap:8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Scarica Backup Completo
                 </button>
             </div>
+            <div style="display:flex; gap:8px; width:100%;">
+                <button type="button" class="btn secondary" id="backup-reminder-stay-btn" style="flex:1; justify-content:center; border-radius:10px; padding:9px 14px; font-weight:600;">Resta nella pagina</button>
+                <button type="button" class="btn secondary" id="backup-reminder-close-anyway-btn" style="flex:1; justify-content:center; border-radius:10px; padding:9px 14px; font-weight:500; color:var(--text-muted); border-style:dashed;">Esci senza salvare</button>
+            </div>
+            <p style="margin:2px 0 0 0; font-size:0.70rem; color:var(--text-muted); text-align:center; line-height:1.3;">Il dialogo nativo “Annulla / Esci” di Chrome non è modificabile — questo riquadro è la versione personalizzata con download.</p>
         </div>
     </div>
 

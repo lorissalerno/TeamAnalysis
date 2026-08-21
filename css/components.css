@@ -1729,9 +1729,26 @@ select option {
     transform: translateY(-1px);
 }
 
-/* Backup reminder modal — z-index superiore agli altri modal */
+/* Backup reminder modal — ottimizzato */
 #backup-reminder-modal {
     z-index: 1150;
+    animation: backupReminderIn 0.22s cubic-bezier(0.16,1,0.3,1);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+@keyframes backupReminderIn {
+    from { opacity: 0; transform: translate(-50%, -46%) scale(0.98); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+#backup-reminder-modal .modal-header .close-modal:hover {
+    background: var(--bg-surface-hover);
+}
+#backup-reminder-modal #backup-reminder-backup-btn:active {
+    transform: scale(0.98);
+}
+#backup-reminder-modal #backup-reminder-close-anyway-btn:hover {
+    color: var(--danger) !important;
+    border-color: rgba(239,68,68,0.35) !important;
+    background: rgba(239,68,68,0.06) !important;
 }
 
 /* Mini-card obiettivi Sales (dashboard e singolo collaboratore).
