@@ -52,6 +52,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Database: vista Tabella mostra una sola tabella alla volta selezionata dai filtri
 - Database Tabella: colonne a larghezza fissa uguale con titolo a capo centrato in basso, limite 80-140px
 - Database Tabella: raddoppiata altezza tabella pivot
+- Database Tabella: colora giallo in tolleranza e rosso oltre tolleranza per valori con obiettivo
 
 **BugFix**
 - Fix modifica torta che riapriva a barre

@@ -61,6 +61,93 @@
         });
     }
 
+    // Helpers per colorazione in base a obiettivi
+    function computeRangeLocal(g) {
+        if (window.computeGoalRange) return window.computeGoalRange(g);
+        const target = parseFloat(g && g.target) || 0;
+        if (!g || !g.toleranceType || g.toleranceType === 'none') return { min: target, max: target };
+        const isNumeric = g.toleranceType === 'numeric';
+        const plus = parseFloat(g.tolerancePlus) || 0;
+        const minus = parseFloat(g.toleranceMinus) || 0;
+        if (g.direction === 'max') {
+            const max = isNumeric ? target + plus : target * (1 + plus / 100);
+            return { min: null, max: max };
+        }
+        if (g.direction === 'min') {
+            const min = isNumeric ? target - minus : target * (1 - minus / 100);
+            return { min: min, max: null };
+        }
+        const min = isNumeric ? target - minus : target * (1 - minus / 100);
+        const max = isNumeric ? target + plus : target * (1 + plus / 100);
+        return { min: min, max: max };
+    }
+    function findGoalForCell(goals, metricFull, employee, skill) {
+        if (!goals || goals.length === 0) return null;
+        // priorità: employee specifico > team, skill specifico > ALL
+        let best = null;
+        let bestScore = -1;
+        for (const g of goals) {
+            if ((g.metric || '') !== metricFull) continue;
+            const gSkill = g.skill || 'ALL';
+            if (gSkill !== 'ALL' && gSkill !== skill && skill !== 'Sales' && skill !== 'Stati') continue;
+            // per Sales/Stati lo skill del goal può essere ALL, quindi ok
+            const gEmp = (g.employee || '').trim();
+            if (gEmp && gEmp !== employee) continue;
+            let score = 0;
+            if (gEmp) score += 2;
+            if (gSkill !== 'ALL') score += 1;
+            if (score > bestScore) {
+                best = g;
+                bestScore = score;
+            }
+        }
+        return best;
+    }
+    function evalGoalStatus(val, goal) {
+        if (!goal) return null;
+        const v = parseFloat(String(val).replace(',', '.'));
+        if (isNaN(v)) return null;
+        const target = parseFloat(goal.target);
+        if (isNaN(target)) return null;
+        const range = computeRangeLocal(goal);
+        const dir = goal.direction;
+        const tolNone = !goal.toleranceType || goal.toleranceType === 'none';
+        if (tolNone) {
+            if (dir === 'max') return v <= target ? null : 'over';
+            if (dir === 'min') return v >= target ? null : 'over';
+            return v === target ? null : 'over';
+        }
+        if (dir === 'max') {
+            if (v <= target) return null;
+            if (range.max !== null && v <= range.max) return 'tol';
+            return 'over';
+        }
+        if (dir === 'min') {
+            if (v >= target) return null;
+            if (range.min !== null && v >= range.min) return 'tol';
+            return 'over';
+        }
+        // bilaterale
+        const min = range.min;
+        const max = range.max;
+        let inside = true;
+        if (min !== null && v < min) inside = false;
+        if (max !== null && v > max) inside = false;
+        return inside ? 'tol' : 'over';
+    }
+    function cellClassAndTitle(rawVal, goal) {
+        const status = evalGoalStatus(rawVal, goal);
+        if (!status) return { cls: '', title: goal ? `Target ${goal.target}` : '' };
+        const range = computeRangeLocal(goal);
+        const fmt = n => n === null || n === undefined ? '∞' : String(Math.round(n));
+        let rangeLbl = '';
+        if (goal.direction === 'max') rangeLbl = `≤ ${fmt(range.max)} (target ${goal.target})`;
+        else if (goal.direction === 'min') rangeLbl = `≥ ${fmt(range.min)} (target ${goal.target})`;
+        else rangeLbl = `${fmt(range.min)} – ${fmt(range.max)} (target ${goal.target})`;
+        if (status === 'tol') return { cls: 'db-pivot-tol', title: `In tolleranza — ${rangeLbl}` };
+        return { cls: 'db-pivot-over', title: `Oltre tolleranza — ${rangeLbl} — valore ${rawVal}` };
+    }
+
     async function renderDatabasePivot() {
         const container = document.getElementById('db-pivot-container');
         const card = document.getElementById('db-pivot-card');
@@ -69,6 +156,7 @@
         const perfRecords = await appDb.getAll('performance', 'year', activeYear);
         const salesRecords = await appDb.getAll('sales', 'year', activeYear);
         const statiRecords = await appDb.getAll('stati', 'year', activeYear);
+        const goals = await appDb.getAll('goals', 'year', activeYear);
 
         const yearBadge = document.getElementById('db-pivot-year-badge');
         if (yearBadge) yearBadge.textContent = activeYear;
@@ -169,7 +257,15 @@
                                 <tbody>${rows.map(rw => {
                                     const disp = window.getDisplayName ? window.getDisplayName(rw.employee) : rw.employee;
                                     const mLbl = monthLabel(rw.date);
-                                    return `<tr><td title="${escapeHtml(disp)}">${escapeHtml(disp)}</td><td>${escapeHtml(mLbl)}</td>${metrics.map(m => `<td>${escapeHtml(formatVal(rw.data[m]))}</td>`).join('')}</tr>`;
+                                    return `<tr><td title="${escapeHtml(disp)}">${escapeHtml(disp)}</td><td>${escapeHtml(mLbl)}</td>${metrics.map(m => {
+                                        const raw = rw.data[m];
+                                        const metricFull = `Performance: ${m}`;
+                                        const goal = findGoalForCell(goals, metricFull, rw.employee, skill);
+                                        const st = cellClassAndTitle(raw, goal);
+                                        const clsAttr = st.cls ? ` class="${st.cls}"` : '';
+                                        const titleAttr = st.title ? ` title="${escapeHtml(st.title)}"` : ` title="${escapeHtml(m)}"`;
+                                        return `<td${clsAttr}${titleAttr}>${escapeHtml(formatVal(raw))}</td>`;
+                                    }).join('')}</tr>`;
                                 }).join('')}</tbody>
                             </table>
                         </div>`}
@@ -212,7 +308,7 @@
                     const disp = (window.getDisplayName ? window.getDisplayName(rw.employee) : rw.employee).toLowerCase();
                     const mIdx = parseInt(rw.ym.split('-')[1],10);
                     const mName = (mIdx>=1&&mIdx<=12) ? MONTH_NAMES[mIdx-1].toLowerCase() : rw.ym.toLowerCase();
-                    if (disp.includes(searchTerm) || rw.employee.toLowerCase().includes(searchTerm) || mName.includes(searchTerm) || 'sales'.includes(searchTerm)) return true;
+                    if (disp.includes(searchTerm) || rw.employee.toLowerCase().includes(searchTerm) || mName.includes(searchTerm) || 'sales'.includes(searchTerm) || 'vendite'.includes(searchTerm)) return true;
                     for (const pc of prodCols) {
                         if (pc.toLowerCase().includes(searchTerm)) return true;
                         if (String(rw.counts[pc]||0).includes(searchTerm)) return true;
@@ -226,7 +322,7 @@
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
                     <div class="db-pivot-section-title">
                         <span style="width:10px; height:10px; border-radius:50%; background:#10b981; display:inline-block;"></span>
-                        <span>Sales</span>
+                        <span>Vendite</span>
                         <span class="db-pivot-badge">${rows.length} righe · ${prodCols.length} prodotti</span>
                     </div>
                     <span style="font-size:0.75rem; color:var(--text-muted);">${salesRecords.length} vendite totali</span>
@@ -243,8 +339,15 @@
                             return `<tr><td title="${escapeHtml(disp)}">${escapeHtml(disp)}</td><td>${escapeHtml(m)}</td>${prodCols.map(pc => {
                                 const c = rw.counts[pc] || 0;
                                 if (c===0) return `<td style="color:var(--text-muted);">-</td>`;
-                                if (pc==='AOIT' && rw.sums[pc]) return `<td title="CHF ${formatVal(rw.sums[pc])}">${c}</td>`;
-                                return `<td>${c}</td>`;
+                                // colora se esiste obiettivo Sales per questo prodotto/collaboratore
+                                const metricFull = `Sales: ${pc}`;
+                                const goal = findGoalForCell(goals, metricFull, rw.employee, 'Sales');
+                                const st = c===0 ? {cls:'', title:''} : cellClassAndTitle(c, goal);
+                                const clsAttr = st.cls ? ` class="${st.cls}"` : '';
+                                const titleBase = pc==='AOIT' && rw.sums[pc] ? `CHF ${formatVal(rw.sums[pc])}` : pc;
+                                const titleAttr = st.title ? ` title="${escapeHtml(st.title)} — ${escapeHtml(titleBase)}"` : ` title="${escapeHtml(titleBase)}"`;
+                                if (pc==='AOIT' && rw.sums[pc] && !st.cls) return `<td${titleAttr}>${c}</td>`;
+                                return `<td${clsAttr}${titleAttr}>${c}</td>`;
                             }).join('')}<td style="font-weight:700; background:rgba(16,185,129,0.08);">${total}</td></tr>`;
                         }).join('')}</tbody>
                     </table>
@@ -297,7 +400,17 @@
                             <tbody>${rows.map(rw => {
                                 const disp = window.getDisplayName ? window.getDisplayName(rw.employee) : rw.employee;
                                 const mLbl = monthLabel(rw.date);
-                                return `<tr><td title="${escapeHtml(disp)}">${escapeHtml(disp)}</td><td>${escapeHtml(mLbl)}</td>${metrics.map(m => `<td>${escapeHtml(formatVal(rw.data[m]))}</td>`).join('')}</tr>`;
+                                return `<tr><td title="${escapeHtml(disp)}">${escapeHtml(disp)}</td><td>${escapeHtml(mLbl)}</td>${metrics.map(m => {
+                                    const raw = rw.data[m];
+                                    const metricFull = `Stati: ${m}`;
+                                    const metricFull2 = `Stati: State Rcode - ${m}`;
+                                    let goal = findGoalForCell(goals, metricFull, rw.employee, 'Stati');
+                                    if (!goal) goal = findGoalForCell(goals, metricFull2, rw.employee, 'Stati');
+                                    const st = cellClassAndTitle(raw, goal);
+                                    const clsAttr = st.cls ? ` class="${st.cls}"` : '';
+                                    const titleAttr = st.title ? ` title="${escapeHtml(st.title)}"` : ` title="${escapeHtml(m)}"`;
+                                    return `<td${clsAttr}${titleAttr}>${escapeHtml(formatVal(raw))}</td>`;
+                                }).join('')}</tr>`;
                             }).join('')}</tbody>
                         </table>
                     </div>`}

@@ -885,12 +885,6 @@ input:checked + .slider:before {
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25);
 }
 
-.db-filter-chip.chip-stati.inactive {
-    background: transparent;
-    border-color: rgba(139, 92, 246, 0.5);
-    color: #8b5cf6;
-}
-
 .db-filter-chip.inactive {
     opacity: 0.75;
     background: transparent;
@@ -1139,6 +1133,27 @@ input:checked + .slider:before {
 .db-pivot-table td:first-child:hover,
 .db-pivot-table td:nth-child(2):hover {
     background: var(--bg-surface-hover);
+}
+/* Celle con obiettivo: giallo = in tolleranza, rosso = oltre tolleranza */
+.db-pivot-table td.db-pivot-tol {
+    background: rgba(245,158,11,0.18) !important;
+    color: #f59e0b !important;
+    font-weight: 700;
+    border-color: rgba(245,158,11,0.35) !important;
+}
+.db-pivot-table td.db-pivot-over {
+    background: rgba(239,68,68,0.22) !important;
+    color: #ef4444 !important;
+    font-weight: 800;
+    border-color: rgba(239,68,68,0.4) !important;
+}
+[data-theme="dark"] .db-pivot-table td.db-pivot-tol {
+    background: rgba(245,158,11,0.28) !important;
+    color: #fbbf24 !important;
+}
+[data-theme="dark"] .db-pivot-table td.db-pivot-over {
+    background: rgba(239,68,68,0.32) !important;
+    color: #fca5a5 !important;
 }
 .db-pivot-empty {
     padding: 36px 16px;
