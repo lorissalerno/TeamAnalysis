@@ -1,6 +1,6 @@
 {
-  "version": "v1.17",
+  "version": "v1.18",
   "date": "2026-08-21",
-  "commit": "ef5dd58",
-  "description": "GitHub: default repo IronDirt/TeamAnalysis + README auto-generato"
+  "commit": "371db77",
+  "description": "AGENTS.md: istruzioni versionamento obbligatorio per agente AI (bump + README auto-generato)"
 }

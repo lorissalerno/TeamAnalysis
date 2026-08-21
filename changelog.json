@@ -1,8 +1,9 @@
 [
   {
-    "version": "v1.17",
+    "version": "v1.18",
     "date": "2026-08-21",
     "changes": [
+      "AGENTS.md: istruzioni versionamento obbligatorio per agente AI (bump + README auto-generato)",
       "GitHub: default repo IronDirt/TeamAnalysis + README auto-generato",
       "Impostazioni: nuovo riquadro Stato Aggiornamenti collegato a GitHub (verifica disponibilità aggiornamenti, badge versione, link repository)",
       "Impostazioni: nuovo riquadro Novità e Modifiche con changelog raggruppato per giorno e versione",
