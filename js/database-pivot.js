@@ -60,6 +60,45 @@
             tbl.style.setProperty('--pivot-col-w', w);
         });
     }
+    function ensurePivotSort() {
+        if (!window.appState) window.appState = {};
+        if (!window.appState.dbPivotSort) window.appState.dbPivotSort = { col: 'employee', dir: 'asc' };
+        return window.appState.dbPivotSort;
+    }
+    function sortIconFor(col, sort) {
+        const s = sort || ensurePivotSort();
+        if (s.col !== col) {
+            return '<span class="db-pivot-sort-icon" style="opacity:0.35;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15l5 5 5-5"/><path d="M7 9l5-5 5 5"/></svg></span>';
+        }
+        if (s.dir === 'asc') {
+            return '<span class="db-pivot-sort-icon" style="color:var(--primary);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span>';
+        }
+        return '<span class="db-pivot-sort-icon" style="color:var(--primary);"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg></span>';
+    }
+    function setPivotSort(col) {
+        const sort = ensurePivotSort();
+        if (sort.col === col) {
+            sort.dir = sort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            sort.col = col;
+            sort.dir = col === 'employee' ? 'asc' : (col === 'month' ? 'asc' : 'desc');
+            // metriche: primo click desc per vedere i più alti prima, come lista Valore
+            if (col !== 'employee' && col !== 'month') sort.dir = 'desc';
+            // ma per coerenza iniziale, se col è employee/month => asc
+            if (col === 'employee' || col === 'month') sort.dir = 'asc';
+        }
+        renderDatabasePivot();
+    }
+    window.setPivotSort = setPivotSort;
+    function bindPivotSortHandlers(container) {
+        if (!container) return;
+        container.querySelectorAll('th.db-pivot-sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-col');
+                if (col) setPivotSort(col);
+            });
+        });
+    }
 
     // Helpers per colorazione in base a obiettivi
     function computeRangeLocal(g) {
@@ -225,12 +264,6 @@
                     Object.entries(r.data).forEach(([k,v]) => { entry.data[k] = v; });
                 });
                 let rows = Array.from(map.values());
-                rows.sort((a,b) => {
-                    const na = (window.getDisplayName ? window.getDisplayName(a.employee) : a.employee).toLowerCase();
-                    const nb = (window.getDisplayName ? window.getDisplayName(b.employee) : b.employee).toLowerCase();
-                    if (na !== nb) return na.localeCompare(nb,'it');
-                    return (a.date||'').localeCompare(b.date||'');
-                });
                 if (searchTerm) {
                     rows = rows.filter(rw => {
                         const mLabel = MONTH_NAMES[parseInt(rw.date.split('-')[1],10)-1] || rw.date;
@@ -239,8 +272,41 @@
                         return rowMatchesSearch(rw.employee, mLabel, vals) || metricNames.includes(searchTerm) || skill.toLowerCase().includes(searchTerm);
                     });
                 }
+                // Ordinamento A-Z / Z-A cliccando sull'header
+                const pivotSort = ensurePivotSort();
+                const isPivotMetric = pivotSort.col && metrics.includes(pivotSort.col);
+                if (pivotSort.col === 'employee' || pivotSort.col === 'month' || isPivotMetric) {
+                    const dir = pivotSort.dir === 'desc' ? -1 : 1;
+                    rows.sort((a,b) => {
+                        if (pivotSort.col === 'employee') {
+                            const na = (window.getDisplayName ? window.getDisplayName(a.employee) : a.employee).toLowerCase();
+                            const nb = (window.getDisplayName ? window.getDisplayName(b.employee) : b.employee).toLowerCase();
+                            return na.localeCompare(nb,'it')*dir;
+                        }
+                        if (pivotSort.col === 'month') {
+                            const ma = a.date ? parseInt(a.date.split('-')[1],10) : 0;
+                            const mb = b.date ? parseInt(b.date.split('-')[1],10) : 0;
+                            if (ma !== mb) return (ma - mb)*dir;
+                            return (a.date||'').localeCompare(b.date||'')*dir;
+                        }
+                        const av = a.data[pivotSort.col];
+                        const bv = b.data[pivotSort.col];
+                        const na = parseFloat(String(av).replace(',','.'));
+                        const nb = parseFloat(String(bv).replace(',','.'));
+                        if (!isNaN(na) && !isNaN(nb)) return (na - nb)*dir;
+                        return String(av||'').localeCompare(String(bv||''),'it')*dir;
+                    });
+                } else {
+                    rows.sort((a,b) => {
+                        const na = (window.getDisplayName ? window.getDisplayName(a.employee) : a.employee).toLowerCase();
+                        const nb = (window.getDisplayName ? window.getDisplayName(b.employee) : b.employee).toLowerCase();
+                        if (na !== nb) return na.localeCompare(nb,'it');
+                        return (a.date||'').localeCompare(b.date||'');
+                    });
+                }
                 if (rows.length > 0 || !searchTerm) {
                     const section = document.createElement('div');
+                    const pSort = ensurePivotSort();
                     section.innerHTML = `
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
                             <div class="db-pivot-section-title">
@@ -253,7 +319,7 @@
                         ${rows.length === 0 ? `<div class="db-pivot-empty" style="padding:18px;">Nessuna riga corrisponde alla ricerca.</div>` : `
                         <div class="db-pivot-scroll">
                             <table class="db-pivot-table">
-                                <thead><tr><th>Collaboratore</th><th>Mese</th>${metrics.map(m => `<th title="${escapeHtml(m)}">${escapeHtml(m)}</th>`).join('')}</tr></thead>
+                                <thead><tr><th data-col="employee" class="db-pivot-sortable ${pSort.col==='employee'?'db-pivot-sorted':''}" title="Ordina per collaboratore">Collaboratore${sortIconFor('employee',pSort)}</th><th data-col="month" class="db-pivot-sortable ${pSort.col==='month'?'db-pivot-sorted':''}" title="Ordina per mese">Mese${sortIconFor('month',pSort)}</th>${metrics.map(m => `<th data-col="${escapeHtml(m)}" class="db-pivot-sortable ${pSort.col===m?'db-pivot-sorted':''}" title="Ordina per ${escapeHtml(m)}">${escapeHtml(m)}${sortIconFor(m,pSort)}</th>`).join('')}</tr></thead>
                                 <tbody>${rows.map(rw => {
                                     const disp = window.getDisplayName ? window.getDisplayName(rw.employee) : rw.employee;
                                     const mLbl = monthLabel(rw.date);
@@ -297,12 +363,6 @@
                 entry.sums[prod] = (entry.sums[prod] || 0) + (isNaN(v)?0:v);
             });
             let rows = Array.from(map.values());
-            rows.sort((a,b) => {
-                const na = (window.getDisplayName ? window.getDisplayName(a.employee) : a.employee).toLowerCase();
-                const nb = (window.getDisplayName ? window.getDisplayName(b.employee) : b.employee).toLowerCase();
-                if (na !== nb) return na.localeCompare(nb,'it');
-                return (a.ym||'').localeCompare(b.ym||'');
-            });
             if (searchTerm) {
                 rows = rows.filter(rw => {
                     const disp = (window.getDisplayName ? window.getDisplayName(rw.employee) : rw.employee).toLowerCase();
@@ -316,8 +376,43 @@
                     return false;
                 });
             }
+            // Ordinamento
+            const sSort = ensurePivotSort();
+            const isSalesCol = sSort.col && (prodCols.includes(sSort.col) || sSort.col==='total' || sSort.col==='employee' || sSort.col==='month');
+            if (isSalesCol) {
+                const dir = sSort.dir === 'desc' ? -1 : 1;
+                rows.sort((a,b) => {
+                    if (sSort.col==='employee') {
+                        const na=(window.getDisplayName?window.getDisplayName(a.employee):a.employee).toLowerCase();
+                        const nb=(window.getDisplayName?window.getDisplayName(b.employee):b.employee).toLowerCase();
+                        return na.localeCompare(nb,'it')*dir;
+                    }
+                    if (sSort.col==='month') {
+                        const ma = a.ym ? parseInt(a.ym.split('-')[1],10) : 0;
+                        const mb = b.ym ? parseInt(b.ym.split('-')[1],10) : 0;
+                        if (ma!==mb) return (ma-mb)*dir;
+                        return (a.ym||'').localeCompare(b.ym||'')*dir;
+                    }
+                    if (sSort.col==='total') {
+                        const av = prodCols.reduce((s,pc)=>s+(a.counts[pc]||0),0);
+                        const bv = prodCols.reduce((s,pc)=>s+(b.counts[pc]||0),0);
+                        return (av-bv)*dir;
+                    }
+                    const av = a.counts[sSort.col]||0;
+                    const bv = b.counts[sSort.col]||0;
+                    return (av-bv)*dir;
+                });
+            } else {
+                rows.sort((a,b) => {
+                    const na = (window.getDisplayName ? window.getDisplayName(a.employee) : a.employee).toLowerCase();
+                    const nb = (window.getDisplayName ? window.getDisplayName(b.employee) : b.employee).toLowerCase();
+                    if (na !== nb) return na.localeCompare(nb,'it');
+                    return (a.ym||'').localeCompare(b.ym||'');
+                });
+            }
             const hasAOIT = prodCols.includes('AOIT');
             const section = document.createElement('div');
+            const pSortS = ensurePivotSort();
             section.innerHTML = `
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
                     <div class="db-pivot-section-title">
@@ -330,7 +425,7 @@
                 ${rows.length === 0 ? `<div class="db-pivot-empty" style="padding:18px;">Nessuna riga corrisponde alla ricerca.</div>` : `
                 <div class="db-pivot-scroll">
                     <table class="db-pivot-table">
-                        <thead><tr><th>Collaboratore</th><th>Mese</th>${prodCols.map(p => `<th>${escapeHtml(p)}</th>`).join('')}<th style="background:var(--bg-base); font-weight:800;">Totale</th></tr></thead>
+                        <thead><tr><th data-col="employee" class="db-pivot-sortable ${pSortS.col==='employee'?'db-pivot-sorted':''}" title="Ordina per collaboratore">Collaboratore${sortIconFor('employee',pSortS)}</th><th data-col="month" class="db-pivot-sortable ${pSortS.col==='month'?'db-pivot-sorted':''}" title="Ordina per mese">Mese${sortIconFor('month',pSortS)}</th>${prodCols.map(p => `<th data-col="${escapeHtml(p)}" class="db-pivot-sortable ${pSortS.col===p?'db-pivot-sorted':''}" title="Ordina per ${escapeHtml(p)}">${escapeHtml(p)}${sortIconFor(p,pSortS)}</th>`).join('')}<th data-col="total" class="db-pivot-sortable ${pSortS.col==='total'?'db-pivot-sorted':''}" style="background:var(--bg-base); font-weight:800;" title="Ordina per totale">Totale${sortIconFor('total',pSortS)}</th></tr></thead>
                         <tbody>${rows.map(rw => {
                             const disp = window.getDisplayName ? window.getDisplayName(rw.employee) : rw.employee;
                             const ym = rw.ym;
@@ -369,12 +464,6 @@
                     Object.entries(r.data).forEach(([k,v]) => entry.data[k]=v);
                 });
                 let rows = Array.from(map.values());
-                rows.sort((a,b) => {
-                    const na = (window.getDisplayName ? window.getDisplayName(a.employee) : a.employee).toLowerCase();
-                    const nb = (window.getDisplayName ? window.getDisplayName(b.employee) : b.employee).toLowerCase();
-                    if (na !== nb) return na.localeCompare(nb,'it');
-                    return (a.date||'').localeCompare(b.date||'');
-                });
                 if (searchTerm) {
                     rows = rows.filter(rw => {
                         const mLabel = MONTH_NAMES[parseInt(rw.date.split('-')[1],10)-1] || rw.date;
@@ -383,7 +472,40 @@
                         return rowMatchesSearch(rw.employee, mLabel, vals) || metricNames.includes(searchTerm) || 'stati'.includes(searchTerm);
                     });
                 }
+                // Ordinamento
+                const stSort = ensurePivotSort();
+                const isStMetric = stSort.col && metrics.includes(stSort.col);
+                if (stSort.col==='employee' || stSort.col==='month' || isStMetric) {
+                    const dir = stSort.dir === 'desc' ? -1 : 1;
+                    rows.sort((a,b) => {
+                        if (stSort.col==='employee') {
+                            const na=(window.getDisplayName?window.getDisplayName(a.employee):a.employee).toLowerCase();
+                            const nb=(window.getDisplayName?window.getDisplayName(b.employee):b.employee).toLowerCase();
+                            return na.localeCompare(nb,'it')*dir;
+                        }
+                        if (stSort.col==='month') {
+                            const ma = a.date ? parseInt(a.date.split('-')[1],10) : 0;
+                            const mb = b.date ? parseInt(b.date.split('-')[1],10) : 0;
+                            if (ma!==mb) return (ma-mb)*dir;
+                            return (a.date||'').localeCompare(b.date||'')*dir;
+                        }
+                        const av = a.data[stSort.col];
+                        const bv = b.data[stSort.col];
+                        const na = parseFloat(String(av).replace(',','.'));
+                        const nb = parseFloat(String(bv).replace(',','.'));
+                        if (!isNaN(na) && !isNaN(nb)) return (na-nb)*dir;
+                        return String(av||'').localeCompare(String(bv||''),'it')*dir;
+                    });
+                } else {
+                    rows.sort((a,b) => {
+                        const na = (window.getDisplayName ? window.getDisplayName(a.employee) : a.employee).toLowerCase();
+                        const nb = (window.getDisplayName ? window.getDisplayName(b.employee) : b.employee).toLowerCase();
+                        if (na !== nb) return na.localeCompare(nb,'it');
+                        return (a.date||'').localeCompare(b.date||'');
+                    });
+                }
                 const section = document.createElement('div');
+                const pSortSt = ensurePivotSort();
                 section.innerHTML = `
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
                         <div class="db-pivot-section-title">
@@ -396,7 +518,7 @@
                     ${rows.length === 0 ? `<div class="db-pivot-empty" style="padding:18px;">Nessuna riga corrisponde alla ricerca.</div>` : `
                     <div class="db-pivot-scroll">
                         <table class="db-pivot-table">
-                            <thead><tr><th>Collaboratore</th><th>Mese</th>${metrics.map(m => `<th title="${escapeHtml(m)}">${escapeHtml(m.replace(/^State Rcode - /,'').replace(/^State Duration /,''))}</th>`).join('')}</tr></thead>
+                            <thead><tr><th data-col="employee" class="db-pivot-sortable ${pSortSt.col==='employee'?'db-pivot-sorted':''}" title="Ordina per collaboratore">Collaboratore${sortIconFor('employee',pSortSt)}</th><th data-col="month" class="db-pivot-sortable ${pSortSt.col==='month'?'db-pivot-sorted':''}" title="Ordina per mese">Mese${sortIconFor('month',pSortSt)}</th>${metrics.map(m => `<th data-col="${escapeHtml(m)}" class="db-pivot-sortable ${pSortSt.col===m?'db-pivot-sorted':''}" title="Ordina per ${escapeHtml(m.replace(/^State Rcode - /,'').replace(/^State Duration /,''))}">${escapeHtml(m.replace(/^State Rcode - /,'').replace(/^State Duration /,''))}${sortIconFor(m,pSortSt)}</th>`).join('')}</tr></thead>
                             <tbody>${rows.map(rw => {
                                 const disp = window.getDisplayName ? window.getDisplayName(rw.employee) : rw.employee;
                                 const mLbl = monthLabel(rw.date);
@@ -432,6 +554,7 @@
 
         // applica larghezza colonne fissa, uguale per tutte, in base alla pagina (con limite 80–140px)
         if (rendered) {
+            bindPivotSortHandlers(container);
             // rinvia di un tick per avere cardW corretto dopo display:block
             requestAnimationFrame(() => applyPivotColWidths());
             setTimeout(applyPivotColWidths, 80);

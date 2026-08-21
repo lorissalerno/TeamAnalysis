@@ -25,7 +25,8 @@
       "Database: vista Tabella mostra una sola tabella alla volta selezionata dai filtri",
       "Database Tabella: colonne a larghezza fissa uguale con titolo a capo centrato in basso, limite 80-140px",
       "Database Tabella: raddoppiata altezza tabella pivot",
-      "Database Tabella: colora giallo in tolleranza e rosso oltre tolleranza per valori con obiettivo"
+      "Database Tabella: colora giallo in tolleranza e rosso oltre tolleranza per valori con obiettivo",
+      "Database Tabella: header e colonne fisse opache con ordinamento A-Z al click"
     ],
     "bugfix": [
       "Fix modifica torta che riapriva a barre",
@@ -36,7 +37,7 @@
       "Nasconde Contenuto della Torta per grafici non Sales",
       "Fix warning file:// Unsafe attempt to load URL in console"
     ],
-    "commit": "bd3734b"
+    "commit": "4947ce1"
   },
   {
     "version": "v1.15",

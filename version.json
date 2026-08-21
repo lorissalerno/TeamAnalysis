@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "bd3734b",
-  "description": "Database Tabella: colora giallo in tolleranza e rosso oltre tolleranza per valori con obiettivo"
+  "commit": "4947ce1",
+  "description": "Database Tabella: header e colonne fisse opache con ordinamento A-Z al click"
 }

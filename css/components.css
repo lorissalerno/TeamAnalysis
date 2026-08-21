@@ -1071,6 +1071,28 @@ input:checked + .slider:before {
     vertical-align: bottom;
     line-height: 1.25;
     padding: 6px 6px 8px;
+    opacity: 1;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 1px 0 var(--border);
+}
+.db-pivot-table th.db-pivot-sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.db-pivot-table th.db-pivot-sortable:hover {
+    background: var(--bg-surface-hover);
+    color: var(--primary);
+}
+.db-pivot-table th.db-pivot-sorted {
+    color: var(--primary);
+    background: var(--bg-surface-hover);
+}
+.db-pivot-sort-icon {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 4px;
+    opacity: 0.9;
 }
 .db-pivot-table td {
     text-align: right;
@@ -1091,12 +1113,17 @@ input:checked + .slider:before {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    opacity: 1;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 1px 0 0 var(--border);
 }
 .db-pivot-table th:first-child {
-    z-index: 4;
+    z-index: 5;
     background: var(--bg-base);
     white-space: nowrap;
     vertical-align: bottom;
+    box-shadow: 1px 1px 0 var(--border);
 }
 .db-pivot-table td:nth-child(2),
 .db-pivot-table th:nth-child(2) {
@@ -1109,10 +1136,15 @@ input:checked + .slider:before {
     min-width: 64px;
     max-width: 80px;
     white-space: nowrap;
+    opacity: 1;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 1px 0 0 var(--border);
 }
 .db-pivot-table th:nth-child(2) {
-    z-index: 4;
+    z-index: 5;
     background: var(--bg-base);
+    box-shadow: 1px 1px 0 var(--border);
 }
 /* Colonne metriche: larghezza fissa uguale per tutte, calcolata via JS in --pivot-col-w, con limite 80–140px */
 .db-pivot-table th:nth-child(n+3),

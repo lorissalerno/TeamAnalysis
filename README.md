@@ -53,6 +53,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Database Tabella: colonne a larghezza fissa uguale con titolo a capo centrato in basso, limite 80-140px
 - Database Tabella: raddoppiata altezza tabella pivot
 - Database Tabella: colora giallo in tolleranza e rosso oltre tolleranza per valori con obiettivo
+- Database Tabella: header e colonne fisse opache con ordinamento A-Z al click
 
 **BugFix**
 - Fix modifica torta che riapriva a barre
