@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "99ee1a5",
-  "description": "Fix: torte mostrano skill sotto al titolo come i grafici a colonne"
+  "commit": "f36e2d1",
+  "description": "Sforamenti tolleranze: esclusa parte vendite"
 }

@@ -17,7 +17,8 @@
       "Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella",
       "Fix barra statistiche sticky: rimane in cima e non sparisce allo scroll",
       "Fix barra statistiche sticky: top -32 e parent block per non sparire allo scroll",
-      "Fix: torte mostrano skill sotto al titolo come i grafici a colonne"
+      "Fix: torte mostrano skill sotto al titolo come i grafici a colonne",
+      "Sforamenti tolleranze: esclusa parte vendite"
     ],
     "bugfix": [
       "Fix modifica torta che riapriva a barre",
@@ -28,7 +29,7 @@
       "Nasconde Contenuto della Torta per grafici non Sales",
       "Fix warning file:// Unsafe attempt to load URL in console"
     ],
-    "commit": "99ee1a5"
+    "commit": "f36e2d1"
   },
   {
     "version": "v1.15",

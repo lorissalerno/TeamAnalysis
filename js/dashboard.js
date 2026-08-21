@@ -724,6 +724,9 @@ async function renderToleranceViolations(goals, perfData, salesData, activeEmplo
 
     goals.forEach(g => {
         if (!g.toleranceType || g.toleranceType === 'none') return;
+        // Escludi obiettivi vendite dagli sforamenti tolleranza
+        const gid = String(g.id || '');
+        if ((g.metric || '').startsWith('Sales: ') || gid.startsWith('salestable_')) return;
         const targetVal = parseFloat(g.target) || 0;
         const range = window.computeGoalRange ? window.computeGoalRange(g) : { min: targetVal, max: targetVal };
         const minVal = range.min;
