@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "05ac2e7",
-  "description": "Database Tabella: colonne a larghezza fissa uguale con titolo a capo centrato in basso, limite 80-140px"
+  "commit": "5e9257e",
+  "description": "Database Tabella: raddoppiata altezza tabella pivot"
 }

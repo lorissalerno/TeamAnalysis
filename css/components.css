@@ -1043,7 +1043,7 @@ input:checked + .slider:before {
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg-surface);
-    max-height: 420px;
+    max-height: 840px;
 }
 .db-pivot-table {
     width: 100%;
