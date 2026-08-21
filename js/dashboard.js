@@ -61,9 +61,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // dateRange = { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } (opzionale, filtra per data)
 // weightMetric (opzionale): per le metriche Performance, se valorizzato il risultato e'
 // la media ponderata dei record usando quella metrica come peso (es. "Voice Inbound (#)").
-function calculateEmployeeMetricValue(employee, metricStr, skillFilter, perfData, salesData, dateRange, weightMetric) {
+function calculateEmployeeMetricValue(employee, metricStr, skillFilter, perfData, salesData, dateRange, weightMetric, statiData) {
     let isSales = metricStr.startsWith('Sales: ');
-    let metricName = metricStr.replace('Performance: ', '').replace('Sales: ', '');
+    let isStati = metricStr.startsWith('Stati: ');
+    let metricName = metricStr.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace(/^State Rcode - /, '');
 
     function inRange(record) {
         if (!dateRange) return true;
@@ -73,9 +74,23 @@ function calculateEmployeeMetricValue(employee, metricStr, skillFilter, perfData
     }
 
     if (isSales) {
-        let records = salesData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined && inRange(d));
+        let records = salesData.filter(d => d.employee === employee && d.data && (d.data[metricName] !== undefined || d.data['State Rcode - ' + metricName] !== undefined) && inRange(d));
         if (records.length === 0) return 0;
-        return records.reduce((sum, r) => sum + (parseFloat(r.data[metricName]) || 0), 0);
+        return records.reduce((sum, r) => {
+            const v = r.data[metricName] !== undefined ? r.data[metricName] : r.data['State Rcode - ' + metricName];
+            return sum + (parseFloat(v) || 0);
+        }, 0);
+    } else if (isStati) {
+        const sData = statiData || [];
+        // fallback: se statiData non passato, prova a cercare in perfData (compatibilità)
+        const source = sData.length > 0 ? sData : perfData;
+        let records = source.filter(d => d.employee === employee && d.data && (d.data[metricName] !== undefined || d.data['State Rcode - ' + metricName] !== undefined) && inRange(d));
+        if (records.length === 0) return 0;
+        const sum = records.reduce((acc, r) => {
+            const v = r.data[metricName] !== undefined ? r.data[metricName] : r.data['State Rcode - ' + metricName];
+            return acc + (parseFloat(v) || 0);
+        }, 0);
+        return sum / records.length;
     } else {
         let records = perfData.filter(d => d.employee === employee && d.data && d.data[metricName] !== undefined && inRange(d));
         if (skillFilter && skillFilter !== 'ALL') {
@@ -106,12 +121,12 @@ function calculateEmployeeMetricValue(employee, metricStr, skillFilter, perfData
 // Helper to calculate team aggregate value for a metric (opzionale dateRange)
 // weightMetric (opzionale): per le metriche Performance usa il pool globale del team
 // (somma secondi / somma peso) invece della media dei valori per-collaboratore.
-function calculateTeamMetricValue(metricStr, skillFilter, perfData, salesData, activeEmployees, dateRange, weightMetric) {
+function calculateTeamMetricValue(metricStr, skillFilter, perfData, salesData, activeEmployees, dateRange, weightMetric, statiData) {
     if (activeEmployees.length === 0) return 0;
 
     const isSales = metricStr.startsWith('Sales: ');
     if (!isSales && weightMetric) {
-        const metricName = metricStr.replace('Performance: ', '').replace('Sales: ', '');
+        const metricName = metricStr.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace(/^State Rcode - /, '');
         const weightName = String(weightMetric).replace('Performance: ', '').trim();
         const inRange = (record) => {
             if (!dateRange) return true;
@@ -341,9 +356,9 @@ async function renderCollaboratorsSummary(activeEmployees, perfData, salesData) 
     `;
 }
 
-// Helper: nome metrica senza prefisso 'Performance: '/'Sales: '
+// Helper: nome metrica senza prefisso 'Performance: '/'Sales: '/'Stati: ' (nasconde anche 'State Rcode - ')
 function displayMetricName(metricStr) {
-    return String(metricStr || '').replace('Performance: ', '').replace('Sales: ', '');
+    return String(metricStr || '').replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace(/^State Rcode - /, '');
 }
 
 // 1b. Raggiungimento Obiettivi Sales per tutto il team (stile "Obiettivi di Vendita"
@@ -527,6 +542,10 @@ function renderTeamGoalsProgress(goals, perfData, salesData, activeEmployees) {
 
     const teamGoals = goals.filter(g => {
         if (g.employee && g.employee !== '') return false;
+        const gid = String(g.id || '');
+        const isSale = (g.metric || '').startsWith('Sales: ') || gid.startsWith('salestable_');
+        const isStati = (g.metric || '').startsWith('Stati: ') || gid.startsWith('statitable_');
+        if (isSale || isStati) return false;
         if (!searchQuery) return true;
         return displayMetricName(g.metric).toLowerCase().includes(searchQuery);
     });

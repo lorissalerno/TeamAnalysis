@@ -107,6 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (sectionId === 'goals' && window.renderGoals) renderGoals();
         if (sectionId === 'settings') {
             updateCollabCountBadge();
+            if (window.VersionManager) {
+                window.VersionManager.renderVersionSection();
+                window.VersionManager.setupVersionSection();
+            }
         }
     }
 
@@ -222,7 +226,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (sectionId === 'dashboard' && window.renderDashboard) await window.renderDashboard();
         else if (sectionId === 'statistics' && window.renderStatistics) await window.renderStatistics();
-        else if (sectionId === 'goals' && window.renderGoals) await window.renderGoals();
+        else if (sectionId === 'goals') {
+            const goalsTab = (window.getActiveGoalsTab && window.getActiveGoalsTab()) || localStorage.getItem('goals_active_tab') || 'efficienza';
+            if (goalsTab === 'sales' && window.renderSalesGoalsTable) await window.renderSalesGoalsTable('sales');
+            else if (goalsTab === 'stati' && window.renderSalesGoalsTable) await window.renderSalesGoalsTable('stati');
+            else if (window.renderGoals) await window.renderGoals();
+        }
         else if (sectionId === 'database') renderImportedData();
         else if (sectionId === 'settings' && typeof renderManagementTable === 'function') renderManagementTable();
 
@@ -241,7 +250,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadAnonymousMap();
         if (window.renderDashboard) window.renderDashboard();
         if (window.renderStatistics) window.renderStatistics();
-        if (window.renderGoals) window.renderGoals();
+        const goalsTab = (window.getActiveGoalsTab && window.getActiveGoalsTab()) || localStorage.getItem('goals_active_tab') || 'efficienza';
+        if (goalsTab === 'sales' && window.renderSalesGoalsTable) window.renderSalesGoalsTable('sales');
+        else if (goalsTab === 'stati' && window.renderSalesGoalsTable) window.renderSalesGoalsTable('stati');
+        else if (window.renderGoals) window.renderGoals();
         renderImportedData();
         if (typeof renderManagementTable === 'function') renderManagementTable();
     });
@@ -1414,7 +1426,7 @@ async function renderImportedData() {
             <td>${skillBadge}</td>
             <td>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-weight:500;">${r.metric}</span>
+                    <span style="font-weight:500;">${r.metric.replace(/^State Rcode - /, '')}</span>
                     ${manualBadge}
                 </div>
             </td>

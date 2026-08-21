@@ -1712,6 +1712,23 @@ select option {
     gap: 8px;
 }
 
+/* Modal Soglie Colori — input e righe piu leggibili */
+#goal-thresholds-modal .thr-almost-input:focus,
+#goal-thresholds-modal .thr-surpass-input:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px var(--accent-muted);
+}
+#goal-thresholds-modal #threshold-cols-list > div:hover {
+    border-color: var(--primary) !important;
+}
+#goal-thresholds-modal .thr-mode-btn:hover {
+    filter: brightness(1.15);
+}
+#goal-thresholds-modal .thr-mode-toggle:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+}
+
 /* Mini-card obiettivi Sales (dashboard e singolo collaboratore).
    Niente .card per evitare il margin-top di .card + .card (prima card piu alta);
    sfondo piu chiaro del contenitore per staccare i riquadri. */
@@ -1725,5 +1742,153 @@ select option {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+}
+
+/* Settings — riquadri estesi (aggiornamenti + changelog) */
+.settings-extended-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.settings-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.settings-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.settings-update-card,
+.settings-changelog-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.update-version-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+}
+
+.update-version-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.update-version-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+}
+
+/* Changelog timeline */
+.changelog-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.changelog-entry {
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    transition: border-color var(--transition);
+}
+
+.changelog-entry.latest {
+    border-color: var(--primary);
+    background: var(--accent-muted);
+}
+
+.changelog-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.changelog-version {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--primary);
+}
+
+.changelog-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.changelog-badge-latest {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--primary);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.changelog-list {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.changelog-list li {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-main);
+}
+
+.changelog-list li::marker {
+    color: var(--primary);
+}
+
+.changelog-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: changelog-spin 0.7s linear infinite;
+}
+
+@keyframes changelog-spin {
+    to { transform: rotate(360deg); }
 }
 

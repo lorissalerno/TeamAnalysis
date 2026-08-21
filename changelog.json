@@ -1,0 +1,57 @@
+[
+  {
+    "version": "v1.16",
+    "date": "2026-08-21",
+    "changes": [
+      "Impostazioni: nuovo riquadro Stato Aggiornamenti collegato a GitHub (verifica disponibilità aggiornamenti, badge versione, link repository)",
+      "Impostazioni: nuovo riquadro Novità e Modifiche con changelog raggruppato per giorno e versione",
+      "Versionamento automatico v1.15 → v1.16 con version.json e changelog.json"
+    ]
+  },
+  {
+    "version": "v1.15",
+    "date": "2026-08-20",
+    "changes": [
+      "Menu prodotti vendite: rimosse metriche hardcoded non presenti nel database",
+      "Persistito tab obiettivi attivo al reload e rese distinte le frecce di spostamento colonna",
+      "Pulsanti selezione colonna: Indiv. Team CHF QTA tutti visibili e selezionabili",
+      "Spostate frecce di spostamento colonne in cima alla colonna",
+      "Allargate colonne della tabella vendite in modalità modifica",
+      "Allargato menu a tendina prodotti e aggiunto spostamento colonne tabella vendite",
+      "Statistiche: riga Obiettivo in magenta per distinguerla dai collaboratori",
+      "Nascondi prefisso Performance: dai titoli degli obiettivi efficienza",
+      "Obiettivi: Metrica di influenza attivabile/disattivabile con toggle, disattivata di default",
+      "Obiettivi Stati: metodo di calcolo Efficienza (target + tolleranza in su/in giù)",
+      "Allargata finestra Storico Log (max-width 900px, altezza lista 520px)",
+      "Log storici: data nel dettaglio, registrazione modifiche dati, ritenzione 30 giorni",
+      "Aggiunta categoria Stati: import, obiettivi e statistiche",
+      "Aggiunte statistiche simulate per 7 nuovi collaboratori in Report_stati.csv"
+    ]
+  },
+  {
+    "version": "v1.14",
+    "date": "2026-08-18",
+    "changes": [
+      "Rinominati menu principali con suffisso TAASALO3 (sidebar, nav, dropdown collaboratore)",
+      "Aggiunto header copyright con firma TAASALO3 a tutti i file JS/CSS/HTML",
+      "Corretta altezza card Gestione Skill nel grid",
+      "Rimossa icona targhetta dall'intestazione del pannello Gestione Skill",
+      "Popup eliminazione skill più sintetico con elenco collaboratori a rischio",
+      "Eliminazione skill: avviso per collaboratori con dati solo su quello skill",
+      "Helper appDb.deleteSkill per rimozione completa di uno skill",
+      "Dialog personalizzati (alert/confirm/prompt) al posto dei popup nativi",
+      "Gestione Skill nel Passaggio 2 e pannello Gestione Skill a fianco di Importazione Dati CSV"
+    ]
+  },
+  {
+    "version": "v1.13",
+    "date": "2026-08-17",
+    "changes": [
+      "Dashboard: sezione Sales con raggiungimento obiettivi di team per skill",
+      "Fix mini-card obiettivi Sales: altezza uniforme e larghezza limitata",
+      "Menu laterale: tooltip visibile in stato collassato",
+      "Aggiunto footer copyright con link Feedback in fondo a ogni pagina",
+      "Backup popup a due colonne (Esporta/Importa) e card impostazioni a dimensioni uniformi"
+    ]
+  }
+]

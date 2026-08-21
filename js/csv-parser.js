@@ -242,7 +242,7 @@ class CSVParser {
             for (let j = startIdx; j < valueCols.length && (j + headerOffset) < headers.length; j++) {
                 const hKey = headers[j + headerOffset];
                 if (!hKey || hKey.includes("Org")) continue;
-                const key = hKey.replace(/^State Duration /, '');
+                const key = hKey.replace(/^State Duration /, '').replace(/^State Rcode - /, '');
                 const val = parseFloat((valueCols[j] || '').replace(/\./g, '').replace(',', '.'));
                 dataObj[key] = isNaN(val) ? 0 : val;
             }

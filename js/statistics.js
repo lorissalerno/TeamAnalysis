@@ -831,7 +831,7 @@ async function openStatModal(editingStat = null) {
         });
     });
     statiData.forEach(d => {
-        Object.keys(d.data).forEach(k => metrics.add(`Stati: ${k}`));
+        Object.keys(d.data).forEach(k => metrics.add(`Stati: ${k.replace(/^State Rcode - /, '')}`));
     });
     
     const tablesList = await appDb.getSetting(`sales_tables_list_${year}`, []);
@@ -948,7 +948,7 @@ async function openStatModal(editingStat = null) {
             return fullValue.replace(/^Sales: /, '');
         }
         if (currentStatSource === 'stati') {
-            return fullValue.replace(/^Stati: /, '');
+            return fullValue.replace(/^Stati: /, '').replace(/^State Rcode - /, '');
         }
         return fullValue.replace(/^Performance: /, '');
     }
@@ -1148,9 +1148,11 @@ async function openStatModal(editingStat = null) {
         const isMulti = selectedMetricsList.length > 1;
 
         const y2Container = document.getElementById('y2-scale-container');
-        if (y2Container) y2Container.style.display = isMulti ? 'block' : 'none';
+        if (y2Container) y2Container.style.display = isMulti ? 'flex' : 'none';
 
+        const customYMin = parseFloat(document.getElementById('stat-y-min')?.value);
         const customYMax = parseFloat(document.getElementById('stat-y-max')?.value);
+        const customY2Min = parseFloat(document.getElementById('stat-y2-min')?.value);
         const customY2Max = parseFloat(document.getElementById('stat-y2-max')?.value);
 
         const isIndividualView = document.getElementById('preview-mode-ind-btn')?.classList.contains('active') || false;
@@ -1177,7 +1179,9 @@ async function openStatModal(editingStat = null) {
             pieMode: document.getElementById('stat-pie-mode')?.value || 'collaboratori',
             pieGoalCenter: document.getElementById('pie-goal-center')?.checked || false,
             title: isGoalsTable ? 'Tabella Obiettivi Vendita' : (selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '')),
+            yMin: customYMin,
             yMax: customYMax,
+            y2Min: customY2Min,
             y2Max: customY2Max
         };
 
@@ -1197,9 +1201,17 @@ async function openStatModal(editingStat = null) {
         if (canvas) {
             const chart = Chart.getChart(canvas);
             if (chart && chart.scales) {
+                const yMinInput = document.getElementById('stat-y-min');
+                if (yMinInput && chart.scales.y && chart.scales.y.min !== undefined) {
+                    yMinInput.placeholder = `es. ${chart.scales.y.min}`;
+                }
                 const yMaxInput = document.getElementById('stat-y-max');
                 if (yMaxInput && chart.scales.y && chart.scales.y.max !== undefined) {
                     yMaxInput.placeholder = `es. ${chart.scales.y.max}`;
+                }
+                const y2MinInput = document.getElementById('stat-y2-min');
+                if (y2MinInput && chart.scales.y2 && chart.scales.y2.min !== undefined) {
+                    y2MinInput.placeholder = `es. ${chart.scales.y2.min}`;
                 }
                 const y2MaxInput = document.getElementById('stat-y2-max');
                 if (y2MaxInput && chart.scales.y2 && chart.scales.y2.max !== undefined) {
@@ -1226,7 +1238,9 @@ async function openStatModal(editingStat = null) {
     });
 
     const typeSelect = document.getElementById('stat-type');
+    const yMinInput = document.getElementById('stat-y-min');
     const yMaxInput = document.getElementById('stat-y-max');
+    const y2MinInput = document.getElementById('stat-y2-min');
     const y2MaxInput = document.getElementById('stat-y2-max');
     const goalsTableSelectorGroup = document.getElementById('goals-table-selector-group');
     const goalsTableIdSelect = document.getElementById('stat-goals-table-id');
@@ -1316,7 +1330,9 @@ async function openStatModal(editingStat = null) {
     if (editingStat) {
         if (editingStat.skill) skillSelect.value = editingStat.skill;
         if (editingStat.type) typeSelect.value = editingStat.type;
+        if (yMinInput) yMinInput.value = (editingStat.yMin !== undefined && editingStat.yMin !== null && !isNaN(editingStat.yMin)) ? editingStat.yMin : '';
         if (yMaxInput) yMaxInput.value = editingStat.yMax || '';
+        if (y2MinInput) y2MinInput.value = (editingStat.y2Min !== undefined && editingStat.y2Min !== null && !isNaN(editingStat.y2Min)) ? editingStat.y2Min : '';
         if (y2MaxInput) y2MaxInput.value = editingStat.y2Max || '';
         const pieModeSelect = document.getElementById('stat-pie-mode');
         if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
@@ -1377,7 +1393,9 @@ async function openStatModal(editingStat = null) {
         schedulePreview();
     });
     skillSelect.addEventListener('change', schedulePreview);
+    if (yMinInput) yMinInput.addEventListener('input', schedulePreview);
     if (yMaxInput) yMaxInput.addEventListener('input', schedulePreview);
+    if (y2MinInput) y2MinInput.addEventListener('input', schedulePreview);
     if (y2MaxInput) y2MaxInput.addEventListener('input', schedulePreview);
     if (goalsTableIdSelect) goalsTableIdSelect.addEventListener('change', schedulePreview);
     const pieModeSelect2 = document.getElementById('stat-pie-mode');
@@ -1517,14 +1535,26 @@ function createStatModalHTML() {
                     <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
                 </div>
 
-                <div id="y-scale-custom-group" style="display:flex; gap:12px; margin-bottom:16px;">
-                    <div style="flex:1;">
-                        <label style="font-size:0.78rem;">Max Asse Y (Sinistra):</label>
-                        <input type="number" id="stat-y-max" placeholder="es. 7000" style="width:100%; padding:6px; font-size:0.85rem;">
+                <div id="y-scale-custom-group" style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+                    <div style="display:flex; gap:12px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.78rem;">Min Asse Y (Sinistra):</label>
+                            <input type="number" id="stat-y-min" placeholder="es. 0" style="width:100%; padding:6px; font-size:0.85rem;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.78rem;">Max Asse Y (Sinistra):</label>
+                            <input type="number" id="stat-y-max" placeholder="es. 7000" style="width:100%; padding:6px; font-size:0.85rem;">
+                        </div>
                     </div>
-                    <div id="y2-scale-container" style="flex:1; display:none;">
-                        <label style="font-size:0.78rem;">Max Asse Y (Destra, opz.):</label>
-                        <input type="number" id="stat-y2-max" placeholder="es. 500" style="width:100%; padding:6px; font-size:0.85rem;">
+                    <div id="y2-scale-container" style="display:none; gap:12px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.78rem;">Min Asse Y (Destra, opz.):</label>
+                            <input type="number" id="stat-y2-min" placeholder="es. 0" style="width:100%; padding:6px; font-size:0.85rem;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.78rem;">Max Asse Y (Destra, opz.):</label>
+                            <input type="number" id="stat-y2-max" placeholder="es. 500" style="width:100%; padding:6px; font-size:0.85rem;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1645,7 +1675,9 @@ async function saveNewStat() {
     const product = '';
     const groupId = (document.getElementById('stat-group')?.value || '') || null;
 
+    const yMinVal = parseFloat(document.getElementById('stat-y-min')?.value);
     const yMaxVal = parseFloat(document.getElementById('stat-y-max')?.value);
+    const y2MinVal = parseFloat(document.getElementById('stat-y2-min')?.value);
     const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
     const pieModeVal = document.getElementById('stat-pie-mode')?.value || 'collaboratori';
     const pieGoalCenterVal = document.getElementById('pie-goal-center')?.checked || false;
@@ -1663,7 +1695,9 @@ async function saveNewStat() {
             existing.product = product;
             existing.pieMode = pieModeVal;
             existing.pieGoalCenter = pieGoalCenterVal;
+            existing.yMin = !isNaN(yMinVal) ? yMinVal : null;
             existing.yMax = !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null;
+            existing.y2Min = !isNaN(y2MinVal) ? y2MinVal : null;
             existing.y2Max = !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null;
             existing.groupId = groupId || null;
             await appDb.addMultiple('custom_stats', [existing]);
@@ -1683,7 +1717,9 @@ async function saveNewStat() {
             skill, type, product,
             pieMode: pieModeVal,
             pieGoalCenter: pieGoalCenterVal,
+            yMin: !isNaN(yMinVal) ? yMinVal : null,
             yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
+            y2Min: !isNaN(y2MinVal) ? y2MinVal : null,
             y2Max: !isNaN(y2MaxVal) && y2MaxVal > 0 ? y2MaxVal : null,
             groupId: groupId || null,
             templateId: activeTemplateId,
@@ -2546,6 +2582,16 @@ function parseMetricValue(val) {
     return isNaN(n) ? 0 : n;
 }
 
+function getStatiAwareValue(data, key) {
+    if (!data || !key) return undefined;
+    if (data[key] !== undefined) return data[key];
+    const stripped = key.replace(/^State Rcode - /, '');
+    if (stripped !== key && data[stripped] !== undefined) return data[stripped];
+    const prefixed = 'State Rcode - ' + stripped;
+    if (data[prefixed] !== undefined) return data[prefixed];
+    return undefined;
+}
+
 function hexToRgba(hex, opacity) {
     if (!hex || typeof hex !== 'string') return `rgba(59, 130, 246, ${opacity})`;
     hex = hex.replace('#', '');
@@ -2816,7 +2862,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
 
     const isPerf = statConfig.metric.startsWith('Performance: ');
     const isStati = statConfig.metric.startsWith('Stati: ');
-    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace('Stati: ', '');
+    const rawKey = statConfig.metric.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace('Stati: ', '').replace(/^State Rcode - /, '');
     
     const title = document.createElement('h3');
     const rawTitleText = statConfig.title || rawKey;
@@ -2978,7 +3024,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
         const date = row.date;
         const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
         const emp = row.employee;
-        const val = parseMetricValue(row.data[rawKey]);
+        const val = parseMetricValue(getStatiAwareValue(row.data, rawKey) ?? 0);
 
         datesSet.add(monthKey);
         datesWithData.add(monthKey);
@@ -3039,19 +3085,21 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
     if (!relevantGoal) {
         relevantGoal = candidateGoals.find(g => g.employee === employeeName && (!g.skill || g.skill === 'ALL')) ||
                        candidateGoals.find(g => !g.employee && (!g.skill || g.skill === 'ALL'));
-    }    function getTeamAvgPtsForMetric(m) {
+    }
+    function getTeamAvgPtsForMetric(m) {
         const isP = m.startsWith('Performance: ');
+        const isSt = m.startsWith('Stati: ');
         const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
-        const sData = isP ? perfData : salesData;
+        const sData = isSt ? statiData : (isP ? perfData : salesData);
         const empMap = {};
         sData.forEach(row => {
             if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
-            if (!isP && statConfig.product && row.data['Product'] !== statConfig.product) return;
+            if (!isP && !isSt && statConfig.product && row.data['Product'] !== statConfig.product) return;
                 const date = row.date;
                 const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
                 const emp = row.employee;
                 if (!emp) return;
-                const val = parseMetricValue(row.data[rKey]);
+                const val = parseMetricValue(getStatiAwareValue(row.data, rKey) ?? 0);
                 if (!empMap[emp]) empMap[emp] = {};
                 if (!empMap[emp][monthKey]) empMap[emp][monthKey] = 0;
                 empMap[emp][monthKey] += val;
@@ -3074,38 +3122,161 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
     if (statConfig.type === 'table') {
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
         
-        if (metricsList.length > 1 && !teamAvgOnly) {
-            // Tabella per metriche multiple
+        if (metricsList.length > 1 && !teamAvgOnly && !isIndividual) {
+            // TEAM multi-metrica: una riga per collaboratore per ogni metrica (raggruppate per collaboratore)
+            const colHeader = window.appState.isAnonymous ? 'Collab' : 'Collaboratore';
+            let html = `<table class="data-table"><thead><tr><th scope="col">${colHeader}</th><th scope="col">Metrica</th>`;
+            displayLabels.forEach(l => {
+                html += `<th scope="col" style="text-align:center;">${l}</th>`;
+            });
+            html += `<th scope="col" style="text-align:center; background:var(--bg-base); color:var(--primary);">Media</th>`;
+            html += '</tr></thead><tbody>';
+
+            employees.forEach(emp => {
+                const dispName = window.getDisplayName(emp);
+                metricsList.forEach((m, mIdx) => {
+                    const isP = m.startsWith('Performance: ');
+                    const isSt = m.startsWith('Stati: ');
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
+                    const sData = isSt ? statiData : (isP ? perfData : salesData);
+                    const color = (statConfig.colors && statConfig.colors[mIdx]) ? statConfig.colors[mIdx] : DISTINCT_COLORS[mIdx % DISTINCT_COLORS.length];
+                    const agg = {};
+                    sData.forEach(row => {
+                        if (row.employee !== emp) return;
+                        if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
+                        if (!isP && !isSt && statConfig.product && row.data['Product'] !== statConfig.product) return;
+                        const date = row.date;
+                        const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
+                        const val = parseMetricValue(getStatiAwareValue(row.data, rKey) ?? 0);
+                        if (!agg[monthKey]) agg[monthKey] = 0;
+                        agg[monthKey] += val;
+                    });
+                    const isFirstMetric = mIdx === 0;
+                    html += `<tr style="${!isFirstMetric ? 'background:rgba(127,127,127,0.02);' : ''}">`;
+                    html += `<td style="font-weight:600; white-space:nowrap;">${dispName}</td>`;
+                    html += `<td style="font-weight:600; white-space:nowrap;"><span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:${color}; display:inline-block; flex-shrink:0;"></span>${rKey}</span></td>`;
+                    let _rowSum = 0, _rowCnt = 0;
+                    labels.forEach(d => {
+                        const rawVal = datesWithData.has(d) ? (agg[d] !== undefined ? agg[d] : 0) : '';
+                        const cellVal = (typeof rawVal === 'number') ? Math.round(rawVal) : rawVal;
+                        if (typeof cellVal === 'number') { _rowSum += cellVal; _rowCnt++; }
+                        const cellHtml = renderCellHtml(cellVal);
+                        html += `<td style="text-align:center;">${cellHtml}</td>`;
+                    });
+                    const _avg = _rowCnt > 0 ? Math.round(_rowSum / _rowCnt) : '';
+                    const _avgHtml = _avg === '' ? '' : renderCellHtml(_avg);
+                    html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_avgHtml}</td>`;
+                    html += '</tr>';
+                });
+            });
+
+            if (showTeamAvg) {
+                metricsList.forEach((m, mIdx) => {
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
+                    const avgPts = getTeamAvgPtsForMetric(m);
+                    const color = (statConfig.colors && statConfig.colors[mIdx]) ? statConfig.colors[mIdx] : DISTINCT_COLORS[mIdx % DISTINCT_COLORS.length];
+                    html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
+                    html += `<td style="color:var(--primary);">Media Team</td>`;
+                    html += `<td style="color:var(--primary);"><span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:${color}; display:inline-block;"></span>${rKey}</span></td>`;
+                    let _tSum = 0, _tCnt = 0;
+                    labels.forEach((date, idx) => {
+                        const avgVal = avgPts[idx] === null ? '' : avgPts[idx];
+                        if (typeof avgVal === 'number') { _tSum += avgVal; _tCnt++; }
+                        html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
+                    });
+                    const _tAvg = _tCnt > 0 ? Math.round(_tSum / _tCnt) : '';
+                    const _tAvgCell = _tAvg === '' ? '' : `<span style="color:var(--primary);">${_tAvg}</span>`;
+                    html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_tAvgCell}</td>`;
+                    html += '</tr>';
+                });
+            }
+
+            if (showTeamGoal && relevantGoal) {
+                html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
+                html += `<td style="color:#D946EF;">Obiettivo</td><td style="color:#D946EF;"></td>`;
+                labels.forEach(() => {
+                    const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                    html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
+                });
+                const _gAvg = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                html += `<td style="text-align:center; color:#D946EF; font-weight:700; background:var(--bg-base);">${_gAvg}</td>`;
+                html += '</tr>';
+            }
+
+            html += '</tbody></table>';
+            canvasContainer.innerHTML = html;
+        } else if (metricsList.length > 1 && !teamAvgOnly && isIndividual) {
+            // INDIVIDUALE multi-metrica: una riga per metrica (solo collaboratore selezionato) con colonna Media
             let html = `<table class="data-table"><thead><tr><th scope="col">Dato / Metrica</th>`;
             displayLabels.forEach(l => {
                 html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
+            html += `<th scope="col" style="text-align:center; background:var(--bg-base); color:var(--primary);">Media</th>`;
             html += '</tr></thead><tbody>';
 
-            metricsList.forEach(m => {
+            metricsList.forEach((m, mIdx) => {
                 const isP = m.startsWith('Performance: ');
+                const isSt = m.startsWith('Stati: ');
                 const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
-                const sData = isP ? perfData : salesData;
+                const sData = isSt ? statiData : (isP ? perfData : salesData);
+                const color = (statConfig.colors && statConfig.colors[mIdx]) ? statConfig.colors[mIdx] : DISTINCT_COLORS[mIdx % DISTINCT_COLORS.length];
                 const agg = {};
                 sData.forEach(row => {
                     if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
-                    if (isIndividual && employeeName && row.employee !== employeeName) return;
+                    if (row.employee !== employeeName) return;
                     const date = row.date;
                     const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
-                    const val = parseMetricValue(row.data[rKey]);
+                    const val = parseMetricValue(getStatiAwareValue(row.data, rKey) ?? 0);
                     if (!agg[monthKey]) agg[monthKey] = 0;
                     agg[monthKey] += val;
                 });
 
-                html += `<tr><td style="font-weight:600;">${rKey}</td>`;
+                html += `<tr><td style="font-weight:600;"><span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:${color}; display:inline-block;"></span>${rKey}</span></td>`;
+                let _rowSum = 0;
+                let _rowCnt = 0;
                 labels.forEach(d => {
                     const rawVal = datesWithData.has(d) ? (agg[d] !== undefined ? agg[d] : 0) : '';
                     const cellVal = (typeof rawVal === 'number') ? Math.round(rawVal) : rawVal;
+                    if (typeof cellVal === 'number') { _rowSum += cellVal; _rowCnt++; }
                     const cellHtml = renderCellHtml(cellVal);
                     html += `<td style="text-align:center;">${cellHtml}</td>`;
                 });
+                const _avg = _rowCnt > 0 ? Math.round(_rowSum / _rowCnt) : '';
+                const _avgHtml = _avg === '' ? '' : renderCellHtml(_avg);
+                html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_avgHtml}</td>`;
                 html += '</tr>';
             });
+
+            if (showTeamAvg) {
+                metricsList.forEach((m, mIdx) => {
+                    const rKey = m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
+                    const avgPts = getTeamAvgPtsForMetric(m);
+                    const color = (statConfig.colors && statConfig.colors[mIdx]) ? statConfig.colors[mIdx] : DISTINCT_COLORS[mIdx % DISTINCT_COLORS.length];
+                    html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
+                    html += `<td style="color:var(--primary);"><span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:${color}; display:inline-block;"></span>Media Team (${rKey})</span></td>`;
+                    let _tSum = 0, _tCnt = 0;
+                    labels.forEach((date, idx) => {
+                        const avgVal = avgPts[idx] === null ? '' : avgPts[idx];
+                        if (typeof avgVal === 'number') { _tSum += avgVal; _tCnt++; }
+                        html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
+                    });
+                    const _tAvg = _tCnt > 0 ? Math.round(_tSum / _tCnt) : '';
+                    html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_tAvg === '' ? '' : _tAvg}</td>`;
+                    html += '</tr>';
+                });
+            }
+
+            if (showTeamGoal && relevantGoal) {
+                html += '<tr style="font-weight:700; background: rgba(127,127,127,0.05); border-top: 1px dashed var(--border);">';
+                html += `<td style="color:#D946EF;">Obiettivo</td>`;
+                labels.forEach(() => {
+                    const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                    html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
+                });
+                const _gAvg = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                html += `<td style="text-align:center; color:#D946EF; font-weight:700; background:var(--bg-base);">${_gAvg}</td>`;
+                html += '</tr>';
+            }
 
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
@@ -3115,25 +3286,36 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             displayLabels.forEach(l => {
                 html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
+            html += `<th scope="col" style="text-align:center; background:var(--bg-base); color:var(--primary);">Media</th>`;
             html += '</tr></thead><tbody>';
 
             const dispName = employeeName ? window.getDisplayName(employeeName) : 'Valore';
             html += `<tr><td style="font-weight:600;">${dispName}</td>`;
+            let _indSum = 0, _indCnt = 0;
             displayLabels.forEach((l, idx) => {
                 const val = dataPts[idx];
                 const displayVal = val === null ? '' : (typeof val === 'number' ? Math.round(val) : val);
+                if (typeof displayVal === 'number') { _indSum += displayVal; _indCnt++; }
                 const cellHtml = renderCellHtml(displayVal);
                 html += `<td style="text-align:center;">${cellHtml}</td>`;
             });
+            const _indAvg = _indCnt > 0 ? Math.round(_indSum / _indCnt) : '';
+            const _indAvgHtml = _indAvg === '' ? '' : renderCellHtml(_indAvg);
+            html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_indAvgHtml}</td>`;
             html += '</tr>';
 
             if (showTeamAvg) {
                 html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
-                html += `<td>Media Team</td>`;
+                html += `<td style="color:var(--primary);">Media Team</td>`;
+                let _teamSum = 0, _teamCnt = 0;
                 labels.forEach((date, idx) => {
                     const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
+                    if (typeof avgVal === 'number') { _teamSum += avgVal; _teamCnt++; }
                     html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
                 });
+                const _teamAvg = _teamCnt > 0 ? Math.round(_teamSum / _teamCnt) : '';
+                const _teamAvgCell = _teamAvg === '' ? '' : `<span style="color:var(--primary);">${_teamAvg}</span>`;
+                html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_teamAvgCell}</td>`;
                 html += '</tr>';
             }
 
@@ -3144,17 +3326,20 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                     const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
                     html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
                 });
+                const _goalAvg = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                html += `<td style="text-align:center; color:#D946EF; font-weight:700; background:var(--bg-base);">${_goalAvg}</td>`;
                 html += '</tr>';
             }
 
             html += '</tbody></table>';
             canvasContainer.innerHTML = html;
         } else if (teamAvgOnly) {
-            // Solo Media Team nella tabella
+            // Solo Media Team nella tabella - con colonna Media
             let html = '<table class="data-table"><thead><tr><th scope="col">Metrica</th>';
             displayLabels.forEach(l => {
                 html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
+            html += `<th scope="col" style="text-align:center; background:var(--bg-base); color:var(--primary);">Media</th>`;
             html += '</tr></thead><tbody>';
 
             metricsList.forEach(m => {
@@ -3162,11 +3347,16 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                 const avgPts = getTeamAvgPtsForMetric(m);
                 const labelText = metricsList.length > 1 ? `Media Team (${rKey})` : 'Media Team';
                 html += '<tr style="font-weight:700;">';
-                html += `<td>${labelText}</td>`;
+                html += `<td style="color:var(--primary);">${labelText}</td>`;
+                let _sSum = 0, _sCnt = 0;
                 labels.forEach((date, idx) => {
                     const avgVal = avgPts[idx] === null ? '' : avgPts[idx];
+                    if (typeof avgVal === 'number') { _sSum += avgVal; _sCnt++; }
                     html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
                 });
+                const _sAvg = _sCnt > 0 ? Math.round(_sSum / _sCnt) : '';
+                const _sAvgCell = _sAvg === '' ? '' : `<span style="color:var(--primary);">${_sAvg}</span>`;
+                html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_sAvgCell}</td>`;
                 html += '</tr>';
             });
 
@@ -3177,6 +3367,8 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                     const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
                     html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
                 });
+                const _gAvg = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                html += `<td style="text-align:center; color:#D946EF; font-weight:700; background:var(--bg-base);">${_gAvg}</td>`;
                 html += '</tr>';
             }
 
@@ -3188,30 +3380,41 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             displayLabels.forEach(l => {
                 html += `<th scope="col" style="text-align:center;">${l}</th>`;
             });
+            html += `<th scope="col" style="text-align:center; background:var(--bg-base); color:var(--primary);">Media</th>`;
             html += '</tr></thead><tbody>';
 
             employees.forEach(emp => {
                 const dispName = window.getDisplayName(emp);
                 html += `<tr><td style="font-weight:600;">${dispName}</td>`;
+                let _rowSum = 0, _rowCnt = 0;
                 labels.forEach(date => {
                     let raw = '';
                     if (datesWithData.has(date)) {
                         raw = (empDateMap[emp] && empDateMap[emp][date] !== undefined) ? empDateMap[emp][date] : 0;
                     }
                     const cellVal = (typeof raw === 'number') ? Math.round(raw) : raw;
+                    if (typeof cellVal === 'number') { _rowSum += cellVal; _rowCnt++; }
                     const cellHtml = renderCellHtml(cellVal);
                     html += `<td style="text-align:center;">${cellHtml}</td>`;
                 });
+                const _avg = _rowCnt > 0 ? Math.round(_rowSum / _rowCnt) : '';
+                const _avgHtml = _avg === '' ? '' : renderCellHtml(_avg);
+                html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_avgHtml}</td>`;
                 html += '</tr>';
             });
 
             if (showTeamAvg) {
                 html += '<tr style="font-weight:700; background: rgba(127,127,127,0.1); border-top: 2px solid var(--border);">';
-                html += `<td>Media Team</td>`;
+                html += `<td style="color:var(--primary);">Media Team</td>`;
+                let _tSum = 0, _tCnt = 0;
                 labels.forEach((date, idx) => {
                     const avgVal = teamAvgPts[idx] === null ? '' : teamAvgPts[idx];
+                    if (typeof avgVal === 'number') { _tSum += avgVal; _tCnt++; }
                     html += `<td style="text-align:center; color: var(--primary);">${avgVal}</td>`;
                 });
+                const _tAvg = _tCnt > 0 ? Math.round(_tSum / _tCnt) : '';
+                const _tAvgCell = _tAvg === '' ? '' : `<span style="color:var(--primary);">${_tAvg}</span>`;
+                html += `<td style="text-align:center; font-weight:700; background:var(--bg-base); color:var(--primary);">${_tAvgCell}</td>`;
                 html += '</tr>';
             }
 
@@ -3222,6 +3425,8 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                     const targetVal = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
                     html += `<td style="text-align:center; color: #D946EF; font-weight:700;">${targetVal}</td>`;
                 });
+                const _gAvg = relevantGoal.target !== undefined && relevantGoal.target !== null ? relevantGoal.target : '';
+                html += `<td style="text-align:center; color:#D946EF; font-weight:700; background:var(--bg-base);">${_gAvg}</td>`;
                 html += '</tr>';
             }
 
@@ -3507,7 +3712,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                 sData.forEach(row => {
                     if (isIndividual && employeeName && row.employee !== employeeName) return;
                     if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
-                    sum += parseMetricValue(row.data[rKey]);
+                    sum += parseMetricValue(getStatiAwareValue(row.data, rKey) ?? 0);
                 });
                 metricTotals[rKey] = sum;
             });
@@ -3616,7 +3821,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                         if (row.employee !== employeeName) return;
                         const date = row.date;
                         const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
-                        const val = parseMetricValue(row.data[rKey]);
+                        const val = parseMetricValue(getStatiAwareValue(row.data, rKey) ?? 0);
                         if (!dateAgg[monthKey]) dateAgg[monthKey] = 0;
                         dateAgg[monthKey] += val;
                     });
@@ -3703,7 +3908,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
                         const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
                         const emp = row.employee;
                         if (!emp) return;
-                        const val = parseMetricValue(row.data[rKey]);
+                        const val = parseMetricValue(getStatiAwareValue(row.data, rKey) ?? 0);
                         if (!empMap[emp]) empMap[emp] = {};
                         if (!empMap[emp][monthKey]) empMap[emp][monthKey] = 0;
                         empMap[emp][monthKey] += val;
@@ -3950,8 +4155,12 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
         }
 
         let yScalesConfig = {};
-        if (statConfig.yMax && !isNaN(statConfig.yMax)) {
-            yScalesConfig = { beginAtZero: true, max: statConfig.yMax };
+        const hasYMin = statConfig.yMin !== null && statConfig.yMin !== undefined && !isNaN(statConfig.yMin);
+        const hasYMax = statConfig.yMax !== null && statConfig.yMax !== undefined && !isNaN(statConfig.yMax);
+        if (hasYMin || hasYMax) {
+            if (hasYMin) yScalesConfig.min = statConfig.yMin;
+            else yScalesConfig.beginAtZero = true;
+            if (hasYMax) yScalesConfig.max = statConfig.yMax;
         } else if (allVals.length > 0) {
             const minVal = Math.min(...allVals);
             const maxVal = Math.max(...allVals);
@@ -3993,8 +4202,12 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
 
         if (isMultiMetrics) {
             let y2ScalesConfig = {};
-            if (statConfig.y2Max && !isNaN(statConfig.y2Max)) {
-                y2ScalesConfig = { beginAtZero: true, max: statConfig.y2Max };
+            const hasY2Min = statConfig.y2Min !== null && statConfig.y2Min !== undefined && !isNaN(statConfig.y2Min);
+            const hasY2Max = statConfig.y2Max !== null && statConfig.y2Max !== undefined && !isNaN(statConfig.y2Max);
+            if (hasY2Min || hasY2Max) {
+                if (hasY2Min) y2ScalesConfig.min = statConfig.y2Min;
+                else y2ScalesConfig.beginAtZero = true;
+                if (hasY2Max) y2ScalesConfig.max = statConfig.y2Max;
             } else if (allY2Vals.length > 0) {
                 const minVal = Math.min(...allY2Vals);
                 const maxVal = Math.max(...allY2Vals);
@@ -4269,10 +4482,10 @@ async function saveStatsOrder(orderedStats) {
 // ============================================================
 
 const GOAL_COLORS = {
-    notReached: { bg: 'rgba(244,114,182,0.16)', label: 'Non raggiunto' },
-    almost:     { bg: 'rgba(250,204,21,0.16)',  label: 'Quasi raggiunto' },
-    reached:    { bg: 'rgba(34,197,94,0.16)',   label: 'Raggiunto' },
-    surpassed:  { bg: 'rgba(168,85,247,0.18)',  label: 'Superato' }
+    notReached: { bg: 'transparent', border: 'var(--border)', label: 'Non raggiunto' },
+    almost:     { bg: 'rgba(234,179,8,0.32)',  border: '#eab308', label: 'Quasi raggiunto' },
+    reached:    { bg: 'rgba(34,197,94,0.32)',  border: '#22c55e', label: 'Raggiunto' },
+    surpassed:  { bg: 'rgba(168,85,247,0.32)', border: '#a855f7', label: 'Superato' }
 };
 
 const DEFAULT_ALMOST_PCT = 80;
@@ -4304,16 +4517,17 @@ function getGoalReachedKey(actual, target, p) {
 function goalCellStyle(actual, target, p) {
     const key = getGoalReachedKey(actual, target, p);
     if (!key || key === 'notReached') return '';
-    return `background:${GOAL_COLORS[key].bg};`;
+    const c = GOAL_COLORS[key];
+    return `background:${c.bg};`;
 }
 
 function buildGoalLegendHTML() {
     return `
-        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:0.74rem; color:var(--text-muted);">
-            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:transparent; border:1px solid var(--border);"></span> ${GOAL_COLORS.notReached.label}</span>
-            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:${GOAL_COLORS.almost.bg};"></span> ${GOAL_COLORS.almost.label}</span>
-            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:${GOAL_COLORS.reached.bg};"></span> ${GOAL_COLORS.reached.label}</span>
-            <span style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span style="width:12px; height:12px; border-radius:3px; background:${GOAL_COLORS.surpassed.bg};"></span> ${GOAL_COLORS.surpassed.label}</span>
+        <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; font-size:0.82rem; color:var(--text-muted); font-weight:500;">
+            <span style="display:inline-flex; align-items:center; gap:7px; white-space:nowrap;"><span style="width:14px; height:14px; border-radius:4px; background:${GOAL_COLORS.notReached.bg}; border:1.5px solid ${GOAL_COLORS.notReached.border};"></span> ${GOAL_COLORS.notReached.label}</span>
+            <span style="display:inline-flex; align-items:center; gap:7px; white-space:nowrap;"><span style="width:14px; height:14px; border-radius:4px; background:${GOAL_COLORS.almost.bg}; border:1.5px solid ${GOAL_COLORS.almost.border};"></span> ${GOAL_COLORS.almost.label}</span>
+            <span style="display:inline-flex; align-items:center; gap:7px; white-space:nowrap;"><span style="width:14px; height:14px; border-radius:4px; background:${GOAL_COLORS.reached.bg}; border:1.5px solid ${GOAL_COLORS.reached.border};"></span> ${GOAL_COLORS.reached.label}</span>
+            <span style="display:inline-flex; align-items:center; gap:7px; white-space:nowrap;"><span style="width:14px; height:14px; border-radius:4px; background:${GOAL_COLORS.surpassed.bg}; border:1.5px solid ${GOAL_COLORS.surpassed.border};"></span> ${GOAL_COLORS.surpassed.label}</span>
         </div>
     `;
 }
@@ -4341,7 +4555,7 @@ function calcActualForMetric(mappedMetrics, perfData, salesData, employee, isCHF
 
             let val = 0;
             if (isPerf) {
-                val = parseMetricValue(row.data[rawKey] ?? 0);
+                val = parseMetricValue(getStatiAwareValue(row.data, rawKey) ?? 0);
             } else {
                 // Sales data
                 const rowProduct = row.data.Product || '';
@@ -4366,7 +4580,7 @@ function calcActualForMetric(mappedMetrics, perfData, salesData, employee, isCHF
                         val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data[rawKey] ?? row.data['Nb Events'] ?? 1);
                     }
                 } else if (row.data[rawKey] !== undefined) {
-                    val = parseMetricValue(row.data[rawKey]);
+                    val = parseMetricValue(getStatiAwareValue(row.data, rawKey) ?? 0);
                 } else if (normKey.includes('internet') && (normProduct.includes('internet') || normProduct.includes('bb acq'))) {
                     val = parseMetricValue(row.data.Value ?? row.data.Quantity ?? row.data['Nb Events'] ?? 1);
                 } else if (normKey.includes('tv') && normProduct.includes('tv')) {
@@ -4555,7 +4769,7 @@ async function openGoalThresholdsModal(year, tableId) {
         modal = document.createElement('div');
         modal.id = 'goal-thresholds-modal';
         modal.className = 'modal';
-        modal.style.cssText = 'max-width: 640px; width: 94%; border-radius: 12px;';
+        modal.style.cssText = 'max-width: 740px; width: 96%; border-radius: 14px; max-height: 86vh;';
         document.body.appendChild(modal);
     }
 
@@ -4578,36 +4792,54 @@ async function openGoalThresholdsModal(year, tableId) {
     };
 
     modal.innerHTML = `
-        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
-            <h2 style="font-size:1.1rem; font-weight:700; margin:0; color:var(--text-main);">Soglie Colori Realizzato — ${title}</h2>
-            <button class="close-modal" id="close-thr-modal" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border);">
+            <h2 style="font-size:1rem; font-weight:800; margin:0; color:var(--text-main); letter-spacing:-0.02em;">Soglie Colori Realizzato — ${title}</h2>
+            <button class="close-modal" id="close-thr-modal" style="background:var(--bg-base); border:1px solid var(--border); width:30px; height:30px; border-radius:7px; font-size:1.25rem; cursor:pointer; color:var(--text-muted); display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1;">&times;</button>
         </div>
-        <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:16px;">
-
-            ${buildGoalLegendHTML()}
-            <div id="threshold-cols-list" style="display:flex; flex-direction:column; gap:10px;">
+        <div class="modal-body" style="padding:12px 16px; display:flex; flex-direction:column; gap:10px; overflow-y:auto; flex:1; min-height:0;">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; padding:8px 10px; background:var(--bg-base); border:1px solid var(--border); border-radius:8px;">
+                <div style="display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:0.68rem; font-weight:600; color:var(--text-muted);">
+                    <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:2px; background:transparent; border:1px solid var(--border);"></span> Non raggiunto</span>
+                    <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:2px; background:rgba(234,179,8,0.32); border:1px solid #eab308;"></span> Quasi</span>
+                    <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:2px; background:rgba(34,197,94,0.32); border:1px solid #22c55e;"></span> Raggiunto</span>
+                    <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:2px; background:rgba(168,85,247,0.32); border:1px solid #a855f7;"></span> Superato</span>
+                </div>
+                <span style="margin-left:auto; font-size:0.66rem; color:var(--text-muted); white-space:nowrap; border-left:1px solid var(--border); padding-left:10px;">Es: &lt;80% non raggiunto · 80–99% quasi · 100–104% raggiunto · ≥105% superato</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:4px 10px 0; font-size:0.62rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-muted);">
+                <span style="flex:1;">Prodotto</span>
+                <span style="flex:0 0 108px; text-align:center;">Modalità</span>
+                <span style="flex:0 0 78px; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:4px;"><span style="width:7px; height:7px; border-radius:2px; background:#eab308;"></span> Quasi</span>
+                <span style="flex:0 0 78px; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:4px;"><span style="width:7px; height:7px; border-radius:2px; background:#a855f7;"></span> Superato</span>
+            </div>
+            <div id="threshold-cols-list" style="display:flex; flex-direction:column; gap:6px;">
                 ${products.map((p, idx) => {
                     const m = modes[idx];
-                    const lbl = modeLabels[m];
                     const vals = m === 'pct' ? pctVals[idx] : valVals[idx];
+                    const unit = m === 'pct' ? '%' : '';
                     return `
-                    <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-base); flex-wrap:wrap;">
-                        <span style="font-weight:700; font-size:0.85rem; color:var(--text-main); flex:1; min-width:120px; word-break:break-word;">${p.label}</span>
-                        <span class="thr-mode-toggle" data-idx="${idx}" title="Clicca per cambiare modalità" style="cursor:pointer; font-size:0.68rem; padding:3px 8px; border-radius:6px; font-weight:700; letter-spacing:0.03em; ${m === 'val' ? 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4);' : 'background:rgba(99,102,241,0.2); color:var(--primary); border:1px solid rgba(99,102,241,0.4);'}">${m === 'val' ? 'VAL' : 'PCT'}</span>
-                        <label style="font-size:0.78rem; color:var(--text-muted); display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span class="thr-almost-label" data-idx="${idx}">${lbl.almost}</span>
-                            <input type="number" class="thr-almost-input" data-idx="${idx}" value="${vals[0]}" min="0" step="any" style="width:70px; padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; text-align:center;"><span class="thr-almost-unit" data-idx="${idx}">${lbl.unit}</span>
-                        </label>
-                        <label style="font-size:0.78rem; color:var(--text-muted); display:inline-flex; align-items:center; gap:6px; white-space:nowrap;"><span class="thr-surpass-label" data-idx="${idx}">${lbl.surpass}</span>
-                            <input type="number" class="thr-surpass-input" data-idx="${idx}" value="${vals[1]}" min="0" step="any" style="width:70px; padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:600; text-align:center;"><span class="thr-surpass-unit" data-idx="${idx}">${lbl.unit}</span>
-                        </label>
+                    <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-base);">
+                        <span style="font-weight:700; font-size:0.84rem; color:var(--text-main); flex:1; min-width:0; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.label}">${p.label}</span>
+                        <div style="display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; flex:0 0 108px; background:var(--bg-surface);" role="group" aria-label="Modalità soglia">
+                            <button type="button" class="thr-mode-btn" data-idx="${idx}" data-mode="pct" title="Percentuale sul target" style="flex:1; padding:6px 0; font-size:0.62rem; font-weight:800; letter-spacing:0.04em; border:none; cursor:pointer; line-height:1; ${m==='pct' ? 'background:rgba(59,130,246,0.18); color:#3b82f6;' : 'background:transparent; color:var(--text-muted);'}">% PCT</button>
+                            <button type="button" class="thr-mode-btn" data-idx="${idx}" data-mode="val" title="Valore assoluto" style="flex:1; padding:6px 0; font-size:0.62rem; font-weight:800; letter-spacing:0.04em; border:none; border-left:1px solid var(--border); cursor:pointer; line-height:1; ${m==='val' ? 'background:rgba(16,185,129,0.18); color:#10b981;' : 'background:transparent; color:var(--text-muted);'}">VALORE</button>
+                        </div>
+                        <div style="flex:0 0 78px; display:flex; align-items:center; justify-content:center; gap:3px;">
+                            <input type="number" class="thr-almost-input" data-idx="${idx}" value="${vals[0]}" min="0" step="any" style="width:62px; padding:6px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:700; font-size:0.86rem; text-align:center; outline:none;">
+                            <span class="thr-almost-unit" data-idx="${idx}" style="font-size:0.76rem; font-weight:700; color:var(--text-muted); min-width:10px; text-align:left;">${unit}</span>
+                        </div>
+                        <div style="flex:0 0 78px; display:flex; align-items:center; justify-content:center; gap:3px;">
+                            <input type="number" class="thr-surpass-input" data-idx="${idx}" value="${vals[1]}" min="0" step="any" style="width:62px; padding:6px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-main); font-weight:700; font-size:0.86rem; text-align:center; outline:none;">
+                            <span class="thr-surpass-unit" data-idx="${idx}" style="font-size:0.76rem; font-weight:700; color:var(--text-muted); min-width:10px; text-align:left;">${unit}</span>
+                        </div>
                     </div>
                     `;
                 }).join('')}
             </div>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--border);">
-            <button class="btn secondary" id="cancel-thr-btn" style="padding:6px 16px; font-size:0.85rem;">Annulla</button>
-            <button class="btn primary" id="save-thr-btn" style="padding:6px 16px; font-size:0.85rem;">Salva Soglie</button>
+        <div style="display:flex; justify-content:flex-end; gap:8px; padding:10px 16px; border-top:1px solid var(--border); background:var(--bg-surface); border-radius:0 0 14px 14px;">
+            <button class="btn secondary" id="cancel-thr-btn" style="padding:7px 14px; font-size:0.82rem; font-weight:600; border-radius:7px; min-width:84px;">Annulla</button>
+            <button class="btn primary" id="save-thr-btn" style="padding:7px 18px; font-size:0.82rem; font-weight:700; border-radius:7px; min-width:116px;">Salva Soglie</button>
         </div>
     `;
 
@@ -4615,33 +4847,35 @@ async function openGoalThresholdsModal(year, tableId) {
         const m = modes[idx];
         const lbl = modeLabels[m];
         const vals = m === 'pct' ? pctVals[idx] : valVals[idx];
-        const toggle = modal.querySelector(`.thr-mode-toggle[data-idx="${idx}"]`);
-        const almostLabel = modal.querySelector(`.thr-almost-label[data-idx="${idx}"]`);
+        const pctBtn = modal.querySelector(`.thr-mode-btn[data-idx="${idx}"][data-mode="pct"]`);
+        const valBtn = modal.querySelector(`.thr-mode-btn[data-idx="${idx}"][data-mode="val"]`);
         const almostUnit = modal.querySelector(`.thr-almost-unit[data-idx="${idx}"]`);
         const almostInp = modal.querySelector(`.thr-almost-input[data-idx="${idx}"]`);
-        const surpassLabel = modal.querySelector(`.thr-surpass-label[data-idx="${idx}"]`);
         const surpassUnit = modal.querySelector(`.thr-surpass-unit[data-idx="${idx}"]`);
         const surpassInp = modal.querySelector(`.thr-surpass-input[data-idx="${idx}"]`);
-        if (toggle) {
-            toggle.textContent = m === 'val' ? 'VAL' : 'PCT';
-            toggle.style.background = m === 'val' ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.2)';
-            toggle.style.color = m === 'val' ? '#10b981' : 'var(--primary)';
-            toggle.style.border = m === 'val' ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(99,102,241,0.4)';
+        if (pctBtn) {
+            const isPct = m === 'pct';
+            pctBtn.style.background = isPct ? 'rgba(59,130,246,0.18)' : 'transparent';
+            pctBtn.style.color = isPct ? '#3b82f6' : 'var(--text-muted)';
         }
-        if (almostLabel) almostLabel.textContent = lbl.almost;
+        if (valBtn) {
+            const isVal = m === 'val';
+            valBtn.style.background = isVal ? 'rgba(16,185,129,0.18)' : 'transparent';
+            valBtn.style.color = isVal ? '#10b981' : 'var(--text-muted)';
+        }
         if (almostUnit) almostUnit.textContent = lbl.unit;
-        if (surpassLabel) surpassLabel.textContent = lbl.surpass;
         if (surpassUnit) surpassUnit.textContent = lbl.unit;
         if (almostInp) almostInp.value = vals[0];
         if (surpassInp) surpassInp.value = vals[1];
     };
 
-    modal.querySelectorAll('.thr-mode-toggle').forEach(toggle => {
-        toggle.onclick = () => {
-            const idx = parseInt(toggle.dataset.idx, 10);
-            if (isNaN(idx)) return;
+    modal.querySelectorAll('.thr-mode-btn').forEach(btn => {
+        btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx, 10);
+            const target = btn.dataset.mode;
+            if (isNaN(idx) || (target !== 'pct' && target !== 'val')) return;
+            if (modes[idx] === target) return;
             const cur = modes[idx];
-            const target = cur === 'pct' ? 'val' : 'pct';
             const almostInp = modal.querySelector(`.thr-almost-input[data-idx="${idx}"]`);
             const surpassInp = modal.querySelector(`.thr-surpass-input[data-idx="${idx}"]`);
             const store = cur === 'pct' ? pctVals[idx] : valVals[idx];

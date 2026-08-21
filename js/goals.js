@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabListBtn) tabListBtn.classList.toggle('active', isEfficienza);
         if (tabSalesBtn) tabSalesBtn.classList.toggle('active', isSales);
         if (tabStatiBtn) tabStatiBtn.classList.toggle('active', isStati);
+        // Stati come Efficienza: singolo obiettivo (card), non tabella. Condivide lo stesso container lista.
         if (containerList) containerList.style.display = (isEfficienza || isStati) ? 'block' : 'none';
         if (containerSales) containerSales.style.display = isSales ? 'block' : 'none';
         if (containerStati) containerStati.style.display = 'none';
@@ -92,6 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeGoalsTab === 'sales') renderSalesGoalsTable('sales');
         else if (window.renderGoals) window.renderGoals();
     };
+    // Espone per app.js (toggle anonimo / cambio anno) la resa corretta del tab attivo
+    window.getActiveGoalsTab = () => activeGoalsTab;
+    window.renderSalesGoalsTable = renderSalesGoalsTable;
     if (window.appState && window.appState.activeYear !== undefined) {
         bootGoalsTab();
     } else {
@@ -112,9 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const filteredGoals = goals.filter(g => {
             const metricStr = (g.metric || '').toLowerCase();
-            if (activeGoalsTab === 'stati' && !(g.metric || '').startsWith('Stati: ')) return false;
-            if (activeGoalsTab === 'sales' && !(g.metric || '').startsWith('Sales: ')) return false;
-            if (activeGoalsTab === 'efficienza' && ((g.metric || '').startsWith('Sales: ') || (g.metric || '').startsWith('Stati: '))) return false;
+            const gid = String(g.id || '');
+            const isSaleGoal = (g.metric || '').startsWith('Sales: ') || gid.startsWith('salestable_');
+            const isStatiGoal = (g.metric || '').startsWith('Stati: ') || gid.startsWith('statitable_');
+            if (activeGoalsTab === 'stati' && !isStatiGoal) return false;
+            if (activeGoalsTab === 'sales' && !isSaleGoal) return false;
+            if (activeGoalsTab === 'efficienza' && (isSaleGoal || isStatiGoal)) return false;
             if (!query) return true;
             const skillStr = (g.skill || '').toLowerCase();
             const empStr = (g.employee ? window.getDisplayName(g.employee) : 'tutto il team').toLowerCase();
@@ -140,7 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'card';
             const skillText = g.skill && g.skill !== 'ALL' ? g.skill : 'Tutte le Skill';
             const empText = g.employee ? window.getDisplayName(g.employee) : 'Tutto il Team';
-            const displayMetric = activeGoalsTab === 'efficienza' ? g.metric.replace(/^Performance:\s*/, '') : g.metric;
+            let displayMetric = g.metric || '';
+            if (activeGoalsTab === 'efficienza') displayMetric = displayMetric.replace(/^Performance:\s*/, '');
+            else if (activeGoalsTab === 'stati') displayMetric = displayMetric.replace(/^Stati:\s*/, '').replace(/^State Rcode - /, '');
+            else displayMetric = displayMetric.replace(/^Sales:\s*/, '').replace(/^Performance:\s*/, '').replace(/^Stati:\s*/, '').replace(/^State Rcode - /, '');
             
             let tolLabel = '';
             let rangeLabel = null;
@@ -167,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            card.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 20px; flex-wrap:wrap; margin-bottom:12px;';
+            card.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:20px; padding:10px 14px; flex-wrap:wrap; margin-bottom:0;';
 
             card.innerHTML = `
                 <div style="flex:1; min-width:240px;">
@@ -262,6 +272,18 @@ async function renderSalesGoalsTable(kind = 'sales') {
     const container = document.getElementById(TK.containerId);
     if (!container) return;
 
+    // Lo scroll reale è su .content (body è overflow:hidden, vedi style.css:85-91 / layout.css:449)
+    const scrollEl = document.querySelector('.content');
+    const savedContentTop = scrollEl ? scrollEl.scrollTop : 0;
+    const savedWindowY = window.scrollY;
+    const savedDocTop = document.documentElement ? document.documentElement.scrollTop : 0;
+
+    const restoreScroll = () => {
+        if (scrollEl && scrollEl.scrollTop !== savedContentTop) scrollEl.scrollTop = savedContentTop;
+        if (window.scrollY !== savedWindowY) window.scrollTo(0, savedWindowY);
+        if (document.documentElement && document.documentElement.scrollTop !== savedDocTop) document.documentElement.scrollTop = savedDocTop;
+    };
+
     const year = window.appState?.activeYear || new Date().getFullYear();
     const tablesList = await getSalesTablesList(year, kind);
     const configuredSkills = (await appDb.getSetting('skills', [])) || [];
@@ -290,7 +312,19 @@ async function renderSalesGoalsTable(kind = 'sales') {
     const perfData = await appDb.getAll('performance', 'year', year);
     const salesData = await appDb.getAll('sales', 'year', year);
     const statiData = await appDb.getAll('stati', 'year', year);
-    const collabWorkPcts = (await appDb.getSetting(TK.workPcts, {})) || {};
+    // Occupazione per anno: chiave con suffisso anno, con fallback/migrazione dalla vecchia chiave globale
+    const workPctsKeyYear = `${TK.workPcts}_${year}`;
+    let collabWorkPcts = await appDb.getSetting(workPctsKeyYear, null);
+    if (collabWorkPcts === null || collabWorkPcts === undefined) {
+        const legacy = (await appDb.getSetting(TK.workPcts, null));
+        if (legacy && typeof legacy === 'object' && Object.keys(legacy).length > 0) {
+            collabWorkPcts = legacy;
+            await appDb.setSetting(workPctsKeyYear, collabWorkPcts);
+        } else {
+            collabWorkPcts = {};
+        }
+    }
+    collabWorkPcts = collabWorkPcts || {};
 
     const salesMetricsSet = new Set();
     salesData.forEach(d => {
@@ -305,7 +339,7 @@ async function renderSalesGoalsTable(kind = 'sales') {
     });
     const statiMetricsSet = new Set();
     statiData.forEach(d => {
-        Object.keys(d.data || {}).forEach(k => statiMetricsSet.add(k));
+        Object.keys(d.data || {}).forEach(k => statiMetricsSet.add(k.replace(/^State Rcode - /, '')));
     });
     const availableSalesMetrics = (isStati ? Array.from(statiMetricsSet) : Array.from(salesMetricsSet)).sort();
 
@@ -432,15 +466,15 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                 <th scope="col" style="padding:12px; text-align:left; border-right:1px solid var(--border); width:180px; min-width:160px; font-weight:700;">Collaboratore</th>
                                 <th scope="col" style="padding:12px 6px; text-align:center; border-right:1px solid var(--border); width:95px; min-width:85px; font-weight:700;">Occupazione</th>
                                 ${products.map((p, idx) => `
-                                    <th scope="col" style="padding:12px 10px; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); ${editMode ? 'width:250px; min-width:240px;' : 'width:155px; min-width:145px;'} position:relative;">
-                                        <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                                    <th scope="col" style="padding:${editMode ? '6px 10px' : '12px 10px'}; text-align:center; border-right:1px solid var(--border); font-weight:700; background:rgba(59,130,246,0.05); ${editMode ? 'width:250px; min-width:240px;' : 'width:155px; min-width:145px;'} position:relative;">
+                                        <div style="display:flex; flex-direction:column; align-items:center; gap:${editMode ? '4px' : '8px'};">
                                             ${editMode ? `
-                                                <div style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; background:var(--bg-surface); padding:4px; border-radius:8px; border:1px solid var(--border); box-sizing:border-box;">
-                                                    <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="-1" title="Sposta a sinistra" ${idx === 0 ? 'disabled style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-muted); cursor:default; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box; opacity:0.3;"' : 'style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); cursor:pointer; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box;"'} onmouseover="if(!this.disabled){this.style.background=\'var(--primary)\'; this.style.borderColor=\'var(--primary)\'; this.style.color=\'#fff\';}" onmouseout="if(!this.disabled){this.style.background=\'var(--bg-base)\'; this.style.borderColor=\'var(--border)\'; this.style.color=\'var(--text-main)\';}">
-                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                                <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; box-sizing:border-box; line-height:0;">
+                                                    <button type="button" class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="-1" title="Sposta a sinistra" ${idx === 0 ? 'disabled style="background:none; border:none; color:var(--text-muted); cursor:default; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:16px; box-sizing:border-box; opacity:0.25;"' : 'style="background:none; border:none; color:var(--text-main); cursor:pointer; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:16px; box-sizing:border-box;"'} onmouseover="if(!this.disabled){this.style.background=\'var(--bg-base)\'; this.style.color=\'var(--primary)\';}" onmouseout="if(!this.disabled){this.style.background=\'transparent\'; this.style.color=\'var(--text-main)\';}">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                                                     </button>
-                                                    <button class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="1" title="Sposta a destra" ${idx === products.length - 1 ? 'disabled style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-muted); cursor:default; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box; opacity:0.3;"' : 'style="background:var(--bg-base); border:1px solid var(--border); color:var(--text-main); cursor:pointer; padding:2px 10px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:22px; box-sizing:border-box;"'} onmouseover="if(!this.disabled){this.style.background=\'var(--primary)\'; this.style.borderColor=\'var(--primary)\'; this.style.color=\'#fff\';}" onmouseout="if(!this.disabled){this.style.background=\'var(--bg-base)\'; this.style.borderColor=\'var(--border)\'; this.style.color=\'var(--text-main)\';}">
-                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                                    <button type="button" class="move-col-btn" data-table-id="${t.id}" data-idx="${idx}" data-dir="1" title="Sposta a destra" ${idx === products.length - 1 ? 'disabled style="background:none; border:none; color:var(--text-muted); cursor:default; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:16px; box-sizing:border-box; opacity:0.25;"' : 'style="background:none; border:none; color:var(--text-main); cursor:pointer; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; height:16px; box-sizing:border-box;"'} onmouseover="if(!this.disabled){this.style.background=\'var(--bg-base)\'; this.style.color=\'var(--primary)\';}" onmouseout="if(!this.disabled){this.style.background=\'transparent\'; this.style.color=\'var(--text-main)\';}">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                                                     </button>
                                                 </div>
                                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; width:100%; background:var(--bg-surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
@@ -464,8 +498,8 @@ async function renderSalesGoalsTable(kind = 'sales') {
                                                     <button type="button" class="col-metrics-btn" data-table-id="${t.id}" data-idx="${idx}" style="background:var(--bg-surface); border:1px solid var(--border); color:var(--text-main); font-size:0.72rem; border-radius:6px; padding:4px 8px; width:100%; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:space-between; overflow:hidden;" title="Associa Prodotti DB (${(Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : [])).join(', ')})">
                                                         <span class="col-metrics-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:center;">
                                                             ${(() => {
-                                                                const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : (p.key ? [p.key] : []));
-                                                                return sel.length === 0 ? '-- Prodotti DB --' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
+                                                                const sel = Array.isArray(p.mappedMetrics) ? p.mappedMetrics : (p.mappedMetric ? [p.mappedMetric] : []);
+                                                                return sel.length === 0 ? 'Seleziona' : (sel.length === 1 ? sel[0] : `${sel.length} Prodotti DB`);
                                                             })()}
                                                         </span>
                                                         <span style="font-size:0.55rem; opacity:0.6; margin-left:3px;">▼</span>
@@ -514,9 +548,24 @@ async function renderSalesGoalsTable(kind = 'sales') {
 
         const toggleEditBtn = tableCard.querySelector('.toggle-table-edit-btn');
         if (toggleEditBtn) {
-            toggleEditBtn.onclick = () => {
+            toggleEditBtn.onclick = async (e) => {
+                e.preventDefault();
+                const scrollEl = document.querySelector('.content');
+                const anchorTop = tableCard.getBoundingClientRect().top;
+                const anchorScroll = scrollEl ? scrollEl.scrollTop : window.scrollY;
                 salesTableEditModes[t.id] = !salesTableEditModes[t.id];
-                renderSalesGoalsTable(kind);
+                await renderSalesGoalsTable(kind);
+                // Ancora la stessa tabella alla stessa posizione viewport
+                requestAnimationFrame(() => {
+                    const newCard = document.querySelector(`.sales-table-card[data-table-id="${t.id}"]`);
+                    if (newCard && scrollEl) {
+                        const delta = newCard.getBoundingClientRect().top - anchorTop;
+                        scrollEl.scrollTop = anchorScroll + delta;
+                    }
+                    if (scrollEl) scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop);
+                    // fallback generico se anchor fallisce
+                    if (scrollEl && Math.abs(scrollEl.scrollTop - anchorScroll) > 800) scrollEl.scrollTop = anchorScroll;
+                });
             };
         }
 
@@ -588,7 +637,11 @@ async function renderSalesGoalsTable(kind = 'sales') {
         });
 
         tableCard.querySelectorAll('.move-col-btn').forEach(btn => {
-            btn.onclick = async () => {
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                const scrollEl = document.querySelector('.content');
+                const anchorTop = tableCard.getBoundingClientRect().top;
+                const anchorScroll = scrollEl ? scrollEl.scrollTop : window.scrollY;
                 const idx = parseInt(btn.dataset.idx, 10);
                 const dir = parseInt(btn.dataset.dir, 10);
                 const targetIdx = idx + dir;
@@ -599,6 +652,13 @@ async function renderSalesGoalsTable(kind = 'sales') {
                 products[targetIdx] = temp;
                 await appDb.setSetting(`${TK.products}${t.id}`, products);
                 await renderSalesGoalsTable(kind);
+                requestAnimationFrame(() => {
+                    const newCard = document.querySelector(`.sales-table-card[data-table-id="${t.id}"]`);
+                    if (newCard && scrollEl) {
+                        const delta = newCard.getBoundingClientRect().top - anchorTop;
+                        scrollEl.scrollTop = anchorScroll + delta;
+                    }
+                });
             };
         });
 
@@ -683,7 +743,7 @@ async function renderSalesGoalsTable(kind = 'sales') {
 
                     const labelEl = tableCard.querySelector(`.col-metrics-btn[data-idx="${idx}"] .col-metrics-label`);
                     if (labelEl) {
-                        labelEl.textContent = checked.length === 0 ? '-- Prodotti DB --' : (checked.length === 1 ? checked[0] : `${checked.length} Prodotti DB`);
+                        labelEl.textContent = checked.length === 0 ? 'Seleziona' : (checked.length === 1 ? checked[0] : `${checked.length} Prodotti DB`);
                     }
                 }
             };
@@ -726,6 +786,15 @@ async function renderSalesGoalsTable(kind = 'sales') {
             });
         }
     });
+
+    // Ripristino immediato + nei prossimi frame: buildTableBodyAndFoot e innerHTML possono
+    // cambiare l'altezza e il browser azzera lo scroll prima del prossimo paint
+    restoreScroll();
+    requestAnimationFrame(() => {
+        restoreScroll();
+        requestAnimationFrame(restoreScroll);
+    });
+    setTimeout(restoreScroll, 50);
 }
 
 function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTargets, collabWorkPcts, skillFilter, editMode, kind = 'sales') {
@@ -881,17 +950,18 @@ function buildTableBodyAndFoot(tableCard, tableId, products, employees, savedTar
 
 async function saveSalesTableData(tableCard, tableId, products, employees, year, activeSkillFilter, kind = 'sales') {
     const isStati = kind === 'stati';
-    const workPctsKey = isStati ? 'stati_work_pcts' : 'collab_work_pcts';
+    const workPctsKey = `${isStati ? 'stati_work_pcts' : 'collab_work_pcts'}_${year}`;
+    const legacyWorkPctsKey = isStati ? 'stati_work_pcts' : 'collab_work_pcts';
     const targetsKey = (isStati ? 'stati_table_targets_' : 'sales_table_targets_');
     const goalsPrefix = isStati ? 'statitable_' : 'salestable_';
     const metricPrefix = isStati ? 'Stati: ' : 'Sales: ';
-    const collabWorkPcts = {};
+    const collabWorkPctsLocal = {};
     const savedTargets = {};
 
     tableCard.querySelectorAll('.collab-work-pct-input').forEach(inp => {
         const emp = inp.dataset.emp;
         const val = parseFloat(inp.value) || 100;
-        collabWorkPcts[emp] = val;
+        collabWorkPctsLocal[emp] = val;
     });
 
     tableCard.querySelectorAll('.sales-team-target-input').forEach(inp => {
@@ -906,20 +976,41 @@ async function saveSalesTableData(tableCard, tableId, products, employees, year,
         savedTargets['INDIV_TOTAL_' + key] = val;
     });
 
-    await appDb.setSetting(workPctsKey, collabWorkPcts);
+    // Merge con valore esistente per non azzerare le occupazioni delle altre tabelle/skill
+    const existingPcts = (await appDb.getSetting(workPctsKey, null));
+    let mergedPcts;
+    if (existingPcts && typeof existingPcts === 'object') {
+        mergedPcts = { ...existingPcts, ...collabWorkPctsLocal };
+    } else {
+        const legacy = (await appDb.getSetting(legacyWorkPctsKey, {})) || {};
+        mergedPcts = { ...legacy, ...collabWorkPctsLocal };
+    }
+    await appDb.setSetting(workPctsKey, mergedPcts);
+    // Mantieni anche la chiave legacy aggiornata per retro-compatibilità
+    await appDb.setSetting(legacyWorkPctsKey, mergedPcts);
     await appDb.setSetting(`${targetsKey}${year}_${tableId}`, savedTargets);
 
     // Sincronizza lo store 'goals' IndexedDB
+    const resolveMetricLabel = (p) => {
+        if (Array.isArray(p.mappedMetrics) && p.mappedMetrics.length > 0) return p.mappedMetrics.join(', ');
+        if (p.mappedMetric) return p.mappedMetric;
+        return p.label || p.key;
+    };
     const goalsToSave = [];
+    const keepIds = new Set();
     products.forEach(p => {
+        const metricLabel = resolveMetricLabel(p);
+        const metricWithPrefix = `${metricPrefix}${metricLabel}`;
         if (p.mode === 'team') {
             const tgt = savedTargets['TEAM_' + p.key];
+            const gid = `${goalsPrefix}${year}_${tableId}_TEAM_${p.key}`;
             if (tgt && tgt > 0) {
+                keepIds.add(gid);
                 goalsToSave.push({
-                    id: `${goalsPrefix}${year}_${tableId}_TEAM_${p.key}`,
+                    id: gid,
                     year: year,
-                    metric: p.mappedMetric || p.label,
-                    mappedMetrics: p.mappedMetrics || [],
+                    metric: metricWithPrefix,
+                    mappedMetrics: p.mappedMetrics || (p.mappedMetric ? [p.mappedMetric] : []),
                     target: tgt,
                     skill: activeSkillFilter,
                     employee: '',
@@ -927,27 +1018,57 @@ async function saveSalesTableData(tableCard, tableId, products, employees, year,
                     tolerancePlus: 0,
                     toleranceMinus: 0
                 });
+            } else {
+                // target azzerato -> marca per cancellazione (non aggiungere a keepIds)
             }
         } else {
             const indivTotal = savedTargets['INDIV_TOTAL_' + p.key] || 0;
             let totalWork = 0;
-            employees.forEach(e => totalWork += (collabWorkPcts[e] ?? 100));
+            employees.forEach(e => totalWork += (mergedPcts[e] ?? 100));
 
             employees.forEach(emp => {
-                const workPct = collabWorkPcts[emp] ?? 100;
+                const gid = `${goalsPrefix}${year}_${tableId}_${emp}_${p.key}`;
+                const workPct = mergedPcts[emp] ?? 100;
                 const calcVal = totalWork > 0 ? Math.round(indivTotal * (workPct / totalWork)) : 0;
-                if (calcVal > 0) {
+                if (calcVal > 0 && indivTotal > 0) {
+                    keepIds.add(gid);
                     goalsToSave.push({
-                        metric: `${metricPrefix}${p.key}`,
+                        id: gid,
+                        metric: metricWithPrefix,
+                        mappedMetrics: p.mappedMetrics || (p.mappedMetric ? [p.mappedMetric] : []),
                         skill: activeSkillFilter,
                         employee: emp,
                         target: calcVal,
-                        year: year
+                        year: year,
+                        toleranceType: 'percentage',
+                        tolerancePlus: 0,
+                        toleranceMinus: 0
                     });
                 }
             });
         }
     });
+
+    // Rimuovi obiettivi obsoleti di questa tabella (colonne eliminate o target azzerati)
+    const prefixId = `${goalsPrefix}${year}_${tableId}_`;
+    const allGoals = await appDb.getAll('goals', 'year', year);
+    const staleIds = allGoals.filter(g => String(g.id || '').startsWith(prefixId) && !keepIds.has(g.id)).map(g => g.id);
+    if (staleIds.length > 0) {
+        const tx = appDb._db.transaction(['goals'], 'readwrite');
+        const store = tx.objectStore('goals');
+        staleIds.forEach(sid => store.delete(sid));
+        await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    }
+    // Ripara eventuali goal legacy senza prefisso (migrazione una tantum)
+    const legacyToFix = allGoals.filter(g => String(g.id || '').startsWith(prefixId) && !(g.metric || '').startsWith(metricPrefix));
+    if (legacyToFix.length > 0) {
+        const fixed = legacyToFix.filter(g => !staleIds.includes(g.id)).map(g => {
+            const prod = products.find(pp => g.id.includes(`_${pp.key}`) || g.id.endsWith(`_${pp.key}`));
+            const label = prod ? resolveMetricLabel(prod) : (g.metric || '');
+            return { ...g, metric: `${metricPrefix}${String(label).replace(/^Sales:\s*|^Stati:\s*|^Performance:\s*/, '')}` };
+        });
+        if (fixed.length > 0) await appDb.addMultiple('goals', fixed);
+    }
 
     if (goalsToSave.length > 0) {
         await appDb.addMultiple('goals', goalsToSave);
@@ -1339,14 +1460,14 @@ async function openGoalModal(goalId = null) {
     const metricsSet = new Set();
     if (activeGoalsTab === 'stati') {
         const statiData = await appDb.getAll('stati', 'year', year);
-        statiData.forEach(d => Object.keys(d.data).forEach(k => metricsSet.add(`Stati: ${k}`)));
+        statiData.forEach(d => Object.keys(d.data).forEach(k => metricsSet.add(`Stati: ${k.replace(/^State Rcode - /, '')}`)));
     } else {
         perfData.forEach(d => Object.keys(d.data).forEach(k => metricsSet.add(`Performance: ${k}`)));
     }
 
     const allMetrics = Array.from(metricsSet).sort();
     function displayMetric(m) {
-        return m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '');
+        return m.replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '').replace(/^State Rcode - /, '');
     }
 
     const metricSearchInput = document.getElementById('goal-metric-search');
