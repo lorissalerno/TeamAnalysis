@@ -13,7 +13,7 @@ const legendMarginPlugin = {
     }
 };
 
-// Plugin per mostrare un testo al centro dell'anello della torta (totale o % obiettivo)
+// Plugin per mostrare un testo al centro dell'anello della torta (totale / % / CHF con supporto doppia riga)
 const donutCenterTextPlugin = {
     id: 'donutCenterTextPlugin',
     afterDraw(chart) {
@@ -27,9 +27,19 @@ const donutCenterTextPlugin = {
             ctx.save();
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = cfg.color || '#e2e8f0';
-            ctx.font = `700 ${cfg.size || 20}px system-ui, -apple-system, sans-serif`;
-            ctx.fillText(cfg.text, cx, cy);
+            if (cfg.subText) {
+                // Doppia riga: testo principale sopra, sottotesto sotto
+                ctx.fillStyle = cfg.color || '#e2e8f0';
+                ctx.font = `700 ${cfg.size || 22}px system-ui, -apple-system, sans-serif`;
+                ctx.fillText(cfg.text, cx, cy - 12);
+                ctx.fillStyle = cfg.subColor || cfg.color || '#e2e8f0';
+                ctx.font = `600 ${cfg.subSize || 14}px system-ui, -apple-system, sans-serif`;
+                ctx.fillText(cfg.subText, cx, cy + 14);
+            } else {
+                ctx.fillStyle = cfg.color || '#e2e8f0';
+                ctx.font = `700 ${cfg.size || 20}px system-ui, -apple-system, sans-serif`;
+                ctx.fillText(cfg.text, cx, cy);
+            }
             ctx.restore();
         } catch (e) {
             console.error('Donut center text plugin error:', e);
@@ -1223,7 +1233,9 @@ async function openStatModal(editingStat = null) {
             type: type,
             goalsTableId: goalsTableId,
             pieMode: (currentStatSource !== 'sales' ? 'collaboratori' : (document.getElementById('stat-pie-mode')?.value || 'collaboratori')),
-            pieGoalCenter: document.getElementById('pie-goal-center')?.checked || false,
+            pieGoalCenter: document.getElementById('pie-goal-center-pct')?.checked || false,
+            pieGoalCenterPct: document.getElementById('pie-goal-center-pct')?.checked || false,
+            pieGoalCenterCHF: document.getElementById('pie-goal-center-chf')?.checked || false,
             title: isGoalsTable ? 'Tabella Obiettivi Vendita' : (selectedMetricsList.length > 1 ? selectedMetricsList.join(' + ') : selectedMetricsList[0].replace('Performance: ', '').replace('Sales: ', '').replace('Stati: ', '')),
             yMin: customYMin,
             yMax: customYMax,
@@ -1391,21 +1403,27 @@ async function openStatModal(editingStat = null) {
 
     if (editingStat) {
         if (editingStat.skill) skillSelect.value = editingStat.skill;
-        if (editingStat.type) typeSelect.value = editingStat.type;
         if (yMinInput) yMinInput.value = (editingStat.yMin !== undefined && editingStat.yMin !== null && !isNaN(editingStat.yMin)) ? editingStat.yMin : '';
         if (yMaxInput) yMaxInput.value = editingStat.yMax || '';
         if (y2MinInput) y2MinInput.value = (editingStat.y2Min !== undefined && editingStat.y2Min !== null && !isNaN(editingStat.y2Min)) ? editingStat.y2Min : '';
         if (y2MaxInput) y2MaxInput.value = editingStat.y2Max || '';
-        const pieModeSelect = document.getElementById('stat-pie-mode');
-        if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
-        const pieGoalCenterCb = document.getElementById('pie-goal-center');
-        if (pieGoalCenterCb) pieGoalCenterCb.checked = !!editingStat.pieGoalCenter;
         syncSourceButtons();
         populateTypeSelect(currentStatSource);
-        applyTypeUI(editingStat.type || 'bar');
+        // Ripristina tipo dopo populate (evita reset a barre alla prima apertura del modal)
+        if (editingStat.type) typeSelect.value = editingStat.type;
+        syncTypeSelectorButtons();
+        applyTypeUI(typeSelect.value || editingStat.type || 'bar');
+        const pieModeSelect = document.getElementById('stat-pie-mode');
+        if (pieModeSelect && editingStat.pieMode) pieModeSelect.value = editingStat.pieMode;
+        const pieGoalCenterPctCb = document.getElementById('pie-goal-center-pct');
+        const pieGoalCenterCHFCb = document.getElementById('pie-goal-center-chf');
+        const legacyPct = !!editingStat.pieGoalCenter;
+        if (pieGoalCenterPctCb) pieGoalCenterPctCb.checked = !!(editingStat.pieGoalCenterPct ?? legacyPct);
+        if (pieGoalCenterCHFCb) pieGoalCenterCHFCb.checked = !!editingStat.pieGoalCenterCHF;
     } else {
         syncSourceButtons();
         populateTypeSelect(currentStatSource);
+        syncTypeSelectorButtons();
         applyTypeUI('bar');
     }
 
@@ -1446,8 +1464,10 @@ async function openStatModal(editingStat = null) {
     if (goalsTableIdSelect) goalsTableIdSelect.onchange = schedulePreview;
     const pieModeSelect2 = document.getElementById('stat-pie-mode');
     if (pieModeSelect2) pieModeSelect2.onchange = schedulePreview;
-    const pieGoalCenterCb2 = document.getElementById('pie-goal-center');
-    if (pieGoalCenterCb2) pieGoalCenterCb2.onchange = schedulePreview;
+    const pieGoalCenterPctCb2 = document.getElementById('pie-goal-center-pct');
+    if (pieGoalCenterPctCb2) pieGoalCenterPctCb2.onchange = schedulePreview;
+    const pieGoalCenterCHFCb2 = document.getElementById('pie-goal-center-chf');
+    if (pieGoalCenterCHFCb2) pieGoalCenterCHFCb2.onchange = schedulePreview;
 
     function updatePreviewAvgToggleVisibility() {
         const previewAvgLabel = modal.querySelector('#preview-show-team-avg-label');
@@ -1569,15 +1589,20 @@ function createStatModalHTML() {
                         <option value="doppia">Doppia Torta: Prezzo Pacchetti (Team) + Collaboratori</option>
                     </select>
                     <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; margin-top:10px;">
-                        <input type="checkbox" id="pie-goal-center">
+                        <input type="checkbox" id="pie-goal-center-pct">
                         <span class="slider"></span>
-                        <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra % Obiettivo al Centro</span>
+                        <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra Obiettivo al Centro (%)</span>
+                    </label>
+                    <label class="toggle-switch" style="display:flex; align-items:center; cursor:pointer; margin-top:10px;">
+                        <input type="checkbox" id="pie-goal-center-chf">
+                        <span class="slider"></span>
+                        <span class="label" style="font-size:0.8rem; margin-left:6px;">Mostra Obiettivo al Centro (CHF)</span>
                     </label>
                     <div id="pie-mode-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px; display:none;"></div>
                 </div>
 
                 <div id="stat-skill-group">
-                    <label>Filtro Skill Performance (opzionale):</label>
+                    <label>Filtro Skill Collaboratore (opzionale):</label>
                     <select id="stat-skill" style="width:100%; padding:8px; margin-bottom:16px;"></select>
                 </div>
 
@@ -1727,7 +1752,9 @@ async function saveNewStat() {
     const y2MaxVal = parseFloat(document.getElementById('stat-y2-max')?.value);
     const rawPieModeVal = document.getElementById('stat-pie-mode')?.value || 'collaboratori';
     const pieModeVal = (currentStatSource !== 'sales') ? 'collaboratori' : rawPieModeVal;
-    const pieGoalCenterVal = document.getElementById('pie-goal-center')?.checked || false;
+    const pieGoalCenterPctVal = document.getElementById('pie-goal-center-pct')?.checked || false;
+    const pieGoalCenterCHFVal = document.getElementById('pie-goal-center-chf')?.checked || false;
+    const pieGoalCenterVal = pieGoalCenterPctVal;
 
     if (currentEditingStatId) {
         const allStats = await appDb.getAll('custom_stats');
@@ -1741,7 +1768,9 @@ async function saveNewStat() {
             existing.type = type;
             existing.product = product;
             existing.pieMode = pieModeVal;
-            existing.pieGoalCenter = pieGoalCenterVal;
+            existing.pieGoalCenter = pieGoalCenterPctVal;
+            existing.pieGoalCenterPct = pieGoalCenterPctVal;
+            existing.pieGoalCenterCHF = pieGoalCenterCHFVal;
             existing.yMin = !isNaN(yMinVal) ? yMinVal : null;
             existing.yMax = !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null;
             existing.y2Min = !isNaN(y2MinVal) ? y2MinVal : null;
@@ -1763,7 +1792,9 @@ async function saveNewStat() {
             colors: selectedColors,
             skill, type, product,
             pieMode: pieModeVal,
-            pieGoalCenter: pieGoalCenterVal,
+            pieGoalCenter: pieGoalCenterPctVal,
+            pieGoalCenterPct: pieGoalCenterPctVal,
+            pieGoalCenterCHF: pieGoalCenterCHFVal,
             yMin: !isNaN(yMinVal) ? yMinVal : null,
             yMax: !isNaN(yMaxVal) && yMaxVal > 0 ? yMaxVal : null,
             y2Min: !isNaN(y2MinVal) ? y2MinVal : null,
@@ -3501,7 +3532,6 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
         // --- Grafico a Torta ---
         const metricsList = statConfig.metrics && statConfig.metrics.length > 0 ? statConfig.metrics : [statConfig.metric];
         const pieMode = statConfig.pieMode || 'collaboratori';
-        const pieGoalCenter = !!statConfig.pieGoalCenter;
         const isPieMulti = metricsList.length > 1;
         let pieEntries = [];
 
@@ -3698,14 +3728,26 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
         const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim() || '#1e2130';
         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#9333EA';
 
-        // Crea il testo al centro dell'anello: % obiettivo (se attivata e presente) altrimenti totale
+        const pieGoalCenterPct = !!(statConfig.pieGoalCenterPct ?? statConfig.pieGoalCenter);
+        const pieGoalCenterCHF = !!statConfig.pieGoalCenterCHF;
+        // Crea il testo al centro: % e/o CHF (CHF con formato 27'000.-)
         const getCenterText = (entries) => {
             const total = entries.reduce((sum, [, v]) => sum + v, 0);
-            if (pieGoalCenter && relevantGoalTarget && relevantGoalTarget > 0) {
-                const pct = Math.round((total / relevantGoalTarget) * 100);
+            const totalCHF = Math.round(total).toLocaleString('de-CH') + '.-';
+            const totalPlain = Math.round(total).toLocaleString('it-CH');
+            const pct = (relevantGoalTarget && relevantGoalTarget > 0) ? Math.round((total / relevantGoalTarget) * 100) : null;
+            const showPct = pieGoalCenterPct && pct !== null;
+            const showCHF = pieGoalCenterCHF;
+            if (showPct && showCHF) {
+                return { text: pct + '%', color: primaryColor, size: 26, subText: totalCHF, subColor: textColor, subSize: 14 };
+            }
+            if (showPct) {
                 return { text: pct + '%', color: primaryColor, size: 28 };
             }
-            return { text: Math.round(total).toLocaleString('it-CH'), color: textColor, size: 22 };
+            if (showCHF) {
+                return { text: totalCHF, color: textColor, size: 22 };
+            }
+            return { text: totalPlain, color: textColor, size: 22 };
         };
 
         // Renderizza una singola torta dentro un contenitore con spaziatura uniforme

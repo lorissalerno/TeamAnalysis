@@ -10,8 +10,8 @@
     const LAST_CHECK_KEY = 'version_last_check';
     const DEFAULT_REPO = 'lorissalerno/TeamAnalysis';
     // Fallback incorporato per apertura via file:// (fetch bloccato) — aggiornato da bump-version.js
-    const EMBEDDED_VERSION = {"version":"v1.24","date":"2026-08-21","commit":"69aed81","description":"Filtro skill torta vendite: mostra solo skill assegnati ai collaboratori"};
-    const EMBEDDED_CHANGELOG = [{"version":"v1.24","date":"2026-08-21","novita":["Filtro skill torta vendite: mostra solo skill assegnati ai collaboratori","Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve","Personalizzato popup chiusura: download automatico Backup Completo e chiarito limite popup nativo Chrome non modificabile","Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://","Popup avviso backup prima di chiudere il browser: beforeunload + modal se modifiche non salvate in backup","Changelog: testi semplificati e divisi in Novità e BugFix","Impostazioni: controllo aggiornamenti automatico da GitHub","Impostazioni: cronologia novità raggruppata per versione e giorno","README che si aggiorna da solo ad ogni versione"],"bugfix":["Fix filtro skill grafico a torta vendite: ora seleziona skill collaboratori invece di includere tutti","Fix bug origine dati Vendita non mostra Tabella Obiettivi e anteprima destra buggata","Fix grafico a torta per origine dati Stati (0%)","Nasconde Contenuto della Torta per grafici non Sales","Fix warning file:// Unsafe attempt to load URL in console"]},{"version":"v1.15","date":"2026-08-20","novita":["Nuova categoria Stati per import, obiettivi e statistiche","Storico modifiche con data e conservazione 30 giorni","Obiettivi Stati: calcolo efficienza con target e tolleranza","Obiettivi: metrica di influenza attivabile quando serve"],"bugfix":["Tab Obiettivi rimane selezionato dopo il reload","Titoli obiettivi più puliti senza prefissi inutili"]},{"version":"v1.14","date":"2026-08-18","novita":["Gestione Skill completa: crea, rinomina ed elimina con controllo dati","Finestre di conferma più chiare al posto dei popup del browser"],"bugfix":["Avviso se elimini uno Skill usato da un solo collaboratore"]},{"version":"v1.13","date":"2026-08-17","novita":["Dashboard: obiettivi Sales di team per ogni Skill"],"bugfix":[]}];
+    const EMBEDDED_VERSION = {"version":"v1.26","date":"2026-08-21","commit":"e3cba2c","description":"Tasto Verifica aggiornamenti diventa Scarica aggiornamento se disponibile, altrimenti mostra Sei aggiornato senza messaggi extra"};
+    const EMBEDDED_CHANGELOG = [{"version":"v1.26","date":"2026-08-21","novita":["Tasto Verifica aggiornamenti diventa Scarica aggiornamento se disponibile, altrimenti mostra Sei aggiornato senza messaggi extra","Torta: doppio toggle centro % e CHF con formato 27'000.- e fix modifica che riapriva a barre","Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve","Personalizzato popup chiusura: download automatico Backup Completo e chiarito limite popup nativo Chrome non modificabile","Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://","Popup avviso backup prima di chiudere il browser: beforeunload + modal se modifiche non salvate in backup","Changelog: testi semplificati e divisi in Novità e BugFix","Impostazioni: controllo aggiornamenti automatico da GitHub","Impostazioni: cronologia novità raggruppata per versione e giorno","README che si aggiorna da solo ad ogni versione"],"bugfix":["Filtro skill torta vendite: mostra solo skill assegnati ai collaboratori","Fix filtro skill grafico a torta vendite: ora seleziona skill collaboratori invece di includere tutti","Fix bug origine dati Vendita non mostra Tabella Obiettivi e anteprima destra buggata","Fix grafico a torta per origine dati Stati (0%)","Nasconde Contenuto della Torta per grafici non Sales","Fix warning file:// Unsafe attempt to load URL in console"]},{"version":"v1.15","date":"2026-08-20","novita":["Nuova categoria Stati per import, obiettivi e statistiche","Storico modifiche con data e conservazione 30 giorni","Obiettivi Stati: calcolo efficienza con target e tolleranza","Obiettivi: metrica di influenza attivabile quando serve"],"bugfix":["Tab Obiettivi rimane selezionato dopo il reload","Titoli obiettivi più puliti senza prefissi inutili"]},{"version":"v1.14","date":"2026-08-18","novita":["Gestione Skill completa: crea, rinomina ed elimina con controllo dati","Finestre di conferma più chiare al posto dei popup del browser"],"bugfix":["Avviso se elimini uno Skill usato da un solo collaboratore"]},{"version":"v1.13","date":"2026-08-17","novita":["Dashboard: obiettivi Sales di team per ogni Skill"],"bugfix":[]}];
 
     let localVersion = null;
     let changelogData = null;
@@ -291,6 +291,11 @@
         const statusEl = document.getElementById('update-status');
         const lastCheckEl = document.getElementById('update-last-check');
         const githubLink = document.getElementById('github-open-link');
+        // Se il bottone è già in modalità "scarica", il click scarica (reload)
+        if (btn && btn.dataset.mode === 'download') {
+            location.reload();
+            return;
+        }
         if (btn) { btn.disabled = true; }
         if (statusEl) {
             statusEl.dataset.initialized = '1';
@@ -308,61 +313,53 @@
             }
         }
         const result = await checkForUpdates();
-        if (statusEl) {
-            let icon = '';
-            let color = 'var(--text-muted)';
-            let bg = 'var(--bg-base)';
-            let border = 'var(--border)';
-            if (result.status === 'up-to-date') {
-                icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
-                color = '#10b981'; bg = 'rgba(16,185,129,0.1)'; border = 'rgba(16,185,129,0.3)';
-            } else if (result.status === 'update-available') {
-                icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-                color = '#f59e0b'; bg = 'rgba(245,158,11,0.1)'; border = 'rgba(245,158,11,0.3)';
-            } else if (result.status === 'no-repo' || result.status === 'not-found') {
-                icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-            } else if (result.status === 'ahead') {
-                icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>';
-                color = '#3b82f6'; bg = 'rgba(59,130,246,0.1)'; border = 'rgba(59,130,246,0.3)';
-            }
-            let html = '';
-            // Quando up-to-date il messaggio verde è già nel bottone, non duplicarlo sopra
-            if (result.status !== 'up-to-date') {
-                html = '<div style="display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:8px; background:' + bg + '; border:1px solid ' + border + '; color:' + color + '; font-size:0.85rem; line-height:1.5;">'
-                    + '<span style="margin-top:2px; flex-shrink:0;">' + icon + '</span>'
-                    + '<span>' + escapeHtml(result.message) + '</span></div>';
-            }
-            if (result.lastCommit) {
-                html += '<div style="margin-top:8px; font-size:0.8rem; color:var(--text-muted); background:var(--bg-base); border:1px solid var(--border); border-radius:6px; padding:8px 10px;">'
-                    + '<div style="font-weight:600; color:var(--text-main);">' + escapeHtml(result.lastCommit.sha) + ' — ' + escapeHtml(result.lastCommit.message) + '</div>'
-                    + '<div>' + formatDateIT(result.lastCommit.date ? result.lastCommit.date.substring(0,10) : '') + ' · <a href="' + escapeHtml(result.lastCommit.url) + '" target="_blank" rel="noopener" style="color:var(--primary);">Vedi su GitHub</a></div>'
-                    + '</div>';
-            }
-            if (result.remoteVersion && result.status !== 'up-to-date') {
-                html += '<div style="margin-top:8px; font-size:0.8rem; color:var(--text-muted);">Remoto: <strong style="color:var(--text-main);">' + escapeHtml(result.remoteVersion) + '</strong> del ' + escapeHtml(formatDateIT(result.remoteDate)) + '</div>';
-            }
-            if (result.status === 'update-available') {
-                html += '<button type="button" class="btn primary" onclick="location.reload()" style="margin-top:10px; width:100%;">Ricarica la pagina</button>';
-            }
-            statusEl.innerHTML = html;
-        }
         if (lastCheckEl) {
             const now = Date.now();
             lastCheckEl.textContent = 'Ultimo controllo: ' + new Date(now).toLocaleString('it-IT');
         }
         if (btn) {
             btn.disabled = false;
-            if (result.status === 'up-to-date') {
-                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg> Sei aggiornato alla versione più recente (' + escapeHtml(result.localVersion || '') + ').';
-                btn.style.background = 'rgba(16,185,129,0.15)';
-                btn.style.borderColor = 'rgba(16,185,129,0.35)';
-                btn.style.color = '#10b981';
-            } else {
-                btn.textContent = 'Verifica aggiornamenti';
+            if (result.status === 'update-available') {
+                // Trasforma il bottone in "Scarica aggiornamento" — nessun messaggio in cima
+                if (statusEl) statusEl.innerHTML = '';
+                btn.dataset.mode = 'download';
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Scarica aggiornamento' + (result.remoteVersion ? ' (' + escapeHtml(result.remoteVersion) + ')' : '');
                 btn.style.background = '';
                 btn.style.borderColor = '';
                 btn.style.color = '';
+                return;
             }
+            if (result.status === 'up-to-date') {
+                if (statusEl) statusEl.innerHTML = '';
+                btn.dataset.mode = '';
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg> Sei aggiornato alla versione più recente' + (result.localVersion ? ' (' + escapeHtml(result.localVersion) + ')' : '');
+                btn.style.background = 'rgba(16,185,129,0.15)';
+                btn.style.borderColor = 'rgba(16,185,129,0.35)';
+                btn.style.color = '#10b981';
+                return;
+            }
+        }
+        // Altri stati (errore, not-found, rate-limit, ahead): mostra solo messaggio sobrio in #update-status, bottone resta "Verifica aggiornamenti"
+        if (statusEl) {
+            let color = 'var(--text-muted)';
+            let bg = 'var(--bg-base)';
+            let border = 'var(--border)';
+            let icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+            if (result.status === 'ahead') {
+                color = '#3b82f6'; bg = 'rgba(59,130,246,0.1)'; border = 'rgba(59,130,246,0.3)';
+                icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>';
+            }
+            let html = '<div style="display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:8px; background:' + bg + '; border:1px solid ' + border + '; color:' + color + '; font-size:0.85rem; line-height:1.5;">'
+                + '<span style="margin-top:2px; flex-shrink:0;">' + icon + '</span>'
+                + '<span>' + escapeHtml(result.message) + '</span></div>';
+            statusEl.innerHTML = html;
+        }
+        if (btn) {
+            btn.dataset.mode = '';
+            btn.textContent = 'Verifica aggiornamenti';
+            btn.style.background = '';
+            btn.style.borderColor = '';
+            btn.style.color = '';
         }
     }
 
