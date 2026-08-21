@@ -1759,9 +1759,12 @@ select option {
     align-items: stretch;
 }
 
-.settings-extended-grid > .card {
+.settings-extended-grid > .card,
+.settings-extended-grid > .card + .card {
     display: flex;
     flex-direction: column;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .settings-card-header {
