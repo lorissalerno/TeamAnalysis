@@ -2152,11 +2152,39 @@ function setupBackupReminder() {
         closeReminder();
         window.removeEventListener('beforeunload', beforeUnloadHandler);
     });
-    if (backupBtn) backupBtn.addEventListener('click', function() {
-        closeReminder();
-        const backupModal = document.getElementById('backup-modal');
-        if (backupModal) backupModal.classList.add('open');
-        if (overlay) overlay.classList.add('open');
+    if (backupBtn) backupBtn.addEventListener('click', async function() {
+        const origHtml = backupBtn.innerHTML;
+        backupBtn.disabled = true;
+        backupBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 0.8s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Scaricamento...';
+        // aggiungi animazione spin se non esiste
+        if (!document.getElementById('ta-spin-style')) {
+            const st = document.createElement('style');
+            st.id = 'ta-spin-style';
+            st.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+            document.head.appendChild(st);
+        }
+        try {
+            const json = await appDb.exportJSON('full');
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'TeamAnalysis_Backup_Completo_' + new Date().toISOString().split('T')[0] + '.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
+            window._taMarkBackupDone();
+            isDirty = false;
+            bypassNextUnload = true;
+            window.removeEventListener('beforeunload', beforeUnloadHandler);
+            backupBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Backup scaricato!';
+            setTimeout(function() { closeReminder(); backupBtn.innerHTML = origHtml; backupBtn.disabled = false; }, 1400);
+        } catch (err) {
+            backupBtn.innerHTML = origHtml;
+            backupBtn.disabled = false;
+            try { await appDialog.alert('Errore durante il backup: ' + err); } catch (e2) { alert('Errore durante il backup: ' + err); }
+        }
     });
     if (snoozeCb) snoozeCb.addEventListener('change', function(e) {
         snoozeSession = e.target.checked;

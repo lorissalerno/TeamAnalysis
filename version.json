@@ -1,6 +1,6 @@
 {
-  "version": "v1.16",
+  "version": "v1.17",
   "date": "2026-08-21",
-  "commit": "5670cb5",
-  "description": "Fix altezza riquadri uguale e riquadro attuale senza colore"
+  "commit": "7fb533b",
+  "description": "Personalizzato popup chiusura: download automatico Backup Completo e chiarito limite popup nativo Chrome non modificabile"
 }
