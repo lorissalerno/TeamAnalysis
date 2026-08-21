@@ -1079,10 +1079,18 @@ async function renderImportedData() {
             <span class="chip-count">${totalImportazioni}</span>
         `;
         allChip.addEventListener('click', () => {
-            if (isAllActive) {
-                window.appState.dbCategoryFilters = new Set();
+            const isPivot = window.appState.dbViewMode === 'pivot';
+            if (isPivot) {
+                // in vista Tabella: Totale seleziona la prima fonte disponibile (una sola tabella)
+                if (availableCategories.length > 0) {
+                    window.appState.dbCategoryFilters = new Set([availableCategories[0]]);
+                }
             } else {
-                window.appState.dbCategoryFilters = new Set(availableCategories);
+                if (isAllActive) {
+                    window.appState.dbCategoryFilters = new Set();
+                } else {
+                    window.appState.dbCategoryFilters = new Set(availableCategories);
+                }
             }
             renderImportedData();
         });
@@ -1106,10 +1114,16 @@ async function renderImportedData() {
                 <span class="chip-count">${count}</span>
             `;
             chip.addEventListener('click', () => {
-                if (window.appState.dbCategoryFilters.has(sk)) {
-                    window.appState.dbCategoryFilters.delete(sk);
+                const isPivot = window.appState.dbViewMode === 'pivot';
+                if (isPivot) {
+                    // in vista Tabella: selezione singola — una sola tabella alla volta
+                    window.appState.dbCategoryFilters = new Set([sk]);
                 } else {
-                    window.appState.dbCategoryFilters.add(sk);
+                    if (window.appState.dbCategoryFilters.has(sk)) {
+                        window.appState.dbCategoryFilters.delete(sk);
+                    } else {
+                        window.appState.dbCategoryFilters.add(sk);
+                    }
                 }
                 renderImportedData();
             });
@@ -1134,10 +1148,15 @@ async function renderImportedData() {
                 <span class="chip-count">${totalSales}</span>
             `;
             salesChip.addEventListener('click', () => {
-                if (window.appState.dbCategoryFilters.has('Sales')) {
-                    window.appState.dbCategoryFilters.delete('Sales');
+                const isPivot = window.appState.dbViewMode === 'pivot';
+                if (isPivot) {
+                    window.appState.dbCategoryFilters = new Set(['Sales']);
                 } else {
-                    window.appState.dbCategoryFilters.add('Sales');
+                    if (window.appState.dbCategoryFilters.has('Sales')) {
+                        window.appState.dbCategoryFilters.delete('Sales');
+                    } else {
+                        window.appState.dbCategoryFilters.add('Sales');
+                    }
                 }
                 renderImportedData();
             });
@@ -1162,10 +1181,15 @@ async function renderImportedData() {
                 <span class="chip-count">${totalStati}</span>
             `;
             statiChip.addEventListener('click', () => {
-                if (window.appState.dbCategoryFilters.has('Stati')) {
-                    window.appState.dbCategoryFilters.delete('Stati');
+                const isPivot = window.appState.dbViewMode === 'pivot';
+                if (isPivot) {
+                    window.appState.dbCategoryFilters = new Set(['Stati']);
                 } else {
-                    window.appState.dbCategoryFilters.add('Stati');
+                    if (window.appState.dbCategoryFilters.has('Stati')) {
+                        window.appState.dbCategoryFilters.delete('Stati');
+                    } else {
+                        window.appState.dbCategoryFilters.add('Stati');
+                    }
                 }
                 renderImportedData();
             });
@@ -1502,6 +1526,7 @@ async function renderImportedData() {
     });
 }
 
+window.renderImportedData = renderImportedData;
 // Ensure every name has an ID in the current year
 async function autoAssignAnonIds(dataList) {
     const yearNames = {};
