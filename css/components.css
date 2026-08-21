@@ -1755,11 +1755,13 @@ select option {
     grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
     gap: 20px;
     margin-top: 20px;
+    margin-bottom: 24px;
     align-items: stretch;
 }
 
 .settings-extended-grid > .card {
-    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .settings-card-header {
