@@ -272,7 +272,7 @@
             }
         }
         if (statusEl && !statusEl.dataset.initialized) {
-            statusEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">Premi "Verifica aggiornamenti" per controllare.</span>';
+            statusEl.innerHTML = '';
         }
 
         // --- Card Changelog ---
