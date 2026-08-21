@@ -40,6 +40,26 @@
     function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
+    function computePivotColWidth(numCols) {
+        const card = document.getElementById('db-pivot-card');
+        const cardW = card ? card.clientWidth : (window.innerWidth - 320);
+        const stickyW = 150 + 72;
+        const avail = Math.max(200, cardW - stickyW - 16);
+        const raw = Math.floor(avail / Math.max(1, numCols));
+        const clamped = Math.max(80, Math.min(140, raw));
+        return clamped + 'px';
+    }
+    function applyPivotColWidths() {
+        const container = document.getElementById('db-pivot-container');
+        if (!container) return;
+        container.querySelectorAll('.db-pivot-table').forEach(tbl => {
+            const ths = tbl.querySelectorAll('thead th');
+            const numCols = Math.max(0, ths.length - 2);
+            if (numCols <= 0) return;
+            const w = computePivotColWidth(numCols);
+            tbl.style.setProperty('--pivot-col-w', w);
+        });
+    }
 
     async function renderDatabasePivot() {
         const container = document.getElementById('db-pivot-container');
@@ -297,6 +317,13 @@
             </div>`;
         }
 
+        // applica larghezza colonne fissa, uguale per tutte, in base alla pagina (con limite 80–140px)
+        if (rendered) {
+            // rinvia di un tick per avere cardW corretto dopo display:block
+            requestAnimationFrame(() => applyPivotColWidths());
+            setTimeout(applyPivotColWidths, 80);
+        }
+
         const counter = document.getElementById('db-pivot-counter');
         if (counter) counter.textContent = rendered ? `1 tabella · ${escapeHtml(selected)}` : '';
     }
@@ -350,6 +377,13 @@
             } catch(e) {}
             if (window.appState && window.appState.dbViewMode === 'pivot') renderDatabasePivot();
             else setTimeout(() => { if (window.appState) renderDatabasePivot(); }, 900);
+        });
+
+        let pivotResizeTimer = null;
+        window.addEventListener('resize', () => {
+            if (!window.appState || window.appState.dbViewMode !== 'pivot') return;
+            clearTimeout(pivotResizeTimer);
+            pivotResizeTimer = setTimeout(applyPivotColWidths, 120);
         });
     });
 })();

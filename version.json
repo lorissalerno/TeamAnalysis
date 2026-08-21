@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "60b7b09",
-  "description": "Database: vista Tabella mostra una sola tabella alla volta selezionata dai filtri"
+  "commit": "05ac2e7",
+  "description": "Database Tabella: colonne a larghezza fissa uguale con titolo a capo centrato in basso, limite 80-140px"
 }

@@ -50,6 +50,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati
 - Database: switch Lista/Tabella con stessi filtri, icone SVG vicino a Dati Importati
 - Database: vista Tabella mostra una sola tabella alla volta selezionata dai filtri
+- Database Tabella: colonne a larghezza fissa uguale con titolo a capo centrato in basso, limite 80-140px
 
 **BugFix**
 - Fix modifica torta che riapriva a barre

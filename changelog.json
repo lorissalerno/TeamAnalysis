@@ -22,7 +22,8 @@
       "Sforamenti tolleranza: memorizza skill selezionato dopo reload",
       "Vista tabella pivot nel Database: righe collaboratore×mese, colonne metriche, una tabella per ogni skill + Sales/Stati",
       "Database: switch Lista/Tabella con stessi filtri, icone SVG vicino a Dati Importati",
-      "Database: vista Tabella mostra una sola tabella alla volta selezionata dai filtri"
+      "Database: vista Tabella mostra una sola tabella alla volta selezionata dai filtri",
+      "Database Tabella: colonne a larghezza fissa uguale con titolo a capo centrato in basso, limite 80-140px"
     ],
     "bugfix": [
       "Fix modifica torta che riapriva a barre",
@@ -33,7 +34,7 @@
       "Nasconde Contenuto della Torta per grafici non Sales",
       "Fix warning file:// Unsafe attempt to load URL in console"
     ],
-    "commit": "60b7b09"
+    "commit": "05ac2e7"
   },
   {
     "version": "v1.15",
