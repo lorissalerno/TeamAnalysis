@@ -347,7 +347,20 @@
             const now = Date.now();
             lastCheckEl.textContent = 'Ultimo controllo: ' + new Date(now).toLocaleString('it-IT');
         }
-        if (btn) { btn.disabled = false; btn.textContent = 'Verifica aggiornamenti'; }
+        if (btn) {
+            btn.disabled = false;
+            if (result.status === 'up-to-date') {
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg> Sei aggiornato alla versione più recente (' + escapeHtml(result.localVersion || '') + ').';
+                btn.style.background = 'rgba(16,185,129,0.15)';
+                btn.style.borderColor = 'rgba(16,185,129,0.35)';
+                btn.style.color = '#10b981';
+            } else {
+                btn.textContent = 'Verifica aggiornamenti';
+                btn.style.background = '';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+            }
+        }
     }
 
     function setupVersionSection() {
