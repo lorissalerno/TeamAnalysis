@@ -2,11 +2,11 @@
 
 > Analizza le statistiche del tuo team — app web statica 100% client-side per l'analisi delle performance, delle vendite e degli stati.
 
-[![Versione](https://img.shields.io/badge/versione-v1.26-0ea5e9)](https://github.com/lorissalerno/TeamAnalysis)
+[![Versione](https://img.shields.io/badge/versione-v1.22-0ea5e9)](https://github.com/lorissalerno/TeamAnalysis)
 [![Repository](https://img.shields.io/badge/GitHub-lorissalerno%2FTeamAnalysis-181717?logo=github)](https://github.com/lorissalerno/TeamAnalysis)
 [![Data](https://img.shields.io/badge/data-21%2F08%2F2026-10b981)](https://github.com/lorissalerno/TeamAnalysis/commits/main)
 
-**Repository pubblico:** [https://github.com/lorissalerno/TeamAnalysis](https://github.com/lorissalerno/TeamAnalysis)  ·  **Versione attuale:** `v1.26` del 21/08/2026
+**Repository pubblico:** [https://github.com/lorissalerno/TeamAnalysis](https://github.com/lorissalerno/TeamAnalysis)  ·  **Versione attuale:** `v1.22` del 21/08/2026
 
 ---
 
@@ -27,7 +27,7 @@ Il riquadro **Stato Aggiornamenti** in *Impostazioni* è collegato a GitHub e co
 
 Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **Novità e Modifiche** in Impostazioni. I dati provengono da `changelog.json` e `version.json` (aggiornati automaticamente ad ogni commit tramite `scripts/bump-version.js`).
 
-### v1.26 — 21/08/2026 `Attuale`
+### v1.22 — 21/08/2026 `Attuale`
 
 **Novità**
 - Tasto Verifica aggiornamenti diventa Scarica aggiornamento se disponibile, altrimenti mostra Sei aggiornato senza messaggi extra

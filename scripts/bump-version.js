@@ -54,11 +54,12 @@ if (changes.length === 0) changes = ['Aggiornamento generale'];
 
 const parsed = parseVersion(versionData.version);
 let newVersion;
-if (versionData.date === today) {
-    // stesso giorno: incrementa patch
-    newVersion = `v${parsed.major}.${parsed.minor + 1}`;
+let isSameDay = versionData.date === today;
+if (isSameDay) {
+    // stesso giorno: NON incrementare versione, aggiorna solo testi
+    newVersion = versionData.version;
 } else {
-    // giorno diverso: incrementa comunque patch (v1.15 -> v1.16)
+    // giorno diverso: incrementa patch (v1.22 -> v1.23)
     newVersion = `v${parsed.major}.${parsed.minor + 1}`;
 }
 
@@ -76,9 +77,16 @@ function getNovita(e) {
     return [];
 }
 
-// Aggiorna changelog.json: sostituisci entry di oggi se già esiste, altrimenti prepend
+// Aggiorna changelog.json: se stesso giorno, mergia senza bump; altrimenti prepend nuova versione
 const existingIdx = changelog.findIndex(e => e.date === today);
-if (existingIdx >= 0 && changelog[existingIdx].version === newVersion) {
+if (isSameDay && existingIdx >= 0) {
+    const merged = Array.from(new Set([...getNovita(changelog[existingIdx]), ...changes]));
+    changelog[existingIdx].novita = merged;
+    delete changelog[existingIdx].changes;
+    if (!Array.isArray(changelog[existingIdx].bugfix)) changelog[existingIdx].bugfix = [];
+    changelog[existingIdx].commit = commit;
+    changelog[existingIdx].version = newVersion;
+} else if (existingIdx >= 0 && changelog[existingIdx].version === newVersion) {
     const merged = Array.from(new Set([...getNovita(changelog[existingIdx]), ...changes]));
     changelog[existingIdx].novita = merged;
     delete changelog[existingIdx].changes;
