@@ -291,10 +291,9 @@
         const statusEl = document.getElementById('update-status');
         const lastCheckEl = document.getElementById('update-last-check');
         const githubLink = document.getElementById('github-open-link');
-        if (btn) { btn.disabled = true; btn.textContent = 'Verifica...'; }
+        if (btn) { btn.disabled = true; }
         if (statusEl) {
             statusEl.dataset.initialized = '1';
-            statusEl.innerHTML = '<span style="display:inline-flex; align-items:center; gap:6px; color:var(--text-muted); font-size:0.85rem;"><span class="changelog-spinner"></span> Controllo in corso...</span>';
         }
         const repoInput = document.getElementById('github-repo-input');
         if (repoInput) {
