@@ -1773,7 +1773,7 @@ select option {
     gap: 20px;
     margin-top: 20px;
     margin-bottom: 24px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .settings-extended-grid > .card,
@@ -1782,6 +1782,7 @@ select option {
     flex-direction: column;
     margin-top: 0;
     margin-bottom: 0;
+    height: 100%;
 }
 
 .settings-card-header {
@@ -1805,10 +1806,12 @@ select option {
 .settings-changelog-card {
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .settings-changelog-card #changelog-container {
-    max-height: 300px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 
