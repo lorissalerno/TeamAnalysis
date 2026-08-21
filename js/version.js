@@ -326,16 +326,20 @@
                 icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>';
                 color = '#3b82f6'; bg = 'rgba(59,130,246,0.1)'; border = 'rgba(59,130,246,0.3)';
             }
-            let html = '<div style="display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:8px; background:' + bg + '; border:1px solid ' + border + '; color:' + color + '; font-size:0.85rem; line-height:1.5;">'
-                + '<span style="margin-top:2px; flex-shrink:0;">' + icon + '</span>'
-                + '<span>' + escapeHtml(result.message) + '</span></div>';
+            let html = '';
+            // Quando up-to-date il messaggio verde è già nel bottone, non duplicarlo sopra
+            if (result.status !== 'up-to-date') {
+                html = '<div style="display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border-radius:8px; background:' + bg + '; border:1px solid ' + border + '; color:' + color + '; font-size:0.85rem; line-height:1.5;">'
+                    + '<span style="margin-top:2px; flex-shrink:0;">' + icon + '</span>'
+                    + '<span>' + escapeHtml(result.message) + '</span></div>';
+            }
             if (result.lastCommit) {
                 html += '<div style="margin-top:8px; font-size:0.8rem; color:var(--text-muted); background:var(--bg-base); border:1px solid var(--border); border-radius:6px; padding:8px 10px;">'
                     + '<div style="font-weight:600; color:var(--text-main);">' + escapeHtml(result.lastCommit.sha) + ' — ' + escapeHtml(result.lastCommit.message) + '</div>'
                     + '<div>' + formatDateIT(result.lastCommit.date ? result.lastCommit.date.substring(0,10) : '') + ' · <a href="' + escapeHtml(result.lastCommit.url) + '" target="_blank" rel="noopener" style="color:var(--primary);">Vedi su GitHub</a></div>'
                     + '</div>';
             }
-            if (result.remoteVersion) {
+            if (result.remoteVersion && result.status !== 'up-to-date') {
                 html += '<div style="margin-top:8px; font-size:0.8rem; color:var(--text-muted);">Remoto: <strong style="color:var(--text-main);">' + escapeHtml(result.remoteVersion) + '</strong> del ' + escapeHtml(formatDateIT(result.remoteDate)) + '</div>';
             }
             if (result.status === 'update-available') {
