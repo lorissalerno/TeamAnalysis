@@ -2017,6 +2017,176 @@ function setupSettings() {
     });
 }
 
+function setupBackupReminder() {
+    const modal = document.getElementById('backup-reminder-modal');
+    const overlay = document.getElementById('modal-overlay');
+    const closeBtn = document.getElementById('close-backup-reminder-modal');
+    const stayBtn = document.getElementById('backup-reminder-stay-btn');
+    const closeAnywayBtn = document.getElementById('backup-reminder-close-anyway-btn');
+    const backupBtn = document.getElementById('backup-reminder-backup-btn');
+    const snoozeCb = document.getElementById('backup-reminder-snooze');
+    let snoozeSession = false;
+    try { snoozeSession = sessionStorage.getItem('ta_backup_snooze') === '1'; } catch (e) {}
+    if (snoozeCb) snoozeCb.checked = snoozeSession;
+    let isDirty = false;
+    let bypassNextUnload = false;
+
+    async function hasAnyData() {
+        try {
+            const stores = ['performance', 'sales', 'stati', 'custom_stats', 'goals', 'anonymous_map'];
+            for (const s of stores) {
+                const all = await appDb.getAll(s);
+                if (all && all.length > 0) return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    async function refreshDirty() {
+        try {
+            const lastBackup = await appDb.getSetting('lastBackupAt', 0);
+            const lastChange = await appDb.getSetting('lastDataChangeAt', 0);
+            if (!lastChange) { isDirty = false; return; }
+            if (!lastBackup) {
+                const hasData = await hasAnyData();
+                isDirty = hasData;
+                return;
+            }
+            isDirty = lastChange > lastBackup;
+        } catch (e) { isDirty = false; }
+    }
+
+    window._taMarkDirty = function() {
+        isDirty = true;
+        try { appDb.setSetting('lastDataChangeAt', Date.now()); } catch (e) {}
+    };
+    window._taMarkBackupDone = function() {
+        isDirty = false;
+        try { appDb.setSetting('lastBackupAt', Date.now()); } catch (e) {}
+    };
+
+    // Patch metodi principali di appDb per marcare automaticamente le modifiche
+    try {
+        const origAddMultiple = appDb.addMultiple.bind(appDb);
+        appDb.addMultiple = async function(storeName, items) {
+            const res = await origAddMultiple(storeName, items);
+            if (items && items.length > 0) window._taMarkDirty();
+            return res;
+        };
+        const origPut = appDb.putRecord.bind(appDb);
+        appDb.putRecord = async function(s, item) { const r = await origPut(s, item); window._taMarkDirty(); return r; };
+        const origDel = appDb.deleteRecord.bind(appDb);
+        appDb.deleteRecord = async function(s, id) { const r = await origDel(s, id); window._taMarkDirty(); return r; };
+        const origDelFrom = appDb.deleteFromDate.bind(appDb);
+        appDb.deleteFromDate = async function(s, d, sk) { const r = await origDelFrom(s, d, sk); window._taMarkDirty(); return r; };
+        const origDelSkill = appDb.deleteSkill.bind(appDb);
+        appDb.deleteSkill = async function(sk) { const r = await origDelSkill(sk); window._taMarkDirty(); return r; };
+        const origRename = appDb.renameSkill.bind(appDb);
+        appDb.renameSkill = async function(o, n) { const r = await origRename(o, n); window._taMarkDirty(); return r; };
+        const origDelBySkill = appDb.deleteBySkill.bind(appDb);
+        appDb.deleteBySkill = async function(s, sk, y) { const r = await origDelBySkill(s, sk, y); window._taMarkDirty(); return r; };
+    } catch (e) {}
+
+    // Intercetta transazioni dirette su IDB (es. salvataggio collaboratori, goals)
+    try {
+        if (appDb._db && appDb._db.transaction) {
+            const _origTx = appDb._db.transaction.bind(appDb._db);
+            appDb._db.transaction = function(storeNames, mode) {
+                const tx = _origTx(storeNames, mode);
+                if (mode === 'readwrite') {
+                    const stores = Array.isArray(storeNames) ? storeNames : [storeNames];
+                    const relevant = ['performance','sales','stati','anonymous_map','custom_stats','goals','dashboard_widgets','settings'];
+                    const hasRelevant = stores.some(function(s) { return relevant.indexOf(s) !== -1; });
+                    const isSettingsOnly = stores.length === 1 && stores[0] === 'settings';
+                    if (hasRelevant && stores.indexOf('import_logs') === -1) {
+                        tx.addEventListener('complete', function() {
+                            if (isSettingsOnly) return;
+                            window._taMarkDirty();
+                        });
+                    }
+                }
+                return tx;
+            };
+        }
+    } catch (e2) {}
+
+    refreshDirty();
+
+    ['export-full-btn', 'export-structure-btn', 'export-database-btn'].forEach(function(id) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            setTimeout(function() { window._taMarkBackupDone(); }, 700);
+        });
+    });
+
+    function openReminder() {
+        if (!modal) return;
+        if (snoozeCb) snoozeCb.checked = snoozeSession;
+        modal.classList.add('open');
+        if (overlay) overlay.classList.add('open');
+    }
+    function closeReminder() {
+        if (modal) modal.classList.remove('open');
+        if (overlay) {
+            const anyOpen = document.querySelector('.modal.open');
+            if (!anyOpen) overlay.classList.remove('open');
+            else if (anyOpen && anyOpen.id !== 'backup-reminder-modal') overlay.classList.add('open');
+            else if (!anyOpen) overlay.classList.remove('open');
+        }
+        if (snoozeCb && snoozeCb.checked) {
+            snoozeSession = true;
+            try { sessionStorage.setItem('ta_backup_snooze', '1'); } catch (e) {}
+        }
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', closeReminder);
+    if (stayBtn) stayBtn.addEventListener('click', closeReminder);
+    if (overlay) overlay.addEventListener('click', function(e) {
+        if (modal && modal.classList.contains('open') && e.target === overlay) closeReminder();
+    });
+    if (closeAnywayBtn) closeAnywayBtn.addEventListener('click', function() {
+        if (snoozeCb && snoozeCb.checked) { snoozeSession = true; try { sessionStorage.setItem('ta_backup_snooze', '1'); } catch (e) {} }
+        else { snoozeSession = true; try { sessionStorage.setItem('ta_backup_snooze', '1'); } catch (e) {} }
+        bypassNextUnload = true;
+        closeReminder();
+        window.removeEventListener('beforeunload', beforeUnloadHandler);
+    });
+    if (backupBtn) backupBtn.addEventListener('click', function() {
+        closeReminder();
+        const backupModal = document.getElementById('backup-modal');
+        if (backupModal) backupModal.classList.add('open');
+        if (overlay) overlay.classList.add('open');
+    });
+    if (snoozeCb) snoozeCb.addEventListener('change', function(e) {
+        snoozeSession = e.target.checked;
+        try {
+            if (snoozeSession) sessionStorage.setItem('ta_backup_snooze', '1');
+            else sessionStorage.removeItem('ta_backup_snooze');
+        } catch (err) {}
+    });
+
+    function beforeUnloadHandler(e) {
+        if (bypassNextUnload || snoozeSession) return;
+        if (!isDirty) return;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+    // Dopo dialogo nativo annullato, mostra modal custom
+    window.addEventListener('beforeunload', function() {
+        setTimeout(async function() {
+            if (snoozeSession || bypassNextUnload || !isDirty) return;
+            if (document.visibilityState === 'hidden') return;
+            await refreshDirty();
+            if (isDirty) openReminder();
+        }, 900);
+    });
+
+    window._taBackupReminder = { open: openReminder, close: closeReminder, isDirty: function() { return isDirty; }, refresh: refreshDirty };
+}
+
 // --- RENDERING ---
 
 function setupCustomMonthSelects() {

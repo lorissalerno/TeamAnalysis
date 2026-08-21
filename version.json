@@ -1,6 +1,6 @@
 {
-  "version": "v1.19",
+  "version": "v1.20",
   "date": "2026-08-21",
-  "commit": "a493abe",
-  "description": "Changelog: testi semplificati e divisi in Novità e BugFix"
+  "commit": "5938b2a",
+  "description": "Popup avviso backup prima di chiudere il browser: beforeunload + modal se modifiche non salvate in backup"
 }

@@ -1,8 +1,9 @@
 [
   {
-    "version": "v1.19",
+    "version": "v1.20",
     "date": "2026-08-21",
     "novita": [
+      "Popup avviso backup prima di chiudere il browser: beforeunload + modal se modifiche non salvate in backup",
       "Changelog: testi semplificati e divisi in Novità e BugFix",
       "Impostazioni: controllo aggiornamenti automatico da GitHub",
       "Impostazioni: cronologia novità raggruppata per versione e giorno",
