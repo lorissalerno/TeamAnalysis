@@ -8,6 +8,7 @@
     const CHANGELOG_URL = 'changelog.json';
     const GITHUB_REPO_KEY = 'github_repo'; // es. "owner/repo"
     const LAST_CHECK_KEY = 'version_last_check';
+    const DEFAULT_REPO = 'IronDirt/TeamAnalysis';
 
     let localVersion = null;
     let changelogData = null;
@@ -37,13 +38,25 @@
     async function getGithubRepo() {
         if (window.appDb) {
             const repo = await window.appDb.getSetting(GITHUB_REPO_KEY, '');
+            const clean = (repo || '').trim();
+            if (clean) return clean;
+            return DEFAULT_REPO;
+        }
+        const ls = (localStorage.getItem(GITHUB_REPO_KEY) || '').trim();
+        return ls || DEFAULT_REPO;
+    }
+
+    async function getConfiguredRepoRaw() {
+        if (window.appDb) {
+            const repo = await window.appDb.getSetting(GITHUB_REPO_KEY, '');
             return (repo || '').trim();
         }
         return (localStorage.getItem(GITHUB_REPO_KEY) || '').trim();
     }
 
     async function setGithubRepo(repo) {
-        const clean = (repo || '').trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '');
+        let clean = (repo || '').trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '');
+        if (!clean) clean = DEFAULT_REPO;
         if (window.appDb) await window.appDb.setSetting(GITHUB_REPO_KEY, clean);
         try { localStorage.setItem(GITHUB_REPO_KEY, clean); } catch(e) {}
         return clean;

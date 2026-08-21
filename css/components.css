@@ -1729,9 +1729,14 @@ select option {
     transform: translateY(-1px);
 }
 
+/* Backup reminder modal — z-index superiore agli altri modal */
+#backup-reminder-modal {
+    z-index: 1150;
+}
+
 /* Mini-card obiettivi Sales (dashboard e singolo collaboratore).
-   Niente .card per evitare il margin-top di .card + .card (prima card piu alta);
-   sfondo piu chiaro del contenitore per staccare i riquadri. */
+    Niente .card per evitare il margin-top di .card + .card (prima card piu alta);
+    sfondo piu chiaro del contenitore per staccare i riquadri. */
 .goal-mini-card {
     background: var(--bg-surface-hover);
     border: 1px solid var(--border);

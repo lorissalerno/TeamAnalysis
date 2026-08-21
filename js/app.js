@@ -264,6 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. Settings / Backup
     setupSettings();
     setupAnonymizer();
+    if (typeof setupBackupReminder === 'function') setupBackupReminder();
     
     // Restore active section on page reload
     const hashSection = window.location.hash.replace('#', '');

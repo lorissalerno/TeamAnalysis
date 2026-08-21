@@ -89,3 +89,11 @@ fs.writeFileSync(changelogPath, JSON.stringify(changelog, null, 2) + '\n', 'utf8
 
 console.log(`Bump: ${versionData.version} (${versionData.date}) -> ${newVersion} (${today})`);
 console.log(`Changes: ${changes.join(' | ')}`);
+
+// Rigenera README.md con lo stesso sistema del riquadro aggiornamenti
+try {
+    require('./generate-readme.js');
+} catch (e) {
+    // fallback: esegui come processo separato
+    try { execSync('node ' + path.join(__dirname, 'generate-readme.js'), { cwd: root, stdio: 'inherit' }); } catch {}
+}

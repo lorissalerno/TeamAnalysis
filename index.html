@@ -482,10 +482,10 @@
                     <div style="margin-top:14px;">
                         <label for="github-repo-input" style="display:block; font-size:0.8rem; font-weight:600; color:var(--text-main); margin-bottom:6px;">Repository GitHub (owner/repo)</label>
                         <div style="display:flex; gap:8px;">
-                            <input type="text" id="github-repo-input" placeholder="es. loris/TeamAnalysis" style="flex:1; padding:8px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
+                            <input type="text" id="github-repo-input" placeholder="IronDirt/TeamAnalysis" style="flex:1; padding:8px 10px; border-radius:6px; background:var(--bg-base); color:var(--text-main); border:1px solid var(--border); font-size:0.85rem;">
                             <button type="button" class="btn secondary" id="save-github-repo-btn" style="white-space:nowrap; padding:8px 12px;">Salva</button>
                         </div>
-                        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Lascia vuoto se il sito non è su GitHub Pages. Il controllo usa <code>version.json</code> remoto o l'API commits.</p>
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Preconfigurato su <code>IronDirt/TeamAnalysis</code>. Il controllo usa <code>version.json</code> remoto o l'API commits.</p>
                     </div>
 
                     <div id="update-status" style="margin-top:14px;"></div>
@@ -981,6 +981,45 @@
         </div>
         <div class="modal-footer">
             <button class="btn secondary" id="close-anon-modal-btn">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Backup Reminder Modal (avviso chiusura browser senza backup) -->
+    <div id="backup-reminder-modal" class="modal" style="max-width: 520px;" role="dialog" aria-modal="true" aria-labelledby="backup-reminder-title">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:8px; background:rgba(245, 158, 11, 0.15); display:flex; align-items:center; justify-content:center; color:#f59e0b; flex-shrink:0;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div>
+                    <h2 id="backup-reminder-title" style="margin:0; font-size:1.1rem; font-weight:700;">Backup consigliato prima di uscire</h2>
+                    <p style="margin:2px 0 0 0; font-size:0.78rem; color:var(--text-muted);">I dati sono salvati solo nella cache locale del browser</p>
+                </div>
+            </div>
+            <button class="close-modal" id="close-backup-reminder-modal" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+            <p style="font-size:0.9rem; color:var(--text-main); margin:0; line-height:1.5;">
+                Sono state rilevate <strong>modifiche non ancora salvate in un backup</strong>. Se chiudi il browser senza esportare un backup, i dati potrebbero andare persi (cancellazione cache, cambio dispositivo o browser).
+            </p>
+            <div style="padding:10px 12px; border-radius:8px; background:var(--accent-muted); border:1px solid var(--border); font-size:0.82rem; color:var(--text-muted); display:flex; gap:8px; align-items:flex-start;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; color:var(--primary); margin-top:2px;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Consiglio: esegui un <strong style="color:var(--text-main);">Backup Completo</strong> da Impostazioni &amp; Backup prima di chiudere.</span>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--text-muted); cursor:pointer; user-select:none; margin-top:2px;">
+                <input type="checkbox" id="backup-reminder-snooze" style="accent-color:var(--primary); width:14px; height:14px;">
+                Non avvisarmi più in questa sessione
+            </label>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn secondary" id="backup-reminder-stay-btn">Resta nella pagina</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn secondary" id="backup-reminder-close-anyway-btn">Chiudi senza backup</button>
+                <button type="button" class="btn primary" id="backup-reminder-backup-btn" style="display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Esegui backup ora
+                </button>
+            </div>
         </div>
     </div>
 
