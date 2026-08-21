@@ -1,10 +1,11 @@
 [
   {
-    "version": "v1.22",
+    "version": "v1.26",
     "date": "2026-08-21",
     "novita": [
       "Tasto Verifica aggiornamenti diventa Scarica aggiornamento se disponibile, altrimenti mostra Sei aggiornato senza messaggi extra",
       "Torta: doppio toggle centro % e CHF con formato 27'000.-",
+      "Torta: se entrambi i toggle centro sono spenti non mostra nulla al centro",
       "Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve",
       "Personalizzato popup chiusura: download automatico Backup Completo e chiarito limite popup nativo Chrome non modificabile",
       "Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://",

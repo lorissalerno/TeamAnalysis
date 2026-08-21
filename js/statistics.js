@@ -3747,7 +3747,7 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             if (showCHF) {
                 return { text: totalCHF, color: textColor, size: 22 };
             }
-            return { text: totalPlain, color: textColor, size: 22 };
+            return { text: '', color: textColor, size: 22 };
         };
 
         // Renderizza una singola torta dentro un contenitore con spaziatura uniforme
