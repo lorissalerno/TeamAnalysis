@@ -500,7 +500,7 @@ html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .sun-icon {
 
 .stats-sticky-header {
     position: sticky;
-    top: 0;
+    top: -32px;
     z-index: 90;
     background: var(--bg-surface);
     padding: 10px 20px;
@@ -513,6 +513,11 @@ html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .sun-icon {
     flex-wrap: nowrap;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#statistics.page-section.active {
+    display: block;
+    flex: 1 0 auto;
 }
 
 @keyframes fadeIn {

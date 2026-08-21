@@ -1,6 +1,6 @@
 {
   "version": "v1.26",
   "date": "2026-08-21",
-  "commit": "a875f7e",
-  "description": "Fix barra statistiche sticky: rimane in cima e non sparisce allo scroll"
+  "commit": "6d716cc",
+  "description": "Fix barra statistiche sticky: top -32 e parent block per non sparire allo scroll"
 }

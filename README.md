@@ -43,6 +43,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 - README che si aggiorna da solo ad ogni versione
 - Tabella Obiettivi Vendita: modifica skill in modalità modifica tabella
 - Fix barra statistiche sticky: rimane in cima e non sparisce allo scroll
+- Fix barra statistiche sticky: top -32 e parent block per non sparire allo scroll
 
 **BugFix**
 - Fix modifica torta che riapriva a barre
