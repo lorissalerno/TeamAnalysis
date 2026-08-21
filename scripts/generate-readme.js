@@ -30,7 +30,7 @@ try { changelog = JSON.parse(fs.readFileSync(changelogPath, 'utf8')); } catch {}
 
 const version = versionData.version || 'v1.0';
 const date = versionData.date || '';
-const repo = 'IronDirt/TeamAnalysis';
+const repo = 'lorissalerno/TeamAnalysis';
 const repoUrl = `https://github.com/${repo}`;
 
 let changelogMd = '';

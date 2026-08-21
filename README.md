@@ -2,11 +2,11 @@
 
 > Analizza le statistiche del tuo team — app web statica 100% client-side per l'analisi delle performance, delle vendite e degli stati.
 
-[![Versione](https://img.shields.io/badge/versione-v1.21-0ea5e9)](https://github.com/IronDirt/TeamAnalysis)
-[![Repository](https://img.shields.io/badge/GitHub-IronDirt%2FTeamAnalysis-181717?logo=github)](https://github.com/IronDirt/TeamAnalysis)
-[![Data](https://img.shields.io/badge/data-21%2F08%2F2026-10b981)](https://github.com/IronDirt/TeamAnalysis/commits/main)
+[![Versione](https://img.shields.io/badge/versione-v1.21-0ea5e9)](https://github.com/lorissalerno/TeamAnalysis)
+[![Repository](https://img.shields.io/badge/GitHub-lorissalerno%2FTeamAnalysis-181717?logo=github)](https://github.com/lorissalerno/TeamAnalysis)
+[![Data](https://img.shields.io/badge/data-21%2F08%2F2026-10b981)](https://github.com/lorissalerno/TeamAnalysis/commits/main)
 
-**Repository pubblico:** [https://github.com/IronDirt/TeamAnalysis](https://github.com/IronDirt/TeamAnalysis)  ·  **Versione attuale:** `v1.21` del 21/08/2026
+**Repository pubblico:** [https://github.com/lorissalerno/TeamAnalysis](https://github.com/lorissalerno/TeamAnalysis)  ·  **Versione attuale:** `v1.21` del 21/08/2026
 
 ---
 
@@ -14,9 +14,9 @@
 
 Il riquadro **Stato Aggiornamenti** in *Impostazioni* è collegato a GitHub e confronta automaticamente `version.json` locale con quello remoto su `raw.githubusercontent.com`.
 
-- **Repository preconfigurato:** `IronDirt/TeamAnalysis` (modificabile in Impostazioni → Repository GitHub)
-- **Sorgente di verifica primaria:** `https://raw.githubusercontent.com/IronDirt/TeamAnalysis/main/version.json`
-- **Fallback:** API GitHub `/repos/IronDirt/TeamAnalysis/commits` (ultimi commit) se `version.json` remoto non è raggiungibile
+- **Repository preconfigurato:** `lorissalerno/TeamAnalysis` (modificabile in Impostazioni → Repository GitHub)
+- **Sorgente di verifica primaria:** `https://raw.githubusercontent.com/lorissalerno/TeamAnalysis/main/version.json`
+- **Fallback:** API GitHub `/repos/lorissalerno/TeamAnalysis/commits` (ultimi commit) se `version.json` remoto non è raggiungibile
 - **Azioni disponibili:** _Verifica aggiornamenti_, _Salva repository_, _Ricarica_, link _Apri su GitHub_
 
 > Nessuna configurazione manuale richiesta: il controllo funziona subito all'apertura dell'app. In caso di aggiornamento disponibile viene mostrato un avviso con la nuova versione e la data.
@@ -95,7 +95,7 @@ Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **N
 
 ```bash
 # Clona
-git clone https://github.com/IronDirt/TeamAnalysis.git
+git clone https://github.com/lorissalerno/TeamAnalysis.git
 cd TeamAnalysis
 
 # Apri direttamente o via server statico
