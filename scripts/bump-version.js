@@ -117,3 +117,17 @@ try {
     // fallback: esegui come processo separato
     try { execSync('node ' + path.join(__dirname, 'generate-readme.js'), { cwd: root, stdio: 'inherit' }); } catch {}
 }
+
+// Aggiorna fallback incorporato in js/version.js per supporto file://
+try {
+    const versionJsPath = path.join(root, 'js', 'version.js');
+    let jsContent = fs.readFileSync(versionJsPath, 'utf8');
+    const embeddedVersionStr = JSON.stringify(newVersionData);
+    const embeddedChangelogStr = JSON.stringify(changelog);
+    jsContent = jsContent.replace(/const EMBEDDED_VERSION = \{.*?\};/s, `const EMBEDDED_VERSION = ${embeddedVersionStr};`);
+    jsContent = jsContent.replace(/const EMBEDDED_CHANGELOG = \[.*?\];/s, `const EMBEDDED_CHANGELOG = ${embeddedChangelogStr};`);
+    fs.writeFileSync(versionJsPath, jsContent, 'utf8');
+    console.log('Fallback version.js aggiornato');
+} catch (e) {
+    console.warn('Impossibile aggiornare fallback version.js:', e.message);
+}

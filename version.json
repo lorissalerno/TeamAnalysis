@@ -1,6 +1,6 @@
 {
-  "version": "v1.20",
+  "version": "v1.21",
   "date": "2026-08-21",
-  "commit": "5938b2a",
-  "description": "Popup avviso backup prima di chiudere il browser: beforeunload + modal se modifiche non salvate in backup"
+  "commit": "5670cb5",
+  "description": "Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://"
 }

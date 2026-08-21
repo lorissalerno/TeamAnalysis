@@ -9,11 +9,16 @@
     const GITHUB_REPO_KEY = 'github_repo'; // es. "owner/repo"
     const LAST_CHECK_KEY = 'version_last_check';
     const DEFAULT_REPO = 'IronDirt/TeamAnalysis';
+    // Fallback incorporato per apertura via file:// (fetch bloccato) — aggiornato da bump-version.js
+    const EMBEDDED_VERSION = {"version":"v1.21","date":"2026-08-21","commit":"5670cb5","description":"Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://"};
+    const EMBEDDED_CHANGELOG = [{"version":"v1.21","date":"2026-08-21","novita":["Fix altezza riquadri uguale e bug Stato Aggiornamenti con fallback file://","Popup avviso backup prima di chiudere il browser: beforeunload + modal se modifiche non salvate in backup","Changelog: testi semplificati e divisi in Novità e BugFix","Impostazioni: controllo aggiornamenti automatico da GitHub","Impostazioni: cronologia novità raggruppata per versione e giorno","README che si aggiorna da solo ad ogni versione"],"bugfix":[]},{"version":"v1.15","date":"2026-08-20","novita":["Nuova categoria Stati per import, obiettivi e statistiche","Storico modifiche con data e conservazione 30 giorni","Obiettivi Stati: calcolo efficienza con target e tolleranza","Obiettivi: metrica di influenza attivabile quando serve"],"bugfix":["Tab Obiettivi rimane selezionato dopo il reload","Titoli obiettivi più puliti senza prefissi inutili"]},{"version":"v1.14","date":"2026-08-18","novita":["Gestione Skill completa: crea, rinomina ed elimina con controllo dati","Finestre di conferma più chiare al posto dei popup del browser"],"bugfix":["Avviso se elimini uno Skill usato da un solo collaboratore"]},{"version":"v1.13","date":"2026-08-17","novita":["Dashboard: obiettivi Sales di team per ogni Skill"],"bugfix":[]}];
 
     let localVersion = null;
     let changelogData = null;
 
     async function fetchJson(url) {
+        // file:// non permette fetch: fallisce subito, usiamo fallback
+        if (location.protocol === 'file:') return null;
         try {
             const res = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
             if (!res.ok) return null;
@@ -25,13 +30,21 @@
 
     async function getLocalVersion() {
         if (localVersion) return localVersion;
-        localVersion = await fetchJson(VERSION_URL);
+        const fetched = await fetchJson(VERSION_URL);
+        localVersion = fetched || EMBEDDED_VERSION;
         return localVersion;
     }
 
     async function getChangelog() {
         if (changelogData) return changelogData;
-        changelogData = await fetchJson(CHANGELOG_URL);
+        const fetched = await fetchJson(CHANGELOG_URL);
+        // Se fetch fallisce, usa fallback incorporato; se è array vuoto, comunque mostra fallback
+        if (Array.isArray(fetched) && fetched.length > 0) {
+            changelogData = fetched;
+        } else {
+            changelogData = fetched && Array.isArray(fetched) ? fetched : EMBEDDED_CHANGELOG;
+            if (!Array.isArray(changelogData) || changelogData.length === 0) changelogData = EMBEDDED_CHANGELOG;
+        }
         return changelogData;
     }
 
