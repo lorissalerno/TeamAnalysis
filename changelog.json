@@ -1,6 +1,6 @@
 [
   {
-    "version": "v1.22",
+    "version": "v1.23",
     "date": "2026-08-21",
     "novita": [
       "Ottimizza popup backup: layout compatto, gerarchia chiara, primary Scarica in evidenza, microcopy breve",
@@ -13,6 +13,7 @@
       "README che si aggiorna da solo ad ogni versione"
     ],
     "bugfix": [
+      "Fix filtro skill grafico a torta vendite: ora seleziona skill collaboratori invece di includere tutti",
       "Fix bug origine dati Vendita non mostra Tabella Obiettivi e anteprima destra buggata",
       "Fix grafico a torta per origine dati Stati (0%)",
       "Nasconde Contenuto della Torta per grafici non Sales",

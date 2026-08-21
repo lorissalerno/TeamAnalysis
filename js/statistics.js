@@ -871,9 +871,17 @@ async function openStatModal(editingStat = null) {
         metrics.add(`Tabella Obiettivi: ${t.name}`);
     });
     
-    // Gather unique skills from performance
+    // Gather unique skills da performance, sales e assegnazioni collaboratori (per filtro skill anche su torta Sales)
     const skills = new Set();
     perfData.forEach(d => { if (d.skill) skills.add(d.skill); });
+    salesData.forEach(d => { if (d.skill) skills.add(d.skill); });
+    try {
+        Object.values(window.appState.collaboratorSkills || {}).forEach(list => {
+            (Array.isArray(list) ? list : []).forEach(s => { if (s) skills.add(s); });
+        });
+        const savedSkills = await appDb.getSetting('skills', null);
+        if (Array.isArray(savedSkills)) savedSkills.forEach(s => { if (s) skills.add(s); });
+    } catch (e) {}
 
     // 2. Show Modal
     let modal = document.getElementById('stat-config-modal');
@@ -1359,7 +1367,7 @@ async function openStatModal(editingStat = null) {
         const skillGroup = document.getElementById('stat-skill-group');
         const skillLabel = skillSelect ? skillSelect.previousElementSibling : null;
         const isPerfSource = currentStatSource === 'performance';
-        const showSkill = !isGoalsTable && isPerfSource;
+        const showSkill = !isGoalsTable && (isPerfSource || isPie);
         if (skillGroup) skillGroup.style.display = showSkill ? '' : 'none';
         if (skillSelect) skillSelect.style.display = showSkill ? '' : 'none';
         if (skillLabel && skillLabel.tagName === 'LABEL') skillLabel.style.display = showSkill ? '' : 'none';
@@ -3058,6 +3066,13 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
         if (!isPerf && statConfig.product) {
             if (row.data['Product'] !== statConfig.product) return;
         }
+        // Filtro skill anche per Sales/Stati quando grafico a torta (collaboratori per skill)
+        if (!isPerf && statConfig.skill && statConfig.skill !== 'ALL' && statConfig.type === 'pie') {
+            const empSkills = window.appState.collaboratorSkills?.[row.employee] || [];
+            const hasCollabSkill = Array.isArray(empSkills) && empSkills.includes(statConfig.skill);
+            const hasRowSkill = row.skill === statConfig.skill;
+            if (!hasCollabSkill && !hasRowSkill) return;
+        }
 
         const date = row.date;
         const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
@@ -3133,6 +3148,12 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
         sData.forEach(row => {
             if (isP && statConfig.skill && statConfig.skill !== 'ALL' && row.skill !== statConfig.skill) return;
             if (!isP && !isSt && statConfig.product && row.data['Product'] !== statConfig.product) return;
+            if (!isP && statConfig.skill && statConfig.skill !== 'ALL' && statConfig.type === 'pie') {
+                const empSkills = window.appState.collaboratorSkills?.[row.employee] || [];
+                const hasCollabSkill = Array.isArray(empSkills) && empSkills.includes(statConfig.skill);
+                const hasRowSkill = row.skill === statConfig.skill;
+                if (!hasCollabSkill && !hasRowSkill) return;
+            }
                 const date = row.date;
                 const monthKey = (date && date.length >= 7) ? date.slice(0,7) : date;
                 const emp = row.employee;
@@ -3500,6 +3521,13 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             }
             // Per altre metriche sales:
             if (statConfig.skill && statConfig.skill !== 'ALL' && row.skill && row.skill !== statConfig.skill) return false;
+            // Filtro skill collaboratore per torta Sales: se skill selezionato, esige che il collaboratore abbia quello skill
+            if (statConfig.skill && statConfig.skill !== 'ALL') {
+                const empSkills = window.appState.collaboratorSkills?.[row.employee] || [];
+                const hasCollabSkill = Array.isArray(empSkills) && empSkills.includes(statConfig.skill);
+                const hasRowSkill = row.skill === statConfig.skill;
+                if (!hasCollabSkill && !hasRowSkill) return false;
+            }
             if (row.data[rawKey] !== undefined && row.data[rawKey] !== null) return true;
             if (row.skill === rawKey) return true;
             if (row.data.Product && row.data.Product.toLowerCase() === rawKey.toLowerCase()) return true;
@@ -3512,6 +3540,13 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             salesData.forEach(row => {
                 if (!isSalesRowMatching(row)) return;
                 if (targetEmp && row.employee !== targetEmp) return;
+                // Ulteriore filtro collaboratore se skill selezionato (per modalità pacchetti)
+                if (!targetEmp && statConfig.skill && statConfig.skill !== 'ALL') {
+                    const empSkills = window.appState.collaboratorSkills?.[row.employee] || [];
+                    const hasCollabSkill = Array.isArray(empSkills) && empSkills.includes(statConfig.skill);
+                    const hasRowSkill = row.skill === statConfig.skill;
+                    if (!hasCollabSkill && !hasRowSkill) return;
+                }
                 const prod = row.data && row.data.Product;
                 if (!prod) return;
                 const price = getRecordPrice(row);
@@ -3544,6 +3579,12 @@ async function buildStatCard(statConfig, perfData, salesData, statiData, goals, 
             salesData.forEach(row => {
                 if (!isSalesRowMatching(row)) return;
                 if (targetEmp && row.employee !== targetEmp) return;
+                if (!targetEmp && statConfig.skill && statConfig.skill !== 'ALL') {
+                    const empSkills = window.appState.collaboratorSkills?.[row.employee] || [];
+                    const hasCollabSkill = Array.isArray(empSkills) && empSkills.includes(statConfig.skill);
+                    const hasRowSkill = row.skill === statConfig.skill;
+                    if (!hasCollabSkill && !hasRowSkill) return;
+                }
                 const prod = row.data && row.data.Product;
                 if (!prod) return;
                 const qty = Math.round(parseMetricValue(row.data['Nb Events'])) || 1;

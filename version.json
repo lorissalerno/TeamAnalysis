@@ -1,6 +1,6 @@
 {
-  "version": "v1.22",
+  "version": "v1.23",
   "date": "2026-08-21",
-  "commit": "c34b6d2",
-  "description": "Fix bug origine dati Vendita non mostra Tabella Obiettivi e anteprima destra buggata"
+  "commit": "be920e5",
+  "description": "Fix filtro skill grafico a torta vendite: ora seleziona skill collaboratori invece di includere tutti"
 }

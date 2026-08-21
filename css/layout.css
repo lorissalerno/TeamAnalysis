@@ -500,7 +500,7 @@ html:not([data-theme="dark"]):not([data-theme="dim"]) #theme-toggle .sun-icon {
 
 .stats-sticky-header {
     position: sticky;
-    top: -32px;
+    top: 0;
     z-index: 90;
     background: var(--bg-surface);
     padding: 10px 20px;
