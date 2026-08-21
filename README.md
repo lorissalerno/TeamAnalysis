@@ -2,11 +2,11 @@
 
 > Analizza le statistiche del tuo team — app web statica 100% client-side per l'analisi delle performance, delle vendite e degli stati.
 
-[![Versione](https://img.shields.io/badge/versione-v1.18-0ea5e9)](https://github.com/IronDirt/TeamAnalysis)
+[![Versione](https://img.shields.io/badge/versione-v1.19-0ea5e9)](https://github.com/IronDirt/TeamAnalysis)
 [![Repository](https://img.shields.io/badge/GitHub-IronDirt%2FTeamAnalysis-181717?logo=github)](https://github.com/IronDirt/TeamAnalysis)
 [![Data](https://img.shields.io/badge/data-21%2F08%2F2026-10b981)](https://github.com/IronDirt/TeamAnalysis/commits/main)
 
-**Repository pubblico:** [https://github.com/IronDirt/TeamAnalysis](https://github.com/IronDirt/TeamAnalysis)  ·  **Versione attuale:** `v1.18` del 21/08/2026
+**Repository pubblico:** [https://github.com/IronDirt/TeamAnalysis](https://github.com/IronDirt/TeamAnalysis)  ·  **Versione attuale:** `v1.19` del 21/08/2026
 
 ---
 
@@ -27,50 +27,39 @@ Il riquadro **Stato Aggiornamenti** in *Impostazioni* è collegato a GitHub e co
 
 Cronologia raggruppata per giorno e versione — stesso sistema del riquadro **Novità e Modifiche** in Impostazioni. I dati provengono da `changelog.json` e `version.json` (aggiornati automaticamente ad ogni commit tramite `scripts/bump-version.js`).
 
-### v1.18 — 21/08/2026 `Attuale`
+### v1.19 — 21/08/2026 `Attuale`
 
-- AGENTS.md: istruzioni versionamento obbligatorio per agente AI (bump + README auto-generato)
-- GitHub: default repo IronDirt/TeamAnalysis + README auto-generato
-- Impostazioni: nuovo riquadro Stato Aggiornamenti collegato a GitHub (verifica disponibilità aggiornamenti, badge versione, link repository)
-- Impostazioni: nuovo riquadro Novità e Modifiche con changelog raggruppato per giorno e versione
-- Versionamento automatico v1.15 → v1.16 con version.json e changelog.json
+**Novità**
+- Changelog: testi semplificati e divisi in Novità e BugFix
+- Impostazioni: controllo aggiornamenti automatico da GitHub
+- Impostazioni: cronologia novità raggruppata per versione e giorno
+- README che si aggiorna da solo ad ogni versione
 
 ### v1.15 — 20/08/2026
 
-- Menu prodotti vendite: rimosse metriche hardcoded non presenti nel database
-- Persistito tab obiettivi attivo al reload e rese distinte le frecce di spostamento colonna
-- Pulsanti selezione colonna: Indiv. Team CHF QTA tutti visibili e selezionabili
-- Spostate frecce di spostamento colonne in cima alla colonna
-- Allargate colonne della tabella vendite in modalità modifica
-- Allargato menu a tendina prodotti e aggiunto spostamento colonne tabella vendite
-- Statistiche: riga Obiettivo in magenta per distinguerla dai collaboratori
-- Nascondi prefisso Performance: dai titoli degli obiettivi efficienza
-- Obiettivi: Metrica di influenza attivabile/disattivabile con toggle, disattivata di default
-- Obiettivi Stati: metodo di calcolo Efficienza (target + tolleranza in su/in giù)
-- Allargata finestra Storico Log (max-width 900px, altezza lista 520px)
-- Log storici: data nel dettaglio, registrazione modifiche dati, ritenzione 30 giorni
-- Aggiunta categoria Stati: import, obiettivi e statistiche
-- Aggiunte statistiche simulate per 7 nuovi collaboratori in Report_stati.csv
+**Novità**
+- Nuova categoria Stati per import, obiettivi e statistiche
+- Storico modifiche con data e conservazione 30 giorni
+- Obiettivi Stati: calcolo efficienza con target e tolleranza
+- Obiettivi: metrica di influenza attivabile quando serve
+
+**BugFix**
+- Tab Obiettivi rimane selezionato dopo il reload
+- Titoli obiettivi più puliti senza prefissi inutili
 
 ### v1.14 — 18/08/2026
 
-- Rinominati menu principali con suffisso TAASALO3 (sidebar, nav, dropdown collaboratore)
-- Aggiunto header copyright con firma TAASALO3 a tutti i file JS/CSS/HTML
-- Corretta altezza card Gestione Skill nel grid
-- Rimossa icona targhetta dall'intestazione del pannello Gestione Skill
-- Popup eliminazione skill più sintetico con elenco collaboratori a rischio
-- Eliminazione skill: avviso per collaboratori con dati solo su quello skill
-- Helper appDb.deleteSkill per rimozione completa di uno skill
-- Dialog personalizzati (alert/confirm/prompt) al posto dei popup nativi
-- Gestione Skill nel Passaggio 2 e pannello Gestione Skill a fianco di Importazione Dati CSV
+**Novità**
+- Gestione Skill completa: crea, rinomina ed elimina con controllo dati
+- Finestre di conferma più chiare al posto dei popup del browser
+
+**BugFix**
+- Avviso se elimini uno Skill usato da un solo collaboratore
 
 ### v1.13 — 17/08/2026
 
-- Dashboard: sezione Sales con raggiungimento obiettivi di team per skill
-- Fix mini-card obiettivi Sales: altezza uniforme e larghezza limitata
-- Menu laterale: tooltip visibile in stato collassato
-- Aggiunto footer copyright con link Feedback in fondo a ogni pagina
-- Backup popup a due colonne (Esporta/Importa) e card impostazioni a dimensioni uniformi
+**Novità**
+- Dashboard: obiettivi Sales di team per ogni Skill
 
 
 > Ogni giorno con modifiche incrementa la versione (es. v1.15 → v1.16). Il README viene rigenerato automaticamente ad ogni bump.

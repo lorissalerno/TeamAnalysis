@@ -196,21 +196,35 @@
         if (!Array.isArray(data) || data.length === 0) {
             return '<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:12px;">Nessuna novità disponibile.</p>';
         }
-        // Raggruppa per data (già raggruppato per versione/giorno)
         let html = '<div class="changelog-timeline">';
         data.forEach(entry => {
             const isLatest = entry === data[0];
+            // Supporta sia formato nuovo (novita/bugfix) sia legacy (changes)
+            const novita = Array.isArray(entry.novita) ? entry.novita : (Array.isArray(entry.changes) ? entry.changes : []);
+            const bugfix = Array.isArray(entry.bugfix) ? entry.bugfix : [];
+            const hasNovita = novita.length > 0;
+            const hasBugfix = bugfix.length > 0;
             html += '<div class="changelog-entry' + (isLatest ? ' latest' : '') + '">'
                 + '<div class="changelog-entry-header">'
                 + '<span class="changelog-version">' + escapeHtml(entry.version) + '</span>'
                 + '<span class="changelog-date">' + escapeHtml(formatDateIT(entry.date)) + '</span>'
                 + (isLatest ? '<span class="changelog-badge-latest">Attuale</span>' : '')
-                + '</div>'
-                + '<ul class="changelog-list">';
-            (entry.changes || []).forEach(c => {
-                html += '<li>' + escapeHtml(c) + '</li>';
-            });
-            html += '</ul></div>';
+                + '</div>';
+            if (hasNovita || hasBugfix) {
+                if (hasNovita) {
+                    html += '<div style="margin-top:8px; font-size:0.75rem; font-weight:700; color:#10b981; letter-spacing:0.04em; text-transform:uppercase;">Novità</div><ul class="changelog-list">';
+                    novita.forEach(c => { html += '<li>' + escapeHtml(c) + '</li>'; });
+                    html += '</ul>';
+                }
+                if (hasBugfix) {
+                    html += '<div style="margin-top:8px; font-size:0.75rem; font-weight:700; color:#f59e0b; letter-spacing:0.04em; text-transform:uppercase;">BugFix</div><ul class="changelog-list">';
+                    bugfix.forEach(c => { html += '<li>' + escapeHtml(c) + '</li>'; });
+                    html += '</ul>';
+                }
+            } else {
+                html += '<p style="color:var(--text-muted); font-size:0.8rem; margin-top:6px;">Nessun dettaglio.</p>';
+            }
+            html += '</div>';
         });
         html += '</div>';
         return html;

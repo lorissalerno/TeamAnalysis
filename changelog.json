@@ -1,59 +1,46 @@
 [
   {
-    "version": "v1.18",
+    "version": "v1.19",
     "date": "2026-08-21",
-    "changes": [
-      "AGENTS.md: istruzioni versionamento obbligatorio per agente AI (bump + README auto-generato)",
-      "GitHub: default repo IronDirt/TeamAnalysis + README auto-generato",
-      "Impostazioni: nuovo riquadro Stato Aggiornamenti collegato a GitHub (verifica disponibilità aggiornamenti, badge versione, link repository)",
-      "Impostazioni: nuovo riquadro Novità e Modifiche con changelog raggruppato per giorno e versione",
-      "Versionamento automatico v1.15 → v1.16 con version.json e changelog.json"
-    ]
+    "novita": [
+      "Changelog: testi semplificati e divisi in Novità e BugFix",
+      "Impostazioni: controllo aggiornamenti automatico da GitHub",
+      "Impostazioni: cronologia novità raggruppata per versione e giorno",
+      "README che si aggiorna da solo ad ogni versione"
+    ],
+    "bugfix": []
   },
   {
     "version": "v1.15",
     "date": "2026-08-20",
-    "changes": [
-      "Menu prodotti vendite: rimosse metriche hardcoded non presenti nel database",
-      "Persistito tab obiettivi attivo al reload e rese distinte le frecce di spostamento colonna",
-      "Pulsanti selezione colonna: Indiv. Team CHF QTA tutti visibili e selezionabili",
-      "Spostate frecce di spostamento colonne in cima alla colonna",
-      "Allargate colonne della tabella vendite in modalità modifica",
-      "Allargato menu a tendina prodotti e aggiunto spostamento colonne tabella vendite",
-      "Statistiche: riga Obiettivo in magenta per distinguerla dai collaboratori",
-      "Nascondi prefisso Performance: dai titoli degli obiettivi efficienza",
-      "Obiettivi: Metrica di influenza attivabile/disattivabile con toggle, disattivata di default",
-      "Obiettivi Stati: metodo di calcolo Efficienza (target + tolleranza in su/in giù)",
-      "Allargata finestra Storico Log (max-width 900px, altezza lista 520px)",
-      "Log storici: data nel dettaglio, registrazione modifiche dati, ritenzione 30 giorni",
-      "Aggiunta categoria Stati: import, obiettivi e statistiche",
-      "Aggiunte statistiche simulate per 7 nuovi collaboratori in Report_stati.csv"
+    "novita": [
+      "Nuova categoria Stati per import, obiettivi e statistiche",
+      "Storico modifiche con data e conservazione 30 giorni",
+      "Obiettivi Stati: calcolo efficienza con target e tolleranza",
+      "Obiettivi: metrica di influenza attivabile quando serve"
+    ],
+    "bugfix": [
+      "Tab Obiettivi rimane selezionato dopo il reload",
+      "Titoli obiettivi più puliti senza prefissi inutili"
     ]
   },
   {
     "version": "v1.14",
     "date": "2026-08-18",
-    "changes": [
-      "Rinominati menu principali con suffisso TAASALO3 (sidebar, nav, dropdown collaboratore)",
-      "Aggiunto header copyright con firma TAASALO3 a tutti i file JS/CSS/HTML",
-      "Corretta altezza card Gestione Skill nel grid",
-      "Rimossa icona targhetta dall'intestazione del pannello Gestione Skill",
-      "Popup eliminazione skill più sintetico con elenco collaboratori a rischio",
-      "Eliminazione skill: avviso per collaboratori con dati solo su quello skill",
-      "Helper appDb.deleteSkill per rimozione completa di uno skill",
-      "Dialog personalizzati (alert/confirm/prompt) al posto dei popup nativi",
-      "Gestione Skill nel Passaggio 2 e pannello Gestione Skill a fianco di Importazione Dati CSV"
+    "novita": [
+      "Gestione Skill completa: crea, rinomina ed elimina con controllo dati",
+      "Finestre di conferma più chiare al posto dei popup del browser"
+    ],
+    "bugfix": [
+      "Avviso se elimini uno Skill usato da un solo collaboratore"
     ]
   },
   {
     "version": "v1.13",
     "date": "2026-08-17",
-    "changes": [
-      "Dashboard: sezione Sales con raggiungimento obiettivi di team per skill",
-      "Fix mini-card obiettivi Sales: altezza uniforme e larghezza limitata",
-      "Menu laterale: tooltip visibile in stato collassato",
-      "Aggiunto footer copyright con link Feedback in fondo a ogni pagina",
-      "Backup popup a due colonne (Esporta/Importa) e card impostazioni a dimensioni uniformi"
-    ]
+    "novita": [
+      "Dashboard: obiettivi Sales di team per ogni Skill"
+    ],
+    "bugfix": []
   }
 ]

@@ -1,6 +1,6 @@
 {
-  "version": "v1.18",
+  "version": "v1.19",
   "date": "2026-08-21",
-  "commit": "371db77",
-  "description": "AGENTS.md: istruzioni versionamento obbligatorio per agente AI (bump + README auto-generato)"
+  "commit": "a493abe",
+  "description": "Changelog: testi semplificati e divisi in Novità e BugFix"
 }

@@ -63,26 +63,46 @@ if (versionData.date === today) {
 }
 
 const commit = getGitCommit();
-const newEntry = { version: newVersion, date: today, changes: changes };
+const newEntry = { version: newVersion, date: today, novita: changes, bugfix: [] };
 
 // Aggiorna version.json
 const newVersionData = { version: newVersion, date: today, commit: commit, description: changes[0] || '' };
 fs.writeFileSync(versionPath, JSON.stringify(newVersionData, null, 2) + '\n', 'utf8');
 
+// Helper per leggere novita con fallback legacy
+function getNovita(e) {
+    if (Array.isArray(e.novita)) return e.novita;
+    if (Array.isArray(e.changes)) return e.changes;
+    return [];
+}
+
 // Aggiorna changelog.json: sostituisci entry di oggi se già esiste, altrimenti prepend
 const existingIdx = changelog.findIndex(e => e.date === today);
 if (existingIdx >= 0 && changelog[existingIdx].version === newVersion) {
-    // merge changes
-    const set = new Set([...changelog[existingIdx].changes, ...changes]);
-    changelog[existingIdx].changes = Array.from(set);
+    const merged = Array.from(new Set([...getNovita(changelog[existingIdx]), ...changes]));
+    changelog[existingIdx].novita = merged;
+    delete changelog[existingIdx].changes;
+    if (!Array.isArray(changelog[existingIdx].bugfix)) changelog[existingIdx].bugfix = [];
     changelog[existingIdx].commit = commit;
 } else if (existingIdx >= 0) {
-    // stesso giorno ma versione diversa -> aggiorna versione e merge
+    const merged = Array.from(new Set([...changes, ...getNovita(changelog[existingIdx])]));
     changelog[existingIdx].version = newVersion;
-    changelog[existingIdx].changes = Array.from(new Set([...changes, ...changelog[existingIdx].changes]));
+    changelog[existingIdx].novita = merged;
+    delete changelog[existingIdx].changes;
+    if (!Array.isArray(changelog[existingIdx].bugfix)) changelog[existingIdx].bugfix = [];
 } else {
     changelog.unshift(newEntry);
 }
+// Normalizza tutte le entry alla nuova struttura
+changelog = changelog.map(e => {
+    if (Array.isArray(e.changes) && !Array.isArray(e.novita)) {
+        e.novita = e.changes;
+        delete e.changes;
+    }
+    if (!Array.isArray(e.bugfix)) e.bugfix = [];
+    if (!Array.isArray(e.novita)) e.novita = [];
+    return e;
+});
 // mantieni solo ultime 30 versioni
 if (changelog.length > 30) changelog = changelog.slice(0, 30);
 fs.writeFileSync(changelogPath, JSON.stringify(changelog, null, 2) + '\n', 'utf8');

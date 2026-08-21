@@ -41,10 +41,22 @@ if (!Array.isArray(changelog) || changelog.length === 0) {
         const isLatest = entry === changelog[0];
         const badge = isLatest ? ' `Attuale`' : '';
         changelogMd += `### ${entry.version} — ${formatDateIT(entry.date)}${badge}\n\n`;
-        (entry.changes || []).forEach(c => {
-            changelogMd += `- ${c}\n`;
-        });
-        changelogMd += '\n';
+        // Supporta formato nuovo (novita/bugfix) e legacy (changes)
+        const novita = Array.isArray(entry.novita) ? entry.novita : (Array.isArray(entry.changes) ? entry.changes : []);
+        const bugfix = Array.isArray(entry.bugfix) ? entry.bugfix : [];
+        if (novita.length > 0) {
+            changelogMd += `**Novità**\n`;
+            novita.forEach(c => { changelogMd += `- ${c}\n`; });
+            changelogMd += `\n`;
+        }
+        if (bugfix.length > 0) {
+            changelogMd += `**BugFix**\n`;
+            bugfix.forEach(c => { changelogMd += `- ${c}\n`; });
+            changelogMd += `\n`;
+        }
+        if (novita.length === 0 && bugfix.length === 0) {
+            changelogMd += `_Nessun dettaglio._\n\n`;
+        }
     });
 }
 
